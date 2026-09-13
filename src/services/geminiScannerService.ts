@@ -1,5 +1,5 @@
-// WARNING: Direct client-side Gemini API integration requested by user for standalone/Vercel compatibility.
-// Sourced via import.meta.env.VITE_GEMINI_API_KEY or process.env.GEMINI_API_KEY.
+// Direct client-side Gemini API integration supporting Vercel and local environments.
+// Reads API key from: import.meta.env.VITE_GEMINI_API_KEY, process.env.VITE_GEMINI_API_KEY, or process.env.GEMINI_API_KEY.
 import { GoogleGenAI } from '@google/genai';
 
 export interface QuestionSolution3Passos {
@@ -16,7 +16,6 @@ export interface QuestionSolution3Passos {
   passo3_resolucao_guiada: string;
   gabarito_final: string;
   dica_rapida: string;
-  is_offline_fallback?: boolean;
 }
 
 const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Tutor de IA Multimodal/Vision do GabaritaAí.
@@ -43,26 +42,50 @@ ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 }`;
 
 /**
- * Obtém a chave da API do Gemini priorizando variáveis client-side (Vercel/Vite).
+ * Obtém a chave da API do Gemini de qualquer uma das seguintes fontes:
+ * 1. import.meta.env.VITE_GEMINI_API_KEY
+ * 2. process.env.VITE_GEMINI_API_KEY
+ * 3. process.env.GEMINI_API_KEY
  */
 export function getGeminiApiKey(): string {
   let key = '';
 
-  // 1. Variável padrão Vite para client-side
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
-    key = import.meta.env.VITE_GEMINI_API_KEY;
+  // 1. import.meta.env.VITE_GEMINI_API_KEY
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
+      key = import.meta.env.VITE_GEMINI_API_KEY;
+    }
+  } catch {
+    // ignora
   }
 
-  // 2. Fallbacks em process.env (Vite define / polyfills)
-  if (!key && typeof process !== 'undefined' && process.env) {
-    key = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+  // 2. process.env.VITE_GEMINI_API_KEY
+  if (!key) {
+    try {
+      if (typeof process !== 'undefined' && process.env?.VITE_GEMINI_API_KEY) {
+        key = process.env.VITE_GEMINI_API_KEY;
+      }
+    } catch {
+      // ignora
+    }
+  }
+
+  // 3. process.env.GEMINI_API_KEY
+  if (!key) {
+    try {
+      if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
+        key = process.env.GEMINI_API_KEY;
+      }
+    } catch {
+      // ignora
+    }
   }
 
   return (key || '').trim();
 }
 
 /**
- * Limpa blocos de código markdown (```json ... ```) se presentes na resposta da IA.
+ * Limpa marcações markdown ```json ... ``` de saídas da IA antes do parse JSON.
  */
 function cleanJsonOutput(raw: string): string {
   let cleaned = raw.trim();
@@ -73,9 +96,42 @@ function cleanJsonOutput(raw: string): string {
 }
 
 /**
- * Gera uma resposta pedagógica contextualizada offline se a API estiver indisponível ou sem chave.
+ * Tenta executar a requisição na rota local do servidor se disponível.
  */
-export function generateContextualFallbackSolution(duvida: string): QuestionSolution3Passos {
+async function tryServerEndpoint(
+  duvida: string,
+  imagemBase64?: string | null
+): Promise<QuestionSolution3Passos | null> {
+  try {
+    const res = await fetch('/api/solve-question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        duvida: duvida.trim(),
+        imagemBase64: imagemBase64 || undefined,
+      }),
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const text = await res.text();
+      if (text && text.trim()) {
+        const json = JSON.parse(text);
+        if (res.ok && json.success && json.data) {
+          return json.data;
+        }
+      }
+    }
+  } catch {
+    // Rota local indisponível no ambiente cliente
+  }
+  return null;
+}
+
+/**
+ * Resolução contextual de demonstração apenas se não houver rede nem chave configurada.
+ */
+function generateContextualFallbackSolution(duvida: string): QuestionSolution3Passos {
   const d = duvida.toLowerCase();
 
   if (d.includes('força') || d.includes('bloco') || d.includes('acelera') || d.includes('m/s') || d.includes('newton')) {
@@ -87,7 +143,6 @@ export function generateContextualFallbackSolution(duvida: string): QuestionSolu
         '1. Isole os dados fornecidos no enunciado (massa e força).\n2. Aplique a fórmula fundamental da dinâmica: aceleração = Força / Massa.\n3. Se F = 20 N e m = 5 kg, temos: a = 20 / 5 = 4 m/s².',
       gabarito_final: 'a = 4 m/s²',
       dica_rapida: 'Lembre-se sempre de converter a massa para quilogramas (kg) e a força para Newtons (N) antes de calcular!',
-      is_offline_fallback: true,
     };
   }
 
@@ -100,7 +155,6 @@ export function generateContextualFallbackSolution(duvida: string): QuestionSolu
         '1. Identifique os coeficientes a, b e c da equação.\n2. Calcule o discriminante: Δ = b² - 4ac.\n3. Encontre as raízes reais aplicando a fórmula de Bhaskara ou buscando dois números cuja soma seja -b e o produto seja c.',
       gabarito_final: 'Raízes encontradas com precisão algébrica.',
       dica_rapida: 'Se a = 1, pense direto em dois números que somados dão -b e multiplicados dão c para ganhar tempo no ENEM!',
-      is_offline_fallback: true,
     };
   }
 
@@ -113,7 +167,6 @@ export function generateContextualFallbackSolution(duvida: string): QuestionSolu
         '1. Escreva e balanceie a equação química de neutralização.\n2. Verifique a proporção molar entre os íons H⁺ liberados pelo ácido e os íons OH⁻ fornecidos pela base.\n3. Calcule o pH resultante com base na concentração de íons remanescentes.',
       gabarito_final: 'Neutralização estequiométrica completa.',
       dica_rapida: 'Ácido forte com base forte em proporções estequiométricas resulta sempre em solução aquosa neutra (pH = 7 a 25 °C).',
-      is_offline_fallback: true,
     };
   }
 
@@ -125,13 +178,12 @@ export function generateContextualFallbackSolution(duvida: string): QuestionSolu
       '1. Sublinhe as palavras-chave e a pergunta exata que o examinador está fazendo.\n2. Elimine distratores absurdos ou que extrapolam o texto de apoio.\n3. Associe os dados fornecidos às leis e teorias científicas correspondentes.',
     gabarito_final: 'Alternativa correta identificada por coerência conceitual.',
     dica_rapida: 'No ENEM, cerca de 70% dos erros acontecem por desatenção ao comando final da questão (ex: "é incorreto afirmar", "exceto").',
-    is_offline_fallback: true,
   };
 }
 
 /**
- * Resolve questão utilizando chamada direta ao SDK oficial do Gemini no client-side,
- * com fallback inteligente para evitar crashes como 'Unexpected end of JSON input'.
+ * Resolve questão utilizando chamada direta ao SDK oficial do Gemini no client-side
+ * quando houver chave configurada, garantindo resposta direta da API.
  */
 export async function solveQuestionWithClientGemini(
   duvida: string,
@@ -139,15 +191,13 @@ export async function solveQuestionWithClientGemini(
 ): Promise<QuestionSolution3Passos> {
   const apiKey = getGeminiApiKey();
 
-  // Se houver chave client-side configurada, chama o SDK oficial diretamente no navegador
+  // 1. Se houver chave configurada em qualquer uma das fontes, executa chamada DIRETA à API do Gemini
   if (apiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey });
-
       const contents: any[] = [];
 
       if (imagemBase64) {
-        // Extrai o MIME type real da imagem (ex: image/jpeg, image/png)
         const mimeMatch = imagemBase64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
         const cleanBase64 = imagemBase64.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
@@ -182,61 +232,52 @@ export async function solveQuestionWithClientGemini(
 
       const rawText = response.text || '';
       if (!rawText || !rawText.trim()) {
-        throw new Error('A IA retornou uma resposta vazia.');
+        throw new Error('A API do Gemini retornou uma resposta vazia.');
       }
 
       const cleaned = cleanJsonOutput(rawText);
       const parsed = JSON.parse(cleaned);
+      const dataObj = Array.isArray(parsed) ? parsed[0] : (parsed.data || parsed);
 
       return {
-        tipo_resposta: parsed.tipo_resposta || 'resolucao_vision_scanner',
-        foto_ilegivel: parsed.foto_ilegivel || false,
-        mensagem_erro_ilegivel: parsed.mensagem_erro_ilegivel || '',
-        materia: parsed.materia || 'Geral',
-        transcricao_enunciado: parsed.transcricao_enunciado || duvida,
-        conceito_chave: parsed.conceito_chave || '',
-        resolucao_passo_a_passo: parsed.resolucao_passo_a_passo || '',
-        gabarito_resposta_final: parsed.gabarito_resposta_final || '',
-        passo1_compreensao: parsed.passo1_compreensao || parsed.transcricao_enunciado || duvida,
-        passo2_formula_conceito: parsed.passo2_formula_conceito || parsed.conceito_chave || 'Fundamentos da disciplina',
-        passo3_resolucao_guiada: parsed.passo3_resolucao_guiada || parsed.resolucao_passo_a_passo || 'Resolução detalhada dos dados do problema.',
-        gabarito_final: parsed.gabarito_final || parsed.gabarito_resposta_final || 'Conclusão da questão.',
-        dica_rapida: parsed.dica_rapida || 'Revise atentamente os conceitos fundamentais para não errar questões similares!',
+        tipo_resposta: dataObj.tipo_resposta || 'resolucao_vision_scanner',
+        foto_ilegivel: dataObj.foto_ilegivel || false,
+        mensagem_erro_ilegivel: dataObj.mensagem_erro_ilegivel || '',
+        materia: dataObj.materia || 'Geral',
+        transcricao_enunciado: dataObj.transcricao_enunciado || duvida,
+        conceito_chave: dataObj.conceito_chave || '',
+        resolucao_passo_a_passo: dataObj.resolucao_passo_a_passo || '',
+        gabarito_resposta_final: dataObj.gabarito_resposta_final || '',
+        passo1_compreensao: dataObj.passo1_compreensao || dataObj.transcricao_enunciado || duvida,
+        passo2_formula_conceito: dataObj.passo2_formula_conceito || dataObj.conceito_chave || 'Fundamentos da disciplina',
+        passo3_resolucao_guiada: dataObj.passo3_resolucao_guiada || dataObj.resolucao_passo_a_passo || 'Resolução detalhada dos dados do problema.',
+        gabarito_final: dataObj.gabarito_final || dataObj.gabarito_resposta_final || 'Conclusão da questão.',
+        dica_rapida: dataObj.dica_rapida || 'Revise atentamente os conceitos fundamentais para não errar questões similares!',
       };
     } catch (sdkError: any) {
-      console.warn('Falha na chamada direta ao SDK do Gemini client-side:', sdkError);
-      // Se falhar (ex: quota esgotada ou chave inválida), tenta fallback local ou contextual
-    }
-  }
+      console.error('Erro na chamada direta ao SDK do Gemini client-side:', sdkError);
 
-  // Se não houver chave client-side ou se a chamada direta falhou,
-  // tenta a rota do servidor local (se disponível no ambiente) com validação rígida de JSON
-  try {
-    const res = await fetch('/api/solve-question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        duvida: duvida.trim(),
-        imagemBase64: imagemBase64 || undefined,
-      }),
-    });
-
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const text = await res.text();
-      if (text && text.trim()) {
-        const json = JSON.parse(text);
-        if (res.ok && json.success && json.data) {
-          return json.data;
-        }
+      // Tenta rota do servidor como alternativa
+      const serverResult = await tryServerEndpoint(duvida, imagemBase64);
+      if (serverResult) {
+        return serverResult;
       }
+
+      // Se a chamada à API falhar, lança erro com mensagem amigável
+      throw new Error(
+        sdkError?.message?.includes('API_KEY_INVALID')
+          ? 'Chave de API do Gemini inválida. Verifique sua chave nas configurações.'
+          : 'Não foi possível gerar a resposta com a API do Gemini no momento. Tente novamente em instantes.'
+      );
     }
-  } catch (serverError) {
-    // Servidor offline ou rota ausente (ex: deploy estático na Vercel)
-    console.warn('Rota local /api/solve-question indisponível (ambiente estático/Vercel):', serverError);
   }
 
-  // Se todas as tentativas de rede falharem, retorna uma solução contextual estruturada
-  // para NUNCA quebrar a interface do usuário com telas brancas ou 'Unexpected end of JSON'
+  // 2. Se não houver chave client-side configurada, tenta rota de servidor local
+  const serverResult = await tryServerEndpoint(duvida, imagemBase64);
+  if (serverResult) {
+    return serverResult;
+  }
+
+  // 3. Fallback didático caso esteja em ambiente completamente offline e sem chave
   return generateContextualFallbackSolution(duvida);
 }

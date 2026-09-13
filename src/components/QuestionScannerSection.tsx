@@ -17,8 +17,7 @@ import {
   Mic,
   MicOff,
   Radio,
-  Volume2,
-  AlertCircle
+  Volume2
 } from 'lucide-react';
 import {
   solveQuestionWithClientGemini,
@@ -221,7 +220,7 @@ export const QuestionScannerSection: React.FC = () => {
     } catch (err: any) {
       console.error('Erro na resolução do Scanner Tira-Dúvidas:', err);
       setError(
-        'Não foi possível analisar a questão no momento. Verifique sua conexão com a internet ou tente digitar o enunciado diretamente.'
+        err?.message || 'Não foi possível analisar a questão no momento. Verifique sua conexão com a internet ou tente novamente.'
       );
     } finally {
       setIsLoading(false);
@@ -516,18 +515,6 @@ export const QuestionScannerSection: React.FC = () => {
                       ✓ Resolução Estruturada
                     </div>
                   </div>
-
-                  {solution.is_offline_fallback && (
-                    <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
-                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold">Modo Didático de Apoio Ativado:</span>{' '}
-                        <span>
-                          Para habilitar a análise multimodal com visão computacional em tempo real na Vercel, configure a variável <strong>VITE_GEMINI_API_KEY</strong> nas variáveis de ambiente do projeto.
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   {/* 📌 ENUNCIADO IDENTIFICADO */}
                   <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">

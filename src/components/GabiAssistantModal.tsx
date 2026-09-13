@@ -300,7 +300,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
     let icon = <ArrowRight className="w-3.5 h-3.5" />;
 
     if (atalho === 'tela_assinatura') {
-      label = '⭐ Conhecer o Plano PRO (R$ 9,90/mês)';
+      label = '⭐ Conhecer o Plano PRO (R$ 5,00/mês)';
       icon = <Zap className="w-3.5 h-3.5 text-amber-400" />;
     } else if (atalho === 'tela_perfil') {
       label = '⚙️ Alterar Matéria nas Configurações';

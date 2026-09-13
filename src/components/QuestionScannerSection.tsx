@@ -17,30 +17,19 @@ import {
   Mic,
   MicOff,
   Radio,
-  Volume2
+  Volume2,
+  AlertCircle
 } from 'lucide-react';
+import {
+  solveQuestionWithClientGemini,
+  type QuestionSolution3Passos
+} from '../services/geminiScannerService';
 
 declare global {
   interface Window {
     SpeechRecognition: any;
     webkitSpeechRecognition: any;
   }
-}
-
-interface QuestionSolution3Passos {
-  tipo_resposta?: string;
-  foto_ilegivel?: boolean;
-  mensagem_erro_ilegivel?: string;
-  materia: string;
-  transcricao_enunciado?: string;
-  conceito_chave?: string;
-  resolucao_passo_a_passo?: string;
-  gabarito_resposta_final?: string;
-  passo1_compreensao: string;
-  passo2_formula_conceito: string;
-  passo3_resolucao_guiada: string;
-  gabarito_final: string;
-  dica_rapida: string;
 }
 
 const SAMPLE_QUESTIONS = [
@@ -218,24 +207,22 @@ export const QuestionScannerSection: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/solve-question', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          duvida: duvida.trim(),
-          imagemBase64: selectedImage || undefined,
-        }),
-      });
+      const data = await solveQuestionWithClientGemini(duvida, selectedImage);
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Não foi possível resolver a questão no momento.');
+      if (!data) {
+        throw new Error('Não foi possível obter a resolução da questão.');
       }
 
-      setSolution(data.data);
+      if (data.foto_ilegivel && data.mensagem_erro_ilegivel) {
+        setError(data.mensagem_erro_ilegivel);
+      }
+
+      setSolution(data);
     } catch (err: any) {
-      console.error('Erro na resolução em 3 passos:', err);
-      setError(err.message || 'Erro ao conectar ao Scanner Tira-Dúvidas.');
+      console.error('Erro na resolução do Scanner Tira-Dúvidas:', err);
+      setError(
+        'Não foi possível analisar a questão no momento. Verifique sua conexão com a internet ou tente digitar o enunciado diretamente.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -529,6 +516,18 @@ export const QuestionScannerSection: React.FC = () => {
                       ✓ Resolução Estruturada
                     </div>
                   </div>
+
+                  {solution.is_offline_fallback && (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Modo Didático de Apoio Ativado:</span>{' '}
+                        <span>
+                          Para habilitar a análise multimodal com visão computacional em tempo real na Vercel, configure a variável <strong>VITE_GEMINI_API_KEY</strong> nas variáveis de ambiente do projeto.
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 📌 ENUNCIADO IDENTIFICADO */}
                   <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">

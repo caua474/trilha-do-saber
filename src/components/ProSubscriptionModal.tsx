@@ -109,7 +109,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                     Plano PRO
                   </span>
                   <div className="text-2xl font-black text-white mt-1">
-                    R$ 9,90 <span className="text-xs font-medium text-slate-300">/mês</span>
+                    R$ 5,00 <span className="text-xs font-medium text-slate-300">/mês</span>
                   </div>
                   <p className="text-[10px] text-amber-200 font-semibold mt-0.5">
                     Cancele quando quiser

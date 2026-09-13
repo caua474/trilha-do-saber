@@ -85,7 +85,7 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
 
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do GabaritaAí custa apenas R$ 9,90/mês (sem fidelidade, cancelamento a qualquer momento!). Ele libera perguntas ilimitadas para a IA, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção nota 1000 de Redação com notas por competência.",
+      resposta_suporte: "O Plano PRO do GabaritaAí custa apenas R$ 5,00/mês (sem fidelidade, cancelamento a qualquer momento!). Ele libera perguntas ilimitadas para a IA, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção nota 1000 de Redação com notas por competência.",
       botao_atalho: "tela_assinatura"
     };
   }
@@ -827,7 +827,7 @@ COMO RESPONDER AS PERGUNTAS:
 2. DÚVIDAS DE USO E NAVEGAÇÃO DO APP GABARITAÍ:
    - App de estudos com cronograma inteligente, simulados TRI, Caderno de Erros, Pílulas de Conhecimento e método Feynman.
    - Plano Grátis: 5 perguntas por dia para a IA.
-   - Plano PRO: R$ 9,90/mês (sem fidelidade), perguntas ilimitadas, simulados TRI e correção de redação.
+   - Plano PRO: R$ 5,00/mês (sem fidelidade), perguntas ilimitadas, simulados TRI e correção de redação.
    - Se a dúvida for sobre planos, pagamento ou limite de perguntas: "botao_atalho": "tela_assinatura".
    - Se for sobre alterar matéria ou meta de estudo: "botao_atalho": "tela_perfil".
    - Se for sobre revisar erros de simulados: "botao_atalho": "tela_caderno_erros".

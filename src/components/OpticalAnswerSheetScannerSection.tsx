@@ -73,7 +73,17 @@ export const OpticalAnswerSheetScannerSection: React.FC = () => {
         }),
       });
 
-      const json = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Serviço de leitura óptica indisponível no momento. Tente novamente mais tarde.');
+      }
+
+      const text = await res.text();
+      if (!text || !text.trim()) {
+        throw new Error('Resposta vazia do serviço de visão computacional.');
+      }
+
+      const json = JSON.parse(text);
       if (json.success && json.data) {
         setScanResult(json.data);
       } else {

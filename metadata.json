@@ -1,0 +1,10 @@
+{
+  "name": "GabaritaAí - Plataforma Inteligente de Estudos",
+  "description": "Plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM com resumos agrupados por disciplina, planos de estudo, simulados TRI, assistente de voz da Professora Gabi e prática no Método Feynman via microfone.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

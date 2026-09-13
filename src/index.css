@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+@keyframes shimmer-sweep-5s {
+  0%, 65% {
+    transform: translateX(-160%) skewX(-20deg);
+    opacity: 0;
+  }
+  70% {
+    opacity: 0.85;
+  }
+  85% {
+    transform: translateX(260%) skewX(-20deg);
+    opacity: 0.85;
+  }
+  90%, 100% {
+    transform: translateX(260%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer-5s {
+  animation: shimmer-sweep-5s 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes gentle-pulse-avatar {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 5px rgba(99, 102, 241, 0);
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse-avatar 2.5s ease-in-out infinite;
+}
+
+@keyframes gradient-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes subtle-pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(254, 240, 138, 0.4), 0 4px 14px 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow: 0 0 0 1.5px rgba(251, 146, 60, 0.75), 0 8px 24px 2px rgba(245, 158, 11, 0.55), 0 0 18px 3px rgba(251, 191, 36, 0.45);
+  }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse-glow 2.8s ease-in-out infinite;
+}
+
+#home-gabi-quick-quiz-button {
+  position: relative;
+}
+
+#home-gabi-quick-quiz-button::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 1rem;
+  padding: 1.5px;
+  background: linear-gradient(90deg, #fef08a, #f59e0b, #fb7185, #f59e0b, #fef08a);
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: gradient-border-flow 4.5s ease infinite;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.95;
+}
+
+

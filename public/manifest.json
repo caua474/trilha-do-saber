@@ -1,6 +1,6 @@
 {
-  "name": "GabaritaAí - Assistente de Estudos ENEM",
-  "short_name": "GabaritaAí",
+  "name": "app inteligente - Assistente de Estudos ENEM",
+  "short_name": "app inteligente",
   "description": "Sintetizador inteligente de resumos, flashcards e simulação TRI com suporte total a Leitura Offline.",
   "start_url": "/",
   "display": "standalone",

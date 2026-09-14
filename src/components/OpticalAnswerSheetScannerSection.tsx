@@ -110,7 +110,7 @@ export const OpticalAnswerSheetScannerSection: React.FC = () => {
       ctx.fillText('ENEM 2026 - FOLHA DE RESPOSTAS', 40, 40);
 
       ctx.font = '12px sans-serif';
-      ctx.fillText('NOME: ALUNO GABARITAAÍ', 40, 65);
+      ctx.fillText('NOME: ALUNO APP INTELIGENTE', 40, 65);
       ctx.fillText('INSCRIÇÃO: 2026009841', 40, 85);
 
       const letters = ['A', 'B', 'C', 'D', 'E'];

@@ -26,10 +26,10 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                 <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full">
                   Mercado Pago
                 </span>
-                <span className="text-xs font-bold text-amber-200">GabaritaAí Premium</span>
+                <span className="text-xs font-bold text-amber-200">app inteligente Premium</span>
               </div>
               <h3 className="text-lg font-extrabold text-white">
-                Plano PRO - Ilimitado
+                Planos & Assinatura
               </h3>
             </div>
           </div>
@@ -50,10 +50,10 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                 🎉
               </div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                Parabéns! Você é GabaritaAí PRO!
+                Parabéns! Você é assinante do app inteligente PRO!
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed font-medium">
-                Sua assinatura foi ativada com sucesso! Agora você tem perguntas ilimitadas para a IA, resumos ilimitados, corretor de redação, caderno de erros e todas as ferramentas para gabaritar no ENEM e vestibular.
+                Sua assinatura foi ativada com sucesso! Agora você tem acesso ilimitado ao Scanner Tira-Dúvidas com explicação detalhada em 3 passos e suporte completo à IA.
               </p>
               <button
                 onClick={onClose}
@@ -63,77 +63,82 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
               </button>
             </div>
           ) : (
-            /* Plans Grid */
+            /* Plans Grid - 2 Options */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Free Plan */}
+              {/* 1. Plano Gratuito */}
               <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 flex flex-col justify-between">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Plano Grátis
-                  </span>
-                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                    R$ 0 <span className="text-xs font-medium text-slate-400">/sempre</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Plano Gratuito
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                      Básico
+                    </span>
                   </div>
-                  <ul className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>5 perguntas para a IA por dia</span>
+                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                    R$ 0,00
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-2 leading-relaxed">
+                    Teste grátis para tirar dúvidas básicas diárias no Scanner Tira-Dúvidas.
+                  </p>
+
+                  <ul className="mt-4 space-y-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium border-t border-slate-200 dark:border-slate-800/80 pt-3">
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>Dúvidas diárias no Scanner Tira-Dúvidas</span>
                     </li>
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Acesso ao plano de estudos básico</span>
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>Resolução em 3 passos básica</span>
                     </li>
-                    <li className="flex items-center space-x-2 opacity-50">
-                      <X className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span className="line-through">Resumos ilimitados</span>
-                    </li>
-                    <li className="flex items-center space-x-2 opacity-50">
-                      <X className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span className="line-through">Caderno de erros e Redação</span>
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>Acesso a conteúdos e matérias</span>
                     </li>
                   </ul>
                 </div>
-                <div className="pt-4 text-center">
+                <div className="pt-4 text-center border-t border-slate-200/60 dark:border-slate-800/60">
                   <span className="text-xs font-bold text-slate-400">Seu plano atual</span>
                 </div>
               </div>
 
-              {/* PRO Plan */}
+              {/* 2. Plano Pro Mensal */}
               <div className="bg-gradient-to-b from-indigo-950 via-slate-900 to-indigo-950 text-white p-5 rounded-2xl border-2 border-amber-400 shadow-xl space-y-4 flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl">
+                <div className="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl shadow-sm">
                   Sem Fidelidade
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
-                    Plano PRO
-                  </span>
-                  <div className="text-2xl font-black text-white mt-1">
-                    R$ 5,00 <span className="text-xs font-medium text-slate-300">/mês</span>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                      Plano Pro Mensal
+                    </span>
+                    <span className="text-xs">⭐</span>
                   </div>
-                  <p className="text-[10px] text-amber-200 font-semibold mt-0.5">
-                    Cancele quando quiser
+                  <div className="text-2xl font-black text-white mt-1">
+                    R$ 5,00 <span className="text-xs font-medium text-slate-300">/ mês</span>
+                  </div>
+                  <p className="text-xs text-amber-200 font-medium mt-2 leading-relaxed">
+                    Acesso ilimitado ao Scanner Tira-Dúvidas com explicação detalhada em 3 passos e suporte a IA.
                   </p>
-                  <ul className="mt-4 space-y-2 text-xs text-slate-200 font-medium">
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span><strong>Perguntas ilimitadas</strong> para a IA</span>
+
+                  <ul className="mt-4 space-y-2.5 text-xs text-slate-200 font-medium border-t border-indigo-800/50 pt-3">
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Acesso ilimitado</strong> ao Scanner Tira-Dúvidas</span>
                     </li>
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span><strong>Simulador de SISU</strong> e Nota de Corte Real</span>
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Explicação detalhada em 3 passos</strong> com IA</span>
                     </li>
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span><strong>Gerador de Mapas Mentais</strong> do Edital</span>
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Suporte a IA</strong> com leitura de foto e texto</span>
                     </li>
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span><strong>Modo Foco Pomodoro</strong> com Som Ambiente & XP</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Corretor de Redação ENEM & Simulado TRI</span>
+                    <li className="flex items-start space-x-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>Simulador TRI, Redação e ferramentas avançadas</span>
                     </li>
                   </ul>
                 </div>
@@ -143,7 +148,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                   className="w-full mt-4 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>Assinar via Mercado Pago</span>
+                  <span>Assinar Plano Pro Mensal</span>
                 </button>
               </div>
             </div>

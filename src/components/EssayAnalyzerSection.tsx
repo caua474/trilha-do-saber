@@ -18,10 +18,13 @@ import {
   Zap,
   GraduationCap,
   Printer,
-  Share2
+  Share2,
+  Download
 } from 'lucide-react';
 import { EnemEssayAnalysis } from '../types';
 import { ConnectiveTipsCarousel } from './ConnectiveTipsCarousel';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
+import { exportEssayCorrectionToPdf, PdfVisualTheme } from '../utils/pdfExport';
 
 interface EssayAnalyzerSectionProps {
   onOpenPrintableSheet?: () => void;
@@ -110,6 +113,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [tipIndex, setTipIndex] = useState<number>(0);
   const [copiedTip, setCopiedTip] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   const currentTip = ENEM_DAILY_TIPS[tipIndex];
 
@@ -126,6 +130,11 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
     navigator.clipboard.writeText(content);
     setCopiedTip(true);
     setTimeout(() => setCopiedTip(false), 2000);
+  };
+
+  const handleConfirmPdfExport = (theme: PdfVisualTheme) => {
+    if (!analysis) return;
+    exportEssayCorrectionToPdf(analysis, texto, tema, theme);
   };
 
   const wordCount = texto.trim() ? texto.trim().split(/\s+/).length : 0;
@@ -192,7 +201,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
-                Corretor Especialista GabaritaAí
+                Corretor Especialista • app inteligente
               </span>
               <span className="bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
                 Modelo Oficial ENEM 2026
@@ -221,7 +230,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                GabaritaAí Redação
+                app inteligente Redação
               </span>
               <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>📌 Card de Dica do Dia: Regras & Conectivos Fundamentais</span>
@@ -407,7 +416,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                        Diagnóstico GabaritaAí
+                        Diagnóstico • app inteligente
                       </span>
                       <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                         {analysis.tema_detectado || 'Tema Identificado'}
@@ -449,6 +458,15 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
                           <span>Imprimir Folha ENEM</span>
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => setIsPdfModalOpen(true)}
+                        className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition cursor-pointer active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Exportar PDF (3 Temas)</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -595,6 +613,14 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
           )}
         </div>
       </div>
+
+      <PdfThemeSelectorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onConfirmExport={handleConfirmPdfExport}
+        documentTitle={`Redação ENEM - ${analysis?.nota_estimada_total || 0} pontos`}
+        documentType="redacao"
+      />
     </motion.div>
   );
 };

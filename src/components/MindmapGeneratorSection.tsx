@@ -18,6 +18,8 @@ import {
   Lightbulb,
   Award
 } from 'lucide-react';
+import { exportMindmapToPdf, PdfVisualTheme } from '../utils/pdfExport';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 
 interface MindmapBranch {
   id: string;
@@ -153,6 +155,8 @@ export const MindmapGeneratorSection: React.FC<MindmapGeneratorSectionProps> = (
   const [selectedTopicName, setSelectedTopicName] = useState<string>('Ecologia e Impactos Ambientais');
   const [selectedBranch, setSelectedBranch] = useState<MindmapBranch | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pdfExported, setPdfExported] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Collect all catalog topics for selection dropdown
   const catalogTopicsList: { materia: string; nome: string }[] = [];
@@ -238,6 +242,20 @@ export const MindmapGeneratorSection: React.FC<MindmapGeneratorSectionProps> = (
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExportPdf = () => {
+    setIsPdfModalOpen(true);
+  };
+
+  const handleConfirmPdfExport = (theme: PdfVisualTheme) => {
+    try {
+      exportMindmapToPdf(activeMindmap, theme);
+      setPdfExported(true);
+      setTimeout(() => setPdfExported(false), 3000);
+    } catch (err) {
+      console.error('Erro ao exportar mapa mental para PDF:', err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -261,7 +279,26 @@ export const MindmapGeneratorSection: React.FC<MindmapGeneratorSectionProps> = (
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black transition flex items-center space-x-1.5 cursor-pointer shadow-md active:scale-95"
+            title="Exportar Mapa Mental em PDF estilizado para leitura offline"
+          >
+            {pdfExported ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-slate-950" />
+                <span>PDF Salvo!</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5 text-slate-950" />
+                <span>Exportar PDF</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={handleCopyText}
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer border border-slate-700"
@@ -386,6 +423,14 @@ export const MindmapGeneratorSection: React.FC<MindmapGeneratorSectionProps> = (
           })}
         </div>
       </div>
+
+      <PdfThemeSelectorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onConfirmExport={handleConfirmPdfExport}
+        documentTitle={`Mapa Mental - ${activeMindmap.topicoNome}`}
+        documentType="mindmap"
+      />
     </div>
   );
 };

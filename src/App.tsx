@@ -38,6 +38,8 @@ import { SisuSimulatorSection } from './components/SisuSimulatorSection';
 import { CheatSheetGeneratorSection } from './components/CheatSheetGeneratorSection';
 import { CentralDeOpcoesSection } from './components/CentralDeOpcoesSection';
 import { OfflineStatusBanner } from './components/OfflineStatusBanner';
+import { GeminiErrorBanner } from './components/GeminiErrorBanner';
+import { GeminiErrorProvider } from './context/GeminiErrorContext';
 import { HomeHubCategories } from './components/HomeHubCategories';
 import { AiStudioPlayground } from './components/AiStudioPlayground';
 
@@ -199,7 +201,7 @@ async function clearEntireIndexedDB(): Promise<void> {
   ]);
 }
 
-export default function App() {
+function GabaritouApp() {
   // Navigation States
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('home');
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('flashcards');
@@ -366,6 +368,9 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
       {/* Offline Status Indicator */}
       <OfflineStatusBanner />
+
+      {/* Global Gemini API Error Feedback Banner */}
+      <GeminiErrorBanner onOpenSettings={() => setActiveModal('playground_settings')} />
 
       {/* Daily Study Tip (Auto-prompts if not seen today) */}
       <DailyStudyTipModal />
@@ -538,7 +543,9 @@ export default function App() {
             {abaAtiva === 'pilulas_conhecimento' && <KnowledgePillsSection />}
             {abaAtiva === 'audio_podcasts' && <AudioPodcastsSection />}
             {abaAtiva === 'auto_flashcards' && <AutoFlashcardsSection onAddXp={handleAddXP} />}
-            {abaAtiva === 'duvidas' && <QuestionScannerSection />}
+            {abaAtiva === 'duvidas' && (
+              <QuestionScannerSection onOpenSettings={() => setActiveModal('playground_settings')} />
+            )}
             {abaAtiva === 'ai_playground' && (
               <AiStudioPlayground
                 apiKey={geminiApiKey}
@@ -567,7 +574,9 @@ export default function App() {
         {/* 4. REDAÇÃO & IA TAB */}
         {primaryTab === 'redacao_ia' && (
           <main className="max-w-7xl mx-auto px-4 pb-28 pt-2">
-            {abaAtiva === 'redacao' && <RedacaoCorretor />}
+            {abaAtiva === 'redacao' && (
+              <RedacaoCorretor onOpenSettings={() => setActiveModal('playground_settings')} />
+            )}
             {abaAtiva === 'c5_intervencao' && <C5InterventionDetectorSection />}
             {abaAtiva === 'repertorio' && <RepertoriosCoringaSection />}
             {abaAtiva === 'esquema_redacao' && (
@@ -586,7 +595,9 @@ export default function App() {
               'esquema_redacao',
               'radar_redacao',
               'advogado_diabo',
-            ].includes(abaAtiva) && <RedacaoCorretor />}
+            ].includes(abaAtiva) && (
+              <RedacaoCorretor onOpenSettings={() => setActiveModal('playground_settings')} />
+            )}
           </main>
         )}
 
@@ -965,5 +976,13 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <GeminiErrorProvider>
+      <GabaritouApp />
+    </GeminiErrorProvider>
   );
 }

@@ -181,7 +181,7 @@ export const ProgressStatsCard: React.FC<ProgressStatsCardProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-                  GabaritaAí Analytics
+                  app inteligente Analytics
                 </span>
                 <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                   Level {levelInfo.level}

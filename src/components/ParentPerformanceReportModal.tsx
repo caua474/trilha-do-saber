@@ -58,7 +58,7 @@ export const ParentPerformanceReportModal: React.FC<ParentPerformanceReportModal
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2.5 py-0.5 rounded-full">
-                Plataforma GabaritaAí • Edição 2026
+                app inteligente • Edição 2026
               </span>
               <h4 className="text-lg font-black text-slate-900 dark:text-white">
                 Estudante: Lucas Gabriel S.
@@ -130,7 +130,7 @@ export const ParentPerformanceReportModal: React.FC<ParentPerformanceReportModal
           <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl p-5 space-y-4">
             <div className="flex items-center space-x-2 text-indigo-900 dark:text-indigo-200 font-black text-xs uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4 text-indigo-600" />
-              <span>Diagnóstico do Tutor Pedagógico GabaritaAí:</span>
+              <span>Diagnóstico do Tutor Pedagógico • app inteligente:</span>
             </div>
             <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
               O estudante demonstrou excelente disciplina durante este mês, mantendo a rotina de estudos em dia e corrigindo redações semanalmente. Recomendamos apoio contínuo para o simulado TRI da próxima semana.
@@ -142,8 +142,8 @@ export const ParentPerformanceReportModal: React.FC<ParentPerformanceReportModal
                 <span>Assinatura do Pai/Mãe ou Responsável</span>
               </div>
               <div className="text-center sm:text-right">
-                <span className="font-bold block text-slate-700 dark:text-slate-300">GabaritaAí Pedagógico 2026</span>
-                <span className="text-[10px]">Autenticação Digital: #GAB-8829-PDF</span>
+                <span className="font-bold block text-slate-700 dark:text-slate-300">app inteligente Pedagógico 2026</span>
+                <span className="text-[10px]">Autenticação Digital: #INT-8829-PDF</span>
               </div>
             </div>
           </div>

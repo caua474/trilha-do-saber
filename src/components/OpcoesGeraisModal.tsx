@@ -154,7 +154,7 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
                   <span>Central de Opções & Configurações</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Gerencie sua conta, preferências de exibição, som e notificações do GabaritaAí
+                  Gerencie sua conta, preferências de exibição, som e notificações do app inteligente
                 </p>
               </div>
             </div>
@@ -437,7 +437,7 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
             <div className="p-4 rounded-2xl bg-slate-100 dark:bg-zinc-950/70 border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-zinc-400">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>GabaritaAí Inteligência Vestibulares • v2.6 Pro</span>
+                <span>app inteligente • Plataforma de Estudos • v2.6 Pro</span>
               </div>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1 text-slate-400">

@@ -16,8 +16,13 @@ import {
   Sparkles,
   Settings,
   Key,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
+import { useGeminiError } from '../context/GeminiErrorContext';
+import { classifyGeminiError } from '../utils/geminiErrorHandler';
 
 export interface AttachedFile {
   name: string;
@@ -33,6 +38,8 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   attachments?: AttachedFile[];
+  isError?: boolean;
+  errorType?: string;
 }
 
 export interface AiStudioPlaygroundProps {
@@ -52,6 +59,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
   onOpenSettings,
   onOpenApiKeyModal
 }) => {
+  const { showError } = useGeminiError();
   const effectiveModel = (!model || model === 'gemini-2.5-flash' || model === 'gemini-3.6-flash') ? 'gemini-3.8-flash' : model;
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -369,10 +377,21 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
       console.error('Erro no processamento da IA:', err);
+      const classified = classifyGeminiError(err);
+      showError(err, {
+        componentName: 'AI Studio Playground',
+        retryAction: () => {
+          setInputPrompt(currentPrompt);
+          setAttachments(currentAttachments);
+        },
+      });
+
       const errorMessage: ChatMessage = {
         id: `err-${Date.now()}`,
         role: 'assistant',
-        content: `⚠️ Não foi possível obter a resposta: ${err.message || 'Verifique sua chave de API ou conexão de rede.'}`,
+        isError: true,
+        errorType: classified.type,
+        content: `⚠️ **${classified.title}**\n\n${classified.message}`,
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -522,7 +541,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
             </div>
 
             <div
-              className={`group relative rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] sm:max-w-[75%] border ${
+              className={`group relative rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] sm:max-w-[75%] border break-words ${
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white border-indigo-500/50 rounded-tr-none'
                   : 'bg-slate-900 text-slate-200 border-slate-800 rounded-tl-none shadow-md'
@@ -551,7 +570,29 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
               )}
 
               {/* Conteúdo */}
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+
+              {/* Botões de Ação para Mensagem com Erro */}
+              {msg.isError && (
+                <div className="mt-3 pt-2 border-t border-white/10 flex flex-wrap items-center gap-2">
+                  {msg.errorType === 'AUTH_ERROR' && hasSettingsHandler && (
+                    <button
+                      type="button"
+                      onClick={handleTriggerSettings}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Configurar VITE_GEMINI_API_KEY</span>
+                    </button>
+                  )}
+                  {msg.errorType === 'OFFLINE_ERROR' && (
+                    <span className="text-[11px] text-rose-300 flex items-center gap-1 font-medium">
+                      <WifiOff className="w-3.5 h-3.5" />
+                      <span>Dispositivo desconectado da internet</span>
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Rodapé e Ferramentas */}
               <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 gap-4">

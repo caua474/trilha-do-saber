@@ -21,7 +21,8 @@ import {
   FileText
 } from 'lucide-react';
 import { TutorPlan, UserProgressResponse } from '../types';
-import { exportTutorPlanToPdf } from '../utils/pdfExport';
+import { exportTutorPlanToPdf, PdfVisualTheme } from '../utils/pdfExport';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 import { shuffleQuestionOptions } from '../utils/questionShuffle';
 
 interface TutorPlanSectionProps {
@@ -45,6 +46,7 @@ export const TutorPlanSection: React.FC<TutorPlanSectionProps> = ({
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const [currentXp, setCurrentXp] = useState(1450);
   const [streakCount, setStreakCount] = useState(9);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Dynamic shuffle for tutor plan questions
   const shuffledPlanQuestions = useMemo(() => {
@@ -296,7 +298,7 @@ export const TutorPlanSection: React.FC<TutorPlanSectionProps> = ({
 
             <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={() => exportTutorPlanToPdf(currentPlan)}
+                onClick={() => setIsPdfModalOpen(true)}
                 className="bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-black px-4 py-2.5 rounded-2xl shadow-sm transition flex items-center gap-2 cursor-pointer"
                 title="Exportar cronograma, aula e questões para PDF impresso"
               >
@@ -562,6 +564,16 @@ export const TutorPlanSection: React.FC<TutorPlanSectionProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      <PdfThemeSelectorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onConfirmExport={(theme) => {
+          if (currentPlan) exportTutorPlanToPdf(currentPlan, theme);
+        }}
+        documentTitle={`Plano de Estudos - ${currentPlan?.materia || 'ENEM'}`}
+        documentType="plano"
+      />
     </div>
   );
 };

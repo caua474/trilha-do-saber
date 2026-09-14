@@ -214,6 +214,81 @@ export interface TopDuelist {
   recentMateria?: string;
 }
 
+export interface QuestionSolution3Passos {
+  tipo_resposta?: string;
+  categoria?: 'duvida_complexa' | 'conhecimentos_gerais';
+  foto_ilegivel?: boolean;
+  mensagem_erro_ilegivel?: string;
+  materia: string;
+  transcricao_enunciado?: string;
+  conceito_chave?: string;
+  resposta_direta?: string;
+  resolucao_passo_a_passo?: string;
+  gabarito_resposta_final?: string;
+  passo1_compreensao: string;
+  passo2_formula_conceito: string;
+  passo3_resolucao_guiada: string;
+  gabarito_final: string;
+  dica_rapida: string;
+}
 
+export interface MindmapBranch {
+  id: string;
+  titulo: string;
+  corTheme: string;
+  bgGrad: string;
+  borderColor: string;
+  subtopicos: {
+    conceito: string;
+    detalhes: string;
+    dicaEnem?: string;
+  }[];
+}
 
+export interface MindmapData {
+  topicoNome: string;
+  materia: string;
+  conceitoCentral: string;
+  ramificacoes: MindmapBranch[];
+}
 
+export interface EssayCompetencyDetail {
+  numero: number;
+  nome: string;
+  nota: number; // 0 a 200
+  feedback: string;
+  nivel?: string;
+}
+
+export interface EnemEssayFullAnalysis {
+  tipo_resposta?: string;
+  tema_detectado: string;
+  nota_final: number; // 0 a 1000 (soma estrita de C1 + C2 + C3 + C4 + C5)
+  nota_estimada_total?: number;
+  competencias: EssayCompetencyDetail[];
+  pontos_fortes: string[];
+  pontos_melhoria: string[];
+  pontos_a_melhorar?: string[];
+  sugestao_reescrita: string;
+  dica_de_ouro?: string;
+  aviso_legal?: string;
+}
+
+export type GeminiErrorType =
+  | 'AUTH_ERROR'
+  | 'OFFLINE_ERROR'
+  | 'QUOTA_ERROR'
+  | 'SERVER_ERROR'
+  | 'UNKNOWN_ERROR';
+
+export interface GeminiApiErrorInfo {
+  id: string;
+  type: GeminiErrorType;
+  title: string;
+  message: string;
+  actionText?: string;
+  actionType?: 'open_settings' | 'retry' | 'dismiss';
+  timestamp: string;
+  details?: string;
+  componentSource?: string;
+}

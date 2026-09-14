@@ -79,7 +79,7 @@ const MOCK_LEADERBOARD: LeaderboardUser[] = [
   },
   {
     rank: 4,
-    name: 'Você (Aluno GabaritaAí)',
+    name: 'Você (Aluno app inteligente)',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     xp: 1850,
     streak: 10,
@@ -531,7 +531,7 @@ export const WeeklyRankingSection: React.FC<WeeklyRankingSectionProps> = ({ onSt
       {/* GAMIFICATION XP RULES FOOTER */}
       <div className="bg-slate-50 dark:bg-slate-950/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-2">
         <h5 className="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-amber-500" /> Como Funciona a Pontuação de XP no GabaritaAí?
+          <Sparkles className="w-4 h-4 text-amber-500" /> Como Funciona a Pontuação de XP no app inteligente?
         </h5>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600 dark:text-slate-400 font-medium">
           <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">

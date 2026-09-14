@@ -293,7 +293,7 @@ export const StudyStatisticsSection: React.FC = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(15);
-      doc.text('GABARITA ENEM - RELATÓRIO DE PROGRESSO SEMANAL', 14, 14);
+      doc.text('APP INTELIGENTE - RELATÓRIO DE PROGRESSO SEMANAL', 14, 14);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
@@ -443,7 +443,7 @@ export const StudyStatisticsSection: React.FC = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(67, 56, 202);
-      doc.text('Recomendação GabaritaAí:', 18, currentY + 5);
+      doc.text('Recomendação app inteligente:', 18, currentY + 5);
       doc.text('Mantenha a régua de resolução diária de questões para consolidar sua nota na TRI.', 18, currentY + 9.5);
 
       // Save PDF

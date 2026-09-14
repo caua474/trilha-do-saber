@@ -17,12 +17,27 @@ import {
   Mic,
   MicOff,
   Radio,
-  Volume2
+  Volume2,
+  Download,
+  Check,
+  KeyRound,
+  WifiOff,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   solveQuestionWithClientGemini,
   type QuestionSolution3Passos
 } from '../services/geminiScannerService';
+import { exportQuestionSolutionToPdf, PdfVisualTheme } from '../utils/pdfExport';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
+import { useGeminiError } from '../context/GeminiErrorContext';
+import { classifyGeminiError } from '../utils/geminiErrorHandler';
+import { GeminiApiErrorInfo } from '../types';
+
+interface QuestionScannerSectionProps {
+  onOpenSettings?: () => void;
+}
 
 declare global {
   interface Window {
@@ -38,18 +53,38 @@ const SAMPLE_QUESTIONS = [
   'No texto da questão 12 do ENEM: "A cibercultura redefiniu a noção de espaço e tempo..." O que o autor defende?',
 ];
 
-export const QuestionScannerSection: React.FC = () => {
+export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ onOpenSettings }) => {
+  const { showError } = useGeminiError();
   const [duvida, setDuvida] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [solution, setSolution] = useState<QuestionSolution3Passos | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<GeminiApiErrorInfo | null>(null);
   const [isListening, setIsListening] = useState<boolean>(false);
   const [speechSupported, setSpeechSupported] = useState<boolean>(true);
   const [voiceStatusText, setVoiceStatusText] = useState<string>('');
+  const [pdfExported, setPdfExported] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  const handleExportPdf = () => {
+    if (!solution) return;
+    setIsPdfModalOpen(true);
+  };
+
+  const handleConfirmPdfExport = (theme: PdfVisualTheme) => {
+    if (!solution) return;
+    try {
+      exportQuestionSolutionToPdf(solution, duvida, theme);
+      setPdfExported(true);
+      setTimeout(() => setPdfExported(false), 3000);
+    } catch (err) {
+      console.error('Erro ao exportar PDF do Scanner:', err);
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -183,7 +218,7 @@ export const QuestionScannerSection: React.FC = () => {
       ctx.fillRect(0, 0, 600, 300);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText('⚡ GabaritaAí Scanner de Questão', 30, 50);
+      ctx.fillText('⚡ app inteligente • Scanner de Questão', 30, 50);
       ctx.font = '14px sans-serif';
       ctx.fillStyle = '#cbd5e1';
       ctx.fillText('Questão: Um bloco de 5 kg é puxado por uma força F = 20 N em superfície lisa.', 30, 110);
@@ -204,6 +239,7 @@ export const QuestionScannerSection: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
+    setErrorDetails(null);
 
     try {
       const data = await solveQuestionWithClientGemini(duvida, selectedImage);
@@ -219,9 +255,12 @@ export const QuestionScannerSection: React.FC = () => {
       setSolution(data);
     } catch (err: any) {
       console.error('Erro na resolução do Scanner Tira-Dúvidas:', err);
-      setError(
-        err?.message || 'Não foi possível analisar a questão no momento. Verifique sua conexão com a internet ou tente novamente.'
-      );
+      const info = showError(err, {
+        componentName: 'Scanner Tira-Dúvidas',
+        retryAction: () => handleSolveQuestion(),
+      });
+      setError(info.message);
+      setErrorDetails(info);
     } finally {
       setIsLoading(false);
     }
@@ -444,9 +483,64 @@ export const QuestionScannerSection: React.FC = () => {
               </div>
 
               {error && (
-                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-900">
-                  {error}
-                </p>
+                <div
+                  className={`p-4 rounded-2xl border text-xs space-y-3 transition-all ${
+                    errorDetails?.type === 'AUTH_ERROR'
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                      : errorDetails?.type === 'OFFLINE_ERROR'
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
+                      : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {errorDetails?.type === 'AUTH_ERROR' ? (
+                      <KeyRound className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    ) : errorDetails?.type === 'OFFLINE_ERROR' ? (
+                      <WifiOff className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1 flex-1">
+                      <div className="font-bold flex items-center justify-between">
+                        <span>{errorDetails?.title || 'Atenção'}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setErrorDetails(null);
+                          }}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                          title="Dispensar"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="leading-relaxed font-medium">{error}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-black/5 dark:border-white/5">
+                    {errorDetails?.type === 'AUTH_ERROR' && onOpenSettings && (
+                      <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>Configurar VITE_GEMINI_API_KEY</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleSolveQuestion()}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Tentar Novamente</span>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Submit button */}
@@ -501,27 +595,48 @@ export const QuestionScannerSection: React.FC = () => {
               ) : (
                 <>
                   {/* Header Badge */}
-                  <div className="bg-slate-900 text-white p-5 rounded-3xl border border-amber-500/30 flex items-center justify-between">
+                  <div className="bg-slate-900 text-white p-5 rounded-3xl border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest block">
-                        GabaritaAí Scanner Tira-Dúvidas • IA Vision
+                        app inteligente • Scanner Tira-Dúvidas • IA Vision
                       </span>
                       <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                         <span>Matéria: {solution.materia || 'Geral'}</span>
                       </h3>
                     </div>
 
-                    <div className="bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-sm">
-                      ✓ Resolução Estruturada
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleExportPdf}
+                        className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Salvar resolução em PDF estilizado para leitura offline"
+                      >
+                        {pdfExported ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-slate-950" />
+                            <span>PDF Salvo!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Exportar PDF</span>
+                          </>
+                        )}
+                      </button>
+
+                      <div className="bg-slate-800 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-black shadow-sm">
+                        {solution.categoria === 'conhecimentos_gerais' ? '✓ Resposta Direta & Concisa' : '✓ Resolução 3 Passos'}
+                      </div>
                     </div>
                   </div>
 
-                  {/* 📌 ENUNCIADO IDENTIFICADO */}
+                  {/* 📌 ENUNCIADO / PERGUNTA IDENTIFICADA */}
                   <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">
                     <div className="flex items-center space-x-2">
                       <span className="text-base">📌</span>
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                        Enunciado Identificado
+                        {solution.categoria === 'conhecimentos_gerais' ? 'Pergunta / Consulta' : 'Enunciado Identificado (Passo 1: Compreensão)'}
                       </h4>
                     </div>
                     <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -529,31 +644,48 @@ export const QuestionScannerSection: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* 💡 CONCEITO-CHAVE / ÁREA */}
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-base">💡</span>
-                      <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                        Conceito-Chave / Área
-                      </h4>
+                  {/* SE FOR CONHECIMENTOS GERAIS: RESPOSTA DIRETA E CONCISA */}
+                  {solution.categoria === 'conhecimentos_gerais' || solution.resposta_direta ? (
+                    <div className="bg-white dark:bg-slate-900 border border-amber-500/30 dark:border-amber-500/30 rounded-3xl p-5 shadow-sm space-y-2 bg-gradient-to-br from-amber-500/5 to-transparent">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-base">⚡</span>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                          Resposta Direta & Concisa
+                        </h4>
+                      </div>
+                      <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-semibold bg-amber-50/70 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 whitespace-pre-line">
+                        {solution.resposta_direta || solution.resolucao_passo_a_passo || solution.passo3_resolucao_guiada}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-bold bg-indigo-50/50 dark:bg-indigo-950/20 p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-                      {solution.conceito_chave || `${solution.materia} • ${solution.passo2_formula_conceito}`}
-                    </p>
-                  </div>
+                  ) : (
+                    <>
+                      {/* 💡 CONCEITO-CHAVE / FÓRMULA (Passo 2) */}
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">💡</span>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                            Passo 2: Fórmula, Lei ou Conceito-Chave
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-bold bg-indigo-50/50 dark:bg-indigo-950/20 p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+                          {solution.conceito_chave || `${solution.materia} • ${solution.passo2_formula_conceito}`}
+                        </p>
+                      </div>
 
-                  {/* 📝 RESOLUÇÃO PASSO A PASSO */}
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-base">📝</span>
-                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        Resolução Passo a Passo
-                      </h4>
-                    </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 whitespace-pre-line">
-                      {solution.resolucao_passo_a_passo || solution.passo3_resolucao_guiada}
-                    </p>
-                  </div>
+                      {/* 📝 RESOLUÇÃO GUIADA (Passo 3) */}
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">📝</span>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                            Passo 3: Resolução Guiada e Aplicação
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 whitespace-pre-line">
+                          {solution.resolucao_passo_a_passo || solution.passo3_resolucao_guiada}
+                        </p>
+                      </div>
+                    </>
+                  )}
 
                   {/* ✅ GABARITO / RESPOSTA FINAL */}
                   <div className="bg-gradient-to-r from-emerald-600 to-indigo-600 text-white rounded-3xl p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -604,6 +736,14 @@ export const QuestionScannerSection: React.FC = () => {
           )}
         </div>
       </div>
+
+      <PdfThemeSelectorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onConfirmExport={handleConfirmPdfExport}
+        documentTitle={`Resolução de Questão - ${solution?.materia || 'ENEM'}`}
+        documentType="scanner"
+      />
     </div>
   );
 };

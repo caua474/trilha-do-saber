@@ -111,7 +111,7 @@ export const EnemPrintableSheetModal: React.FC<EnemPrintableSheetModalProps> = (
                 EXAME NACIONAL DO ENSINO MÉDIO - ENEM 2026
               </span>
               <span className="font-black text-xs text-amber-600 dark:text-amber-700">
-                GABARITA AÍ
+                APP INTELIGENTE
               </span>
             </div>
 
@@ -177,7 +177,7 @@ export const EnemPrintableSheetModal: React.FC<EnemPrintableSheetModalProps> = (
 
           {/* FOOTER OFICIAL */}
           <div className="mt-4 pt-2 border-t border-slate-300 text-[10px] text-slate-500 flex justify-between items-center">
-            <span>Inep / Ministério da Educação • Modelo de Treino GabaritaAí</span>
+            <span>Inep / Ministério da Educação • Modelo de Treino app inteligente</span>
             <span>Uso exclusivo para simulação e treino de manuscrito</span>
           </div>
 

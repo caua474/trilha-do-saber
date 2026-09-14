@@ -1,14 +1,17 @@
 // Direct client-side Gemini API integration supporting Vercel and local environments.
 // Reads API key from: import.meta.env.VITE_GEMINI_API_KEY, process.env.VITE_GEMINI_API_KEY, or process.env.GEMINI_API_KEY.
 import { GoogleGenAI } from '@google/genai';
+import { dispatchGeminiError, classifyGeminiError } from '../utils/geminiErrorHandler';
 
 export interface QuestionSolution3Passos {
   tipo_resposta?: string;
+  categoria?: 'duvida_complexa' | 'conhecimentos_gerais';
   foto_ilegivel?: boolean;
   mensagem_erro_ilegivel?: string;
   materia: string;
   transcricao_enunciado?: string;
   conceito_chave?: string;
+  resposta_direta?: string;
   resolucao_passo_a_passo?: string;
   gabarito_resposta_final?: string;
   passo1_compreensao: string;
@@ -18,27 +21,54 @@ export interface QuestionSolution3Passos {
   dica_rapida: string;
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Tutor de IA Multimodal/Vision do GabaritaAí.
-Sua missão é extrair e ler com precisão texto, equações matemáticas, gráficos e tabelas presentes na imagem ou enunciado fornecido (seja texto impresso ou manuscrito legível).
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Tutor Pedagógico Multimodal com IA do app inteligente GabaritaAí.
+Sua missão é analisar perguntas acadêmicas, exercícios de exames/ENEM ou fotos de enunciados e responder com máxima precisão e clareza.
+
+DIRETRIZ CENTRAL DE PROCESSAMENTO E FORMATAÇÃO (SIGA RIGOROSAMENTE):
+Identifique e classifique a consulta em uma de duas categorias:
+
+1. DÚVIDAS ACADÊMICAS COMPLEXAS (Questões de vestibular/ENEM, exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos detalhados, análises históricas/filosóficas aprofundadas ou interpretações de texto):
+   - DEVE SER RESPONDIDA RIGOROSAMENTE EM EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
+     • Passo 1 (Compreensão e Dados Essenciais): Identifique e transcreva com exatidão o que foi fornecido no enunciado e o que se pede. Isole as variáveis, dados numéricos e o foco central do problema.
+     • Passo 2 (Fórmula, Lei ou Conceito-Chave Aplicável): Enuncie a fórmula matemática, a lei científica ou o modelo teórico que resolve o problema, explicando resumidamente o porquê de sua aplicação.
+     • Passo 3 (Resolução Guiada Passo a Passo): Desenvolva os cálculos ou a linha de raciocínio de forma clara e sequencial até a dedução final.
+   - Forneça ainda:
+     • "gabarito_final": A alternativa correta ou resultado final objetivo.
+     • "dica_rapida": Uma dica prática ou macete para o aluno lembrar na hora da prova.
+   - Defina "categoria": "duvida_complexa".
+
+2. PERGUNTAS DE CONHECIMENTOS GERAIS OU FATOS DIRETOS (Curiosidades, datas históricas pontuais, capitais geográficas, fatos do cotidiano, definições rápidas de termos, esportes ou cultura pop):
+   - DEVE RECEBER UMA RESPOSTA DIRETA E CONCISA!
+   - NÃO force uma divisão artificial em 3 passos longos nem invente fórmulas ou cálculos onde não cabem.
+   - Preencha o campo "resposta_direta" com uma resposta direta, objetiva e concisa (1 a 3 frases esclarecedoras).
+   - Preencha também:
+     • "passo1_compreensao": "Pergunta direta / Conhecimento geral"
+     • "passo2_formula_conceito": "Fato ou conceito consultado"
+     • "passo3_resolucao_guiada": A mesma resposta direta e concisa.
+     • "gabarito_final": Resposta conclusiva direta.
+     • "dica_rapida": Curiosidade ou contexto adicional em 1 frase.
+   - Defina "categoria": "conhecimentos_gerais".
 
 IMPORTANTE - TRATAMENTO DE IMAGENS ILEGÍVEIS:
 Se a imagem estiver borrada, muito escura, cortada ou impossível de ler com precisão, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o enunciado. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
 
 ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 {
+  "categoria": "duvida_complexa | conhecimentos_gerais",
   "tipo_resposta": "resolucao_vision_scanner",
   "foto_ilegivel": false,
   "mensagem_erro_ilegivel": "",
-  "materia": "Física",
-  "transcricao_enunciado": "Transcrição exata e completa do enunciado e dados identificados na imagem ou texto.",
-  "conceito_chave": "Termodinâmica • Primeira Lei da Termodinâmica",
-  "resolucao_passo_a_passo": "1. Identificação das variáveis: Q = 500J e W = 200J.\\n2. Aplicação da fórmula ΔU = Q - W.\\n3. Cálculo: ΔU = 500 - 200 = 300J.",
-  "gabarito_resposta_final": "300 Joules (Alternativa B)",
-  "passo1_compreensao": "Transcrição e leitura do enunciado da questão.",
-  "passo2_formula_conceito": "Fórmula ou conceito principal envolvido.",
-  "passo3_resolucao_guiada": "Explicação passo a passo da resolução.",
-  "gabarito_final": "Alternativa B (300 J)",
-  "dica_rapida": "Dica de ouro para lembrar na hora do exame."
+  "materia": "Física | Matemática | Biologia | História | Literatura | Conhecimentos Gerais | ...",
+  "transcricao_enunciado": "Transcrição exata do enunciado ou pergunta do usuário.",
+  "conceito_chave": "Nome do conceito central ou assunto envolvido.",
+  "resposta_direta": "Preenchido com a resposta direta e concisa (obrigatório se categoria for conhecimentos_gerais).",
+  "resolucao_passo_a_passo": "Resolução ou resposta completa.",
+  "gabarito_resposta_final": "Resultado ou conclusão objetiva.",
+  "passo1_compreensao": "Passo 1: Compreensão e dados essenciais identificados.",
+  "passo2_formula_conceito": "Passo 2: Fórmula, lei ou conceito-chave aplicado.",
+  "passo3_resolucao_guiada": "Passo 3: Resolução guiada ordenada até o resultado.",
+  "gabarito_final": "Alternativa ou resposta final.",
+  "dica_rapida": "Dica rápida de memorização ou aplicação."
 }`;
 
 /**
@@ -75,6 +105,20 @@ export function getGeminiApiKey(): string {
     try {
       if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
         key = process.env.GEMINI_API_KEY;
+      }
+    } catch {
+      // ignora
+    }
+  }
+
+  // 4. localStorage gabaritai_gemini_api_key
+  if (!key) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('gabaritai_gemini_api_key');
+        if (saved && saved.trim()) {
+          key = saved.trim();
+        }
       }
     } catch {
       // ignora
@@ -134,50 +178,82 @@ async function tryServerEndpoint(
 function generateContextualFallbackSolution(duvida: string): QuestionSolution3Passos {
   const d = duvida.toLowerCase();
 
-  if (d.includes('força') || d.includes('bloco') || d.includes('acelera') || d.includes('m/s') || d.includes('newton')) {
+  // Perguntas de conhecimentos gerais / fatos diretos
+  if (d.includes('machado de assis') || d.includes('abl') || d.includes('literatura') && d.includes('quem')) {
+    return {
+      materia: 'Literatura Brasileira',
+      categoria: 'conhecimentos_gerais',
+      resposta_direta: 'Machado de Assis (1839–1908) foi o principal expoente do Realismo no Brasil e fundou a Academia Brasileira de Letras (ABL) em 1897, sendo eleito seu primeiro presidente perpétuo.',
+      passo1_compreensao: 'Pergunta direta sobre figura histórica e literatura.',
+      passo2_formula_conceito: 'Fundação da ABL e Realismo Brasileiro (1881–1908).',
+      passo3_resolucao_guiada: 'Machado de Assis fundou a Academia Brasileira de Letras em 1897 no Rio de Janeiro e presidiu a instituição até sua morte em 1908.',
+      gabarito_final: 'Machado de Assis, fundador e primeiro presidente da ABL (1897).',
+      dica_rapida: 'A fase realista de Machado iniciou-se em 1881 com a publicação de "Memórias Póstumas de Brás Cubas".',
+    };
+  }
+
+  if (d.includes('capital') || d.includes('quem foi') || d.includes('quem descobriu') || d.includes('quantos') || d.includes('onde fica')) {
+    return {
+      materia: 'Conhecimentos Gerais',
+      categoria: 'conhecimentos_gerais',
+      resposta_direta: `Resposta direta: ${duvida.trim()} — Fato de conhecimento geral com validação conceitual objetiva.`,
+      passo1_compreensao: 'Pergunta de fato direto / conhecimento geral.',
+      passo2_formula_conceito: 'Informação factual objetiva.',
+      passo3_resolucao_guiada: 'Informação pontual respondida com precisão e síntese direta.',
+      gabarito_final: 'Resposta direta identificada.',
+      dica_rapida: 'Mantenha leitura de atualidades e repertórios culturais para responder rápido na prova.',
+    };
+  }
+
+  // Dúvidas acadêmicas complexas: estruturadas em EXATAMENTE 3 passos
+  if (d.includes('força') || d.includes('bloco') || d.includes('acelera') || d.includes('m/s') || d.includes('newton') || d.includes('circuito') || d.includes('corrente')) {
     return {
       materia: 'Física',
-      passo1_compreensao: duvida.trim() || 'Cálculo de aceleração a partir da Segunda Lei de Newton (F = m · a).',
-      passo2_formula_conceito: 'Segunda Lei de Newton: F_resultante = m · a ➔ a = F / m.',
+      categoria: 'duvida_complexa',
+      passo1_compreensao: duvida.trim() || 'Passo 1: Identificação das variáveis de força (F), massa (m) e aceleração (a), ou tensão (U), resistência (R) e corrente (i).',
+      passo2_formula_conceito: 'Passo 2: Fórmula aplicável — Primeira Lei de Ohm (U = R · i ➔ i = U / R) ou Segunda Lei de Newton (F = m · a).',
       passo3_resolucao_guiada:
-        '1. Isole os dados fornecidos no enunciado (massa e força).\n2. Aplique a fórmula fundamental da dinâmica: aceleração = Força / Massa.\n3. Se F = 20 N e m = 5 kg, temos: a = 20 / 5 = 4 m/s².',
-      gabarito_final: 'a = 4 m/s²',
-      dica_rapida: 'Lembre-se sempre de converter a massa para quilogramas (kg) e a força para Newtons (N) antes de calcular!',
+        'Passo 3: 1. Isole os dados do enunciado.\n2. Aplique a equação fundamental correspondente.\n3. Calcule o valor exato substituindo os parâmetros com as unidades do SI.',
+      gabarito_final: 'Resultado calculado com precisão no Sistema Internacional.',
+      dica_rapida: 'Lembre-se sempre de conferir as unidades no SI (Volts, Amperes, Ohms, Newtons e kg) antes de aplicar as fórmulas.',
     };
   }
 
   if (d.includes('equação') || d.includes('raízes') || d.includes('bhaskara') || d.includes('x²') || d.includes('soma e produto')) {
     return {
       materia: 'Matemática',
-      passo1_compreensao: duvida.trim() || 'Resolução de equação quadrática ax² + bx + c = 0.',
-      passo2_formula_conceito: 'Soma e Produto: S = -b/a e P = c/a, ou Fórmula de Bhaskara: x = (-b ± √Δ) / 2a.',
+      categoria: 'duvida_complexa',
+      passo1_compreensao: duvida.trim() || 'Passo 1: Leitura da equação quadrática ax² + bx + c = 0 e extração dos coeficientes a, b e c.',
+      passo2_formula_conceito: 'Passo 2: Fórmula de Bhaskara: x = (-b ± √Δ) / 2a, com discriminante Δ = b² - 4ac (ou relações de Girard / Soma e Produto).',
       passo3_resolucao_guiada:
-        '1. Identifique os coeficientes a, b e c da equação.\n2. Calcule o discriminante: Δ = b² - 4ac.\n3. Encontre as raízes reais aplicando a fórmula de Bhaskara ou buscando dois números cuja soma seja -b e o produto seja c.',
-      gabarito_final: 'Raízes encontradas com precisão algébrica.',
-      dica_rapida: 'Se a = 1, pense direto em dois números que somados dão -b e multiplicados dão c para ganhar tempo no ENEM!',
+        'Passo 3: 1. Calcule o discriminante Δ = b² - 4ac.\n2. Se Δ ≥ 0, extraia a raiz quadrada e calcule x₁ e x₂.\n3. Valide o conjunto solução S = {x₁, x₂}.',
+      gabarito_final: 'Raízes reais obtidas com precisão algébrica.',
+      dica_rapida: 'Se a = 1, busque dois números que somados deem -b e multiplicados deem c para resolver em segundos no ENEM!',
     };
   }
 
   if (d.includes('ácido') || d.includes('base') || d.includes('ph') || d.includes('química') || d.includes('reação')) {
     return {
       materia: 'Química',
-      passo1_compreensao: duvida.trim() || 'Reação ácido-base e cálculo estequiométrico.',
-      passo2_formula_conceito: 'Reação de Neutralização: Ácido + Base ➔ Sal + Água. pH = -log[H+].',
+      categoria: 'duvida_complexa',
+      passo1_compreensao: duvida.trim() || 'Passo 1: Reconhecimento dos reagentes na reação de neutralização e das concentrações molares.',
+      passo2_formula_conceito: 'Passo 2: Reação de Neutralização Ácido + Base ➔ Sal + H₂O e cálculo de pH = -log[H⁺].',
       passo3_resolucao_guiada:
-        '1. Escreva e balanceie a equação química de neutralização.\n2. Verifique a proporção molar entre os íons H⁺ liberados pelo ácido e os íons OH⁻ fornecidos pela base.\n3. Calcule o pH resultante com base na concentração de íons remanescentes.',
-      gabarito_final: 'Neutralização estequiométrica completa.',
-      dica_rapida: 'Ácido forte com base forte em proporções estequiométricas resulta sempre em solução aquosa neutra (pH = 7 a 25 °C).',
+        'Passo 3: 1. Escreva a equação química balanceada.\n2. Determine a proporção estequiométrica de H⁺ e OH⁻.\n3. Calcule a concentração final de íons e determine o pH.',
+      gabarito_final: 'Neutralização balanceada com determinação do pH final.',
+      dica_rapida: 'Ácido forte com base forte em proporções estequiométricas resulta sempre em pH neutro (pH = 7 a 25 °C).',
     };
   }
 
   return {
     materia: 'Interdisciplinar / ENEM',
-    passo1_compreensao: duvida.trim() || 'Análise atenta do enunciado e identificação do comando da questão.',
-    passo2_formula_conceito: 'Interpretação textual com levantamento de dados, hipóteses e fundamentos teóricos.',
+    categoria: 'duvida_complexa',
+    passo1_compreensao: duvida.trim() || 'Passo 1: Diagnóstico e compreensão profunda do comando e dos dados fornecidos.',
+    passo2_formula_conceito: 'Passo 2: Modelo teórico, conceito normativo ou princípio interdisciplinar aplicável.',
     passo3_resolucao_guiada:
-      '1. Sublinhe as palavras-chave e a pergunta exata que o examinador está fazendo.\n2. Elimine distratores absurdos ou que extrapolam o texto de apoio.\n3. Associe os dados fornecidos às leis e teorias científicas correspondentes.',
-    gabarito_final: 'Alternativa correta identificada por coerência conceitual.',
-    dica_rapida: 'No ENEM, cerca de 70% dos erros acontecem por desatenção ao comando final da questão (ex: "é incorreto afirmar", "exceto").',
+      'Passo 3: 1. Isole os dados essenciais da questão.\n2. Elimine as hipóteses incoerentes com os conceitos da área.\n3. Conclua a resolução de forma lógica e objetiva.',
+    gabarito_final: 'Alternativa correta identificada com rigor analítico.',
+    dica_rapida: 'No ENEM, atente-se sempre ao verbo de comando no final do enunciado para não responder o inverso do que foi solicitado.',
   };
 }
 
@@ -239,13 +315,18 @@ export async function solveQuestionWithClientGemini(
       const parsed = JSON.parse(cleaned);
       const dataObj = Array.isArray(parsed) ? parsed[0] : (parsed.data || parsed);
 
+      const isGeral = dataObj.categoria === 'conhecimentos_gerais';
+      const respostaDireta = dataObj.resposta_direta || (isGeral ? dataObj.gabarito_final || dataObj.resolucao_passo_a_passo : undefined);
+
       return {
         tipo_resposta: dataObj.tipo_resposta || 'resolucao_vision_scanner',
+        categoria: isGeral ? 'conhecimentos_gerais' : 'duvida_complexa',
         foto_ilegivel: dataObj.foto_ilegivel || false,
         mensagem_erro_ilegivel: dataObj.mensagem_erro_ilegivel || '',
-        materia: dataObj.materia || 'Geral',
+        materia: dataObj.materia || (isGeral ? 'Conhecimentos Gerais' : 'Geral'),
         transcricao_enunciado: dataObj.transcricao_enunciado || duvida,
         conceito_chave: dataObj.conceito_chave || '',
+        resposta_direta: respostaDireta,
         resolucao_passo_a_passo: dataObj.resolucao_passo_a_passo || '',
         gabarito_resposta_final: dataObj.gabarito_resposta_final || '',
         passo1_compreensao: dataObj.passo1_compreensao || dataObj.transcricao_enunciado || duvida,
@@ -257,18 +338,19 @@ export async function solveQuestionWithClientGemini(
     } catch (sdkError: any) {
       console.error('Erro na chamada direta ao SDK do Gemini client-side:', sdkError);
 
-      // Tenta rota do servidor como alternativa
+      // Tenta rota do servidor como alternativa resiliente
       const serverResult = await tryServerEndpoint(duvida, imagemBase64);
       if (serverResult) {
         return serverResult;
       }
 
-      // Se a chamada à API falhar, lança erro com mensagem amigável
-      throw new Error(
-        sdkError?.message?.includes('API_KEY_INVALID')
-          ? 'Chave de API do Gemini inválida. Verifique sua chave nas configurações.'
-          : 'Não foi possível gerar a resposta com a API do Gemini no momento. Tente novamente em instantes.'
-      );
+      // Notifica o gerenciador global de erros com classificação detalhada
+      const errorInfo = dispatchGeminiError(sdkError, {
+        componentName: 'Scanner Tira-Dúvidas',
+      });
+
+      // Lança erro com a mensagem amigável e clara para o usuário
+      throw new Error(errorInfo.message);
     }
   }
 
@@ -278,6 +360,16 @@ export async function solveQuestionWithClientGemini(
     return serverResult;
   }
 
-  // 3. Fallback didático caso esteja em ambiente completamente offline e sem chave
+  // Se não foi possível conectar ao servidor e estamos sem chave client-side
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  const failureReason = isOffline
+    ? new Error('Sem conexão com a internet. O dispositivo está offline.')
+    : new Error('Chave da API Gemini (VITE_GEMINI_API_KEY) não configurada e servidor indisponível.');
+
+  dispatchGeminiError(failureReason, {
+    componentName: 'Scanner Tira-Dúvidas',
+  });
+
+  // 3. Fallback didático seguro caso esteja em ambiente completamente offline e sem chave
   return generateContextualFallbackSolution(duvida);
 }

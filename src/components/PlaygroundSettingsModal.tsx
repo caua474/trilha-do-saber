@@ -274,7 +274,7 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
               rows={3}
               value={systemInstruction}
               onChange={(e) => setSystemInstruction(e.target.value)}
-              placeholder="Ex: Você é um professor socrático que responde sempre com exemplos práticos para o ENEM..."
+              placeholder="Ex: Responda a dúvidas acadêmicas complexas em exatamente 3 passos claros (Compreensão, Conceito/Fórmula e Resolução Guiada) e forneça respostas diretas e concisas a perguntas de conhecimentos gerais..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-none"
             />
           </div>

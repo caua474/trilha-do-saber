@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { StudyMaterial, Flashcard } from '../types';
 import { FlashcardsDeck } from './FlashcardsDeck';
-import { exportMaterialToPdf } from '../utils/pdfExport';
+import { exportMaterialToPdf, PdfVisualTheme } from '../utils/pdfExport';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 import { cacheSummaryInServiceWorker } from '../utils/serviceWorker';
 import { saveMaterial, getAllMaterials } from '../utils/db';
 
@@ -53,6 +54,7 @@ export const BentoResults: React.FC<BentoResultsProps> = ({
   const [showOfflineDrawer, setShowOfflineDrawer] = useState<boolean>(false);
   const [savedMaterialsList, setSavedMaterialsList] = useState<StudyMaterial[]>([]);
   const [readerFontSize, setReaderFontSize] = useState<'normal' | 'large' | 'xlarge'>('normal');
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   // Monitor online status
   useEffect(() => {
@@ -108,9 +110,13 @@ export const BentoResults: React.FC<BentoResultsProps> = ({
   };
 
   const handleExportPdf = () => {
+    setIsPdfModalOpen(true);
+  };
+
+  const handleConfirmPdfExport = (theme: PdfVisualTheme) => {
     setIsExportingPdf(true);
     try {
-      exportMaterialToPdf(material);
+      exportMaterialToPdf(material, theme);
     } catch (err) {
       console.error('Erro ao exportar PDF no BentoResults:', err);
     } finally {
@@ -653,6 +659,14 @@ ${material.perguntas
       <div className="pt-2">
         <FlashcardsDeck flashcards={activeFlashcards} title={material.title} />
       </div>
+
+      <PdfThemeSelectorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onConfirmExport={handleConfirmPdfExport}
+        documentTitle={`Resumo - ${material.title || 'ENEM'}`}
+        documentType="material"
+      />
     </div>
   );
 };

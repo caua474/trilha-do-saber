@@ -511,7 +511,7 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
             <div className="space-y-2 text-xs text-slate-600 dark:text-zinc-300">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold">GabaritaAí Inteligência Vestibulares</span>
+                <span className="font-bold">app inteligente • Plataforma de Estudos</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
                 Seus dados de simulados, pontuações TRI e fichamentos são salvos com persistência local no seu navegador através de banco de dados IndexedDB.

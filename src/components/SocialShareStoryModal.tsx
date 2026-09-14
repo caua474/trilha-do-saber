@@ -88,13 +88,13 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
     playSuccessSound();
     let text = '';
     if (type === 'redacao') {
-      text = `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no GabaritaAí! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #GabaritaAi #ENEM2026 #Redacao1000`;
+      text = `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no app inteligente! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #AppInteligente #ENEM2026 #Redacao1000`;
     } else if (type === 'mascote') {
-      text = `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no GabaritaAí! Rumo ao ENEM! 🚀 #GabaritaAi #MascoteGabaritão`;
+      text = `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no app inteligente! Rumo ao ENEM! 🚀 #AppInteligente #Estudos`;
     } else if (type === 'quiz') {
-      text = `⚡ Gabaritei o Quiz Rápido da Professora Gabi no GabaritaAí! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #GabaritaAi #ENEM2026 #ProfessoraGabi #QuizENEM`;
+      text = `⚡ Gabaritei o Quiz Rápido da Professora Gabi no app inteligente! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #AppInteligente #ENEM2026 #ProfessoraGabi #QuizENEM`;
     } else {
-      text = `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no GabaritaAí! Foco total na aprovação! 🎓 #Streak #GabaritaAi #FocoENEM`;
+      text = `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no app inteligente! Foco total na aprovação! 🎓 #Streak #AppInteligente #FocoENEM`;
     }
 
     navigator.clipboard.writeText(text);
@@ -104,13 +104,13 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
 
   const getShareText = () => {
     if (type === 'redacao') {
-      return `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no GabaritaAí! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #GabaritaAi #ENEM2026 #Redacao1000`;
+      return `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no app inteligente! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #AppInteligente #ENEM2026 #Redacao1000`;
     } else if (type === 'mascote') {
-      return `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no GabaritaAí! Rumo ao ENEM! 🚀 #GabaritaAi #MascoteGabaritão`;
+      return `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no app inteligente! Rumo ao ENEM! 🚀 #AppInteligente #Estudos`;
     } else if (type === 'quiz') {
-      return `⚡ Gabaritei o Quiz Rápido da Professora Gabi no GabaritaAí! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #GabaritaAi #ENEM2026 #ProfessoraGabi #QuizENEM`;
+      return `⚡ Gabaritei o Quiz Rápido da Professora Gabi no app inteligente! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #AppInteligente #ENEM2026 #ProfessoraGabi #QuizENEM`;
     } else {
-      return `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no GabaritaAí! Foco total na aprovação! 🎓 #Streak #GabaritaAi #FocoENEM`;
+      return `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no app inteligente! Foco total na aprovação! 🎓 #Streak #AppInteligente #FocoENEM`;
     }
   };
 
@@ -130,9 +130,9 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Meu Desempenho no GabaritaAí',
+          title: 'Meu Desempenho no app inteligente',
           text: getShareText(),
-          url: 'https://gabaritaai.app',
+          url: window.location.origin,
         });
         playSuccessSound();
       } catch {

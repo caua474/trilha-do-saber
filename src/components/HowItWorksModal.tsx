@@ -217,7 +217,7 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({
               <Sparkles className="w-4 h-4 fill-slate-950" />
             </div>
             <div>
-              <h3 className="text-base font-black text-white">Tutorial Rápido GabaritaAí</h3>
+              <h3 className="text-base font-black text-white">Tutorial Rápido • app inteligente</h3>
               <p className="text-[11px] text-slate-400 font-semibold">
                 Passo {currentSlideIndex + 1} de {TUTORIAL_SLIDES.length} • Guia da Plataforma
               </p>

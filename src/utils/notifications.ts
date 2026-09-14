@@ -76,12 +76,12 @@ export const sendLocalNotification = (title: string, body: string, icon?: string
 
 export const sendStreakReminderNotification = (streakDays: number, isStreakAtRisk: boolean = true) => {
   const title = isStreakAtRisk
-    ? `🚨 Hora de Gabaritar! Sua streak de ${streakDays} dia${streakDays > 1 ? 's' : ''} está em risco!`
-    : `🔥 Hora de Gabaritar! Mantenha sua sequência de ${streakDays} dia${streakDays > 1 ? 's' : ''}!`;
+    ? `🚨 Hora de Estudar! Sua streak de ${streakDays} dia${streakDays > 1 ? 's' : ''} está em risco!`
+    : `🔥 Hora de Estudar! Mantenha sua sequência de ${streakDays} dia${streakDays > 1 ? 's' : ''}!`;
 
   const body = isStreakAtRisk
     ? `Você ainda não concluiu suas metas de estudo do cronograma hoje. Estude agora para não zerar sua sequência e ganhe +50 XP!`
-    : `Seu horário de estudos agendado no cronograma chegou. Abra o GabaritaAí e revise sua matéria!`;
+    : `Seu horário de estudos agendado no cronograma chegou. Abra o app inteligente e revise sua matéria!`;
 
   return sendLocalNotification(title, body);
 };

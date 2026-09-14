@@ -59,7 +59,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
     {
       id: 'welcome',
       sender: 'gabi',
-      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora inteligente e tutora oficial do GabaritaAí. Faça qualquer pergunta de matéria ou sobre o aplicativo que eu respondo automaticamente para você!',
+      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora inteligente e tutora oficial do app inteligente. Faça qualquer pergunta de matéria ou sobre o aplicativo que eu respondo automaticamente para você!',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -274,7 +274,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
       const fallbackMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'gabi',
-        text: `Entendido! Sobre "${query}": o segredo principal para dominar essa matéria é revisar os conceitos-base e fazer exercícios práticos. Pode me mandar um exemplo específico ou me pedir uma explicação passo a passo!`,
+        text: `Entendido! Sobre "${query}": posso te responder de forma direta e objetiva, ou te explicar em 3 passos se for uma dúvida de estudo. Como você prefere que eu te ajude?`,
         botaoAtalho: 'nenhum',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -419,31 +419,55 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
                 msg.sender === 'user' ? 'items-end' : 'items-start'
               }`}
             >
-              <div className="flex items-center space-x-1.5 mb-1 text-[10px] text-slate-400 font-medium">
-                {msg.sender === 'gabi' && (
-                  <GabiAvatar size={16} className="mr-0.5" />
-                )}
-                <span>{msg.sender === 'user' ? 'Você' : 'Professora Gabi'}</span>
-                <span>•</span>
-                <span>{msg.timestamp}</span>
-                {msg.sender === 'gabi' && (
-                  <button
-                    type="button"
-                    onClick={() => speakMessage(msg.text, msg.id)}
-                    className="ml-1 p-1 hover:text-purple-500 rounded transition cursor-pointer"
-                    title={speakingMsgId === msg.id ? 'Parar áudio' : 'Ouvir resposta da Gabi'}
-                  >
-                    {speakingMsgId === msg.id ? (
-                      <VolumeX className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
-                    ) : (
-                      <Volume2 className="w-3.5 h-3.5 text-slate-400 hover:text-purple-400" />
-                    )}
-                  </button>
+              <div
+                className={`flex items-center gap-2 mb-1.5 text-[11px] font-medium max-w-[85%] ${
+                  msg.sender === 'user' ? 'justify-end text-slate-400' : 'justify-between text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {msg.sender === 'gabi' ? (
+                  <div className="flex items-center justify-between w-full gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <GabiAvatar size={18} />
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        Professora Gabi
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-normal">
+                        {msg.timestamp}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => speakMessage(msg.text, msg.id)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors cursor-pointer shrink-0 text-[10px] font-bold border border-purple-200/60 dark:border-purple-800/40"
+                      title={speakingMsgId === msg.id ? 'Parar áudio' : 'Ouvir resposta da Gabi'}
+                      aria-label="Ouvir resposta em áudio"
+                    >
+                      {speakingMsgId === msg.id ? (
+                        <>
+                          <VolumeX className="w-3 h-3 text-rose-500 animate-pulse" />
+                          <span className="text-rose-500">Parar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>Ouvir</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">Você</span>
+                    <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
+                    <span className="text-slate-400 font-normal">{msg.timestamp}</span>
+                  </div>
                 )}
               </div>
 
               <div
-                className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed font-medium shadow-xs ${
+                className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed font-medium shadow-xs break-words overflow-hidden ${
                   msg.sender === 'user'
                     ? 'bg-indigo-600 text-white rounded-br-none'
                     : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 rounded-bl-none'

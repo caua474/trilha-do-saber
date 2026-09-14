@@ -221,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
       const isAtRisk = !isTodayStudyCompleted();
       sendStreakReminderNotification(studyStreak, isAtRisk);
       console.log('[Header] ✅ Notificação de lembrete de streak enviada com sucesso.');
-      showToast('🚨 Hora de Gabaritar! Lembrete de streak enviado!', 'success');
+      showToast('🚨 Hora de Estudar! Lembrete de streak enviado!', 'success');
     } else {
       console.warn('[Header] ⚠️ Notificações bloqueadas no navegador.');
       showToast('⚠️ Notificações bloqueadas no seu navegador. Permita o acesso nas configurações.', 'warning');
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
       const sent = sendStreakReminderNotification(studyStreak, isAtRisk);
       
       console.info('✅ [Header] [Testar Notificação] Notificação enviada com sucesso ao sistema/navegador!', { sent });
-      showToast('⚡ Teste Rápido enviado com sucesso! Verifique o alerta "Hora de Gabaritar!".', 'success');
+      showToast('⚡ Teste Rápido enviado com sucesso! Verifique o alerta "Hora de Estudar!".', 'success');
     } else {
       console.warn('⚠️ [Header] [Testar Notificação] Permissão de notificação negada ou indisponível.');
       showToast('⚠️ Notificações bloqueadas no seu navegador. Ative as permissões para visualizar.', 'warning');
@@ -335,14 +335,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center space-x-1.5 sm:space-x-2">
                     <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                      GabaritaAí
+                      app inteligente
                     </h1>
                     <span className="hidden sm:inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/80 uppercase tracking-wider shrink-0">
-                      <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1 text-indigo-600 dark:text-indigo-400" /> Bento AI
+                      <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1 text-indigo-600 dark:text-indigo-400" /> IA
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
-                    Plataforma Inteligente para Fundamental, Médio e ENEM
+                    Plataforma Inteligente de Estudos & Scanner Tira-Dúvidas
                   </p>
                 </div>
               </div>
@@ -504,7 +504,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 title={
                   !notifState.isCompletedToday
-                    ? 'Hora de Gabaritar! Sua streak de estudos está em risco hoje. Clique para testar/enviar notificação.'
+                    ? 'Hora de Estudar! Sua streak de estudos está em risco hoje. Clique para testar/enviar notificação.'
                     : 'Notificação Push de Estudos Ativa (Horário: ' + notifState.settings.time + ')'
                 }
               >

@@ -260,6 +260,26 @@ export interface EssayCompetencyDetail {
   nivel?: string;
 }
 
+export interface SingleCompetencyAnalysis {
+  tipo_resposta?: string;
+  competencia_numero: number;
+  competencia_nome: string;
+  nota: number; // 0 a 200
+  nivel?: string;
+  feedback: string;
+  elementos_c5?: {
+    agente: { presente: boolean; trecho: string | null; comentario: string };
+    acao: { presente: boolean; trecho: string | null; comentario: string };
+    meio_modo: { presente: boolean; trecho: string | null; comentario: string };
+    efeito: { presente: boolean; trecho: string | null; comentario: string };
+    detalhamento: { presente: boolean; trecho: string | null; comentario: string };
+  };
+  pontos_fortes: string[];
+  pontos_melhoria: string[];
+  sugestao_reescrita?: string;
+  dica_de_ouro?: string;
+}
+
 export interface EnemEssayFullAnalysis {
   tipo_resposta?: string;
   tema_detectado: string;

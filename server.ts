@@ -6,6 +6,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Sanitize invalid or corrupted injected variables (e.g. placeholder or non-key values)
+if (process.env.VITE_GEMINI_API_KEY && (process.env.VITE_GEMINI_API_KEY === "5,00" || process.env.VITE_GEMINI_API_KEY.length < 15)) {
+  delete process.env.VITE_GEMINI_API_KEY;
+}
+
 const app = express();
 const PORT = 3000;
 
@@ -15,11 +20,24 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-function getGenAI() {
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY não configurada no servidor.");
+function getGeminiApiKey(): string {
+  // Always prioritize the official server-side GEMINI_API_KEY
+  const serverKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (serverKey && serverKey !== "MY_GEMINI_API_KEY" && serverKey.length > 15) {
+    return serverKey;
   }
+  const viteKey = (process.env.VITE_GEMINI_API_KEY || "").trim();
+  if (viteKey && viteKey !== "MY_GEMINI_API_KEY" && viteKey.length > 15 && viteKey !== "5,00") {
+    return viteKey;
+  }
+  if (serverKey && serverKey !== "MY_GEMINI_API_KEY") {
+    return serverKey;
+  }
+  throw new Error("GEMINI_API_KEY não configurada no servidor.");
+}
+
+function getGenAI() {
+  const apiKey = getGeminiApiKey();
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -142,9 +160,9 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
   timeoutMs?: number;
 }) {
   const modelsToTry = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash",
     options.preferredModel || "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
 
@@ -158,7 +176,7 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
       if (options.responseSchema) config.responseSchema = options.responseSchema;
       if (options.temperature !== undefined) config.temperature = options.temperature;
 
-      const timeoutDuration = options.timeoutMs || 6000;
+      const timeoutDuration = options.timeoutMs || 12000;
       const result = await Promise.race([
         ai.models.generateContent({
           model,
@@ -174,8 +192,14 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
         return { text: result.text, modelUsed: model };
       }
     } catch (err: any) {
-      console.warn(`[callGeminiSafe] Modelo ${model} falhou:`, err?.message?.slice(0, 100) || err);
       lastError = err;
+      const errStr = String(err?.message || err);
+      // Se a chave for comprovadamente inválida, interrompe o loop de modelos
+      if (errStr.includes("API key not valid") || errStr.includes("API_KEY_INVALID")) {
+        console.warn(`[callGeminiSafe] Chave de API inválida detectada.`);
+        break;
+      }
+      console.warn(`[callGeminiSafe] Modelo ${model} indisponível, tentando próximo.`);
     }
   }
 
@@ -285,7 +309,16 @@ app.post("/api/gemini/chat", async (req, res) => {
       return res.status(400).json({ error: "O prompt ou anexo é obrigatório." });
     }
 
-    const effectiveKey = customApiKey?.trim() || process.env.GEMINI_API_KEY;
+    let effectiveKey = "";
+    try {
+      if (customApiKey && customApiKey.trim().length > 15 && customApiKey.trim() !== "5,00") {
+        effectiveKey = customApiKey.trim();
+      } else {
+        effectiveKey = getGeminiApiKey();
+      }
+    } catch {
+      effectiveKey = "";
+    }
     if (!effectiveKey) {
       return res.status(400).json({
         error: "GEMINI_API_KEY não configurada no servidor e nenhuma chave foi fornecida nas configurações do Playground.",
@@ -934,6 +967,15 @@ app.post("/api/gabi-support", async (req, res) => {
       if (!parsedData.resposta_suporte) {
         parsedData.resposta_suporte = text || "Aqui está a explicação sobre a sua dúvida.";
       }
+      if (typeof parsedData.resposta_suporte === "string" && parsedData.resposta_suporte.trim().startsWith("{")) {
+        try {
+          const inner = JSON.parse(parsedData.resposta_suporte.trim());
+          if (inner.resposta_suporte) {
+            parsedData.resposta_suporte = inner.resposta_suporte;
+            if (inner.botao_atalho) parsedData.botao_atalho = inner.botao_atalho;
+          }
+        } catch (_) {}
+      }
       if (!parsedData.botao_atalho) {
         parsedData.botao_atalho = "nenhum";
       }
@@ -944,7 +986,7 @@ app.post("/api/gabi-support", async (req, res) => {
         data: parsedData,
       });
     } catch (modelErr: any) {
-      console.warn("Utilizando motor pedagógico de resposta rápida para a Professora Gabi:", modelErr?.message);
+      console.log("[Professora Gabi] Utilizando motor pedagógico de resposta rápida.");
       const fallbackResposta = getFallbackGabiAnswer(pergunta.trim());
       return res.json({
         success: true,
@@ -1291,6 +1333,108 @@ function evaluateSingleCompetencyHeuristic(compNum: number, texto: string, tema?
   };
 }
 
+/**
+ * Trata, higieniza e repara o JSON retornado pelo Gemini antes do JSON.parse(),
+ * evitando erros como "Unexpected end of JSON input" caso o modelo corte o texto
+ * ou retorne pequenos deslizes de formatação sintática.
+ */
+function cleanAndRepairJson(rawText: string | undefined | null): any {
+  if (!rawText || typeof rawText !== "string") return null;
+
+  let text = rawText.trim();
+
+  // 1. Remover blocos de marcação markdown ```json ... ```
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+
+  // 2. Tentativa direta de JSON.parse
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    // Prossegue para higienização e reparo estrutural
+  }
+
+  // 3. Localizar delimitadores de objeto '{' ... '}'
+  const firstBrace = text.indexOf("{");
+  if (firstBrace === -1) return null;
+
+  let candidate = text.slice(firstBrace);
+  const lastBrace = candidate.lastIndexOf("}");
+  if (lastBrace !== -1) {
+    const candidateSlice = candidate.slice(0, lastBrace + 1);
+    try {
+      // Remove vírgulas extras antes de fechamento de chaves ou colchetes
+      const withoutTrailingCommas = candidateSlice.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(withoutTrailingCommas);
+    } catch (_) {
+      // Falhou; prossegue para o reparo de JSON cortado no final
+    }
+  }
+
+  // 4. Reparar JSON incompleto/cortado no meio (fechamento de strings e delimitadores)
+  try {
+    let repaired = candidate;
+
+    // Remove pares de chave-valor incompletos no final (ex: ,"propriedade": ou ,"propriedade)
+    repaired = repaired.replace(/,\s*"[^"]*":?\s*$/, "");
+    repaired = repaired.replace(/:\s*"[^"]*$/, ': ""');
+
+    // Fechar string se aspas estiverem abertas
+    let inString = false;
+    let escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+      if (char === "\\" && inString) {
+        escaped = !escaped;
+      } else if (char === '"' && !escaped) {
+        inString = !inString;
+      } else {
+        escaped = false;
+      }
+    }
+    if (inString) {
+      repaired += '"';
+    }
+
+    // Remover vírgulas soltas no final
+    repaired = repaired.replace(/,\s*$/, "");
+
+    // Rastrear pilha de delimitadores abertos para fechá-los
+    const stack: string[] = [];
+    inString = false;
+    escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+      if (char === "\\" && inString) {
+        escaped = !escaped;
+      } else if (char === '"' && !escaped) {
+        inString = !inString;
+      } else if (!inString) {
+        if (char === "{") stack.push("}");
+        else if (char === "[") stack.push("]");
+        else if (char === "}" || char === "]") {
+          if (stack.length > 0 && stack[stack.length - 1] === char) {
+            stack.pop();
+          }
+        }
+      } else {
+        escaped = false;
+      }
+    }
+
+    while (stack.length > 0) {
+      repaired += stack.pop();
+    }
+
+    // Limpeza final de vírgulas antes de fechamento
+    repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+    return JSON.parse(repaired);
+  } catch (_) {
+    // Retorna null para acionar o fallback silencioso heurístico sem quebrar a aplicação
+    return null;
+  }
+}
+
 app.post("/api/analyze-essay", async (req, res) => {
   try {
     const { tema, texto } = req.body;
@@ -1319,6 +1463,7 @@ ${texto.trim()}
         config: {
           systemInstruction: ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",
+          maxOutputTokens: 8192,
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -1362,14 +1507,19 @@ ${texto.trim()}
       });
 
       if (response && response.text) {
-        parsedData = JSON.parse(response.text);
+        try {
+          parsedData = cleanAndRepairJson(response.text);
+        } catch (parseErr) {
+          console.warn("[/api/analyze-essay] Erro no parse do JSON reparado. Acionando fallback silencioso:", parseErr);
+          parsedData = null;
+        }
       }
     } catch (aiErr: any) {
-      console.warn("[/api/analyze-essay] Gemini indisponível ou limite atingido. Usando motor heurístico ENEM:", aiErr?.message?.slice(0, 100));
+      console.warn("[/api/analyze-essay] Gemini indisponível ou limite atingido. Usando motor heurístico ENEM com fallback silencioso:", aiErr?.message?.slice(0, 100));
       parsedData = evaluateEssayHeuristic(texto, temaInformado);
     }
 
-    if (!parsedData || !parsedData.competencias) {
+    if (!parsedData || !parsedData.competencias || !Array.isArray(parsedData.competencias)) {
       parsedData = evaluateEssayHeuristic(texto, temaInformado);
     }
 
@@ -1490,14 +1640,20 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido sem markdown ou texto fora do JSON
         contents: prompt,
         config: {
           responseMimeType: "application/json",
+          maxOutputTokens: 8192,
         },
       });
 
       if (response && response.text) {
-        parsedData = JSON.parse(response.text);
+        try {
+          parsedData = cleanAndRepairJson(response.text);
+        } catch (parseErr) {
+          console.warn("[/api/analyze-single-competency] Erro no parse do JSON reparado. Acionando fallback silencioso:", parseErr);
+          parsedData = null;
+        }
       }
     } catch (aiErr: any) {
-      console.warn("[/api/analyze-single-competency] Gemini indisponível ou limite atingido. Usando heurística oficial:", aiErr?.message?.slice(0, 100));
+      console.warn("[/api/analyze-single-competency] Gemini indisponível ou limite atingido. Usando heurística oficial com fallback silencioso:", aiErr?.message?.slice(0, 100));
       parsedData = evaluateSingleCompetencyHeuristic(compNum, texto, tema);
     }
 
@@ -2274,28 +2430,43 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
   }
 });
 
-// 10. SYSTEM INSTRUCTION FOR RESOLUÇÃO PASSO A PASSO (TIRA-DÚVIDAS / SCANNER VISION)
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Tutor de IA Multimodal/Vision do GabaritaAí.
-Sua missão é extrair e ler com precisão texto, equações matemáticas, gráficos e tabelas presentes na imagem ou enunciado fornecido (seja texto impresso ou manuscrito legível).
+// 10. SYSTEM INSTRUCTION FOR SCANNER TIRA-DÚVIDAS (RESPOSTAS LIVRES E UNIVERSAIS)
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Assistente Universal com IA do GabaritaAí.
+Sua missão é responder a QUALQUER pergunta enviada pelo usuário, com LIBERDADE TOTAL de tema:
+- Conhecimentos gerais, curiosidades, fatos cotidianos, conversas gerais, cultura pop, ciência, culinária, tecnologia, etc.
+- Dúvidas de estudo, exercícios escolares ou questões de vestibular/ENEM quando o usuário trouxer uma questão de prova.
+
+DIRETRIZES FUNDAMENTAIS DE RESPOSTA LIVRE:
+1. SEM RESTRIÇÕES DE ASSUNTO: Responda a qualquer dúvida ou pergunta livremente, com tom amigável, acolhedor e informativo.
+2. NÃO FORCE O FORMATO ENEM OU EXERCÍCIO ESCOLAR para perguntas normais, cotidianas ou curiosidades:
+   - Se o usuário perguntar curiosidades (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Me dê uma receita rápida", "Como organizar minha rotina?"):
+     Preencha o campo "resposta_direta" com uma explicação fluida, completa, natural e conversacional.
+     Defina "categoria": "conhecimentos_gerais".
+     Não invente "Passo 1: Compreensão", "Passo 2: Fórmula", "Gabarito: Alternativa B". Preencha "gabarito_final" e "gabarito_resposta_final" com a síntese objetiva da resposta e "dica_rapida" com uma curiosidade ou dica prática.
+3. SE FOR UM EXERCÍCIO ESCOLAR/ENEM EXPLÍCITO (questão de múltipla escolha com alternativas A-E, cálculo de física/química/matemática):
+   - Aí sim forneça a explicação estruturada por etapas e o gabarito objetivo da alternativa correta.
+   - Defina "categoria": "exercicio".
 
 IMPORTANTE - TRATAMENTO DE IMAGENS ILEGÍVEIS:
-Se a imagem estiver borrada, muito escura, cortada ou impossível de ler com precisão, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o enunciado. Tente tirar outra foto mais de perto e em um ambiente iluminado! 📸".
+Se a imagem enviada estiver borrada, muito escura ou impossível de ler, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o texto da foto. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
 
 ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 {
-  "tipo_resposta": "resolucao_vision_scanner",
+  "categoria": "conhecimentos_gerais | exercicio",
+  "tipo_resposta": "tira_duvidas_livre",
   "foto_ilegivel": false,
   "mensagem_erro_ilegivel": "",
-  "materia": "Física",
-  "transcricao_enunciado": "Transcrição exata e completa do enunciado e dados identificados na imagem ou texto.",
-  "conceito_chave": "Termodinâmica • Primeira Lei da Termodinâmica",
-  "resolucao_passo_a_passo": "1. Identificação das variáveis: Q = 500J e W = 200J.\n2. Aplicação da fórmula ΔU = Q - W.\n3. Cálculo: ΔU = 500 - 200 = 300J.",
-  "gabarito_resposta_final": "300 Joules (Alternativa B)",
-  "passo1_compreensao": "Transcrição e leitura do enunciado da questão.",
-  "passo2_formula_conceito": "Fórmula ou conceito principal envolvido.",
-  "passo3_resolucao_guiada": "Explicação passo a passo da resolução.",
-  "gabarito_final": "Alternativa B (300 J)",
-  "dica_rapida": "Dica de ouro para lembrar na hora do exame."
+  "materia": "Assunto ou Área (ex: Conhecimentos Gerais, Curiosidades, Física, Geografia, Cotidiano...)",
+  "transcricao_enunciado": "Transcrição da pergunta ou dúvida do usuário.",
+  "conceito_chave": "Assunto ou conceito principal.",
+  "resposta_direta": "Resposta completa, clara, amigável e conversacional para qualquer dúvida livre enviada.",
+  "resolucao_passo_a_passo": "Explicação detalhada ou contextualizada da resposta.",
+  "gabarito_resposta_final": "Conclusão ou resposta final objetiva.",
+  "passo1_compreensao": "Compreensão da dúvida do usuário.",
+  "passo2_formula_conceito": "Conceito ou princípio abordado.",
+  "passo3_resolucao_guiada": "Explicação completa e clara.",
+  "gabarito_final": "Síntese ou conclusão final.",
+  "dica_rapida": "Dica prática, curiosidade ou conselho útil."
 }`;
 
 app.post("/api/solve-question", async (req, res) => {
@@ -2303,7 +2474,7 @@ app.post("/api/solve-question", async (req, res) => {
     const { duvida, imagemBase64 } = req.body;
 
     if (!duvida && !imagemBase64) {
-      return res.status(400).json({ error: "Envie o enunciado ou uma imagem da questão." });
+      return res.status(400).json({ error: "Envie sua pergunta, dúvida ou uma imagem." });
     }
 
     const ai = getGenAI();
@@ -2321,12 +2492,12 @@ app.post("/api/solve-question", async (req, res) => {
         },
         {
           text: duvida && duvida.trim()
-            ? `Analise a foto desta questão de prova/caderno. Texto complementar: "${duvida}". Extraia o texto, equações e gráficos com precisão e forneça o gabarito estruturado.`
-            : "Analise a imagem enviada. Extraia com precisão o enunciado, equações, gráficos e tabelas. Responda com a transcrição do enunciado, conceito-chave, resolução passo a passo e gabarito final.",
+            ? `Analise a foto enviada. Texto complementar ou dúvida do usuário: "${duvida}". Responda de forma aberta, clara e sem restrições no formato JSON solicitado.`
+            : "Analise a imagem enviada. Extraia texto, gráficos ou fórmulas e responda com clareza e sem restrições no formato JSON solicitado.",
         },
       ];
     } else {
-      contents = [`Enunciado ou Dúvida da Questão:\n"${duvida.trim()}"`];
+      contents = [`Pergunta ou Dúvida do Usuário (sem restrição de tema):\n"${duvida.trim()}"`];
     }
 
     const response = await ai.models.generateContent({
@@ -2335,46 +2506,48 @@ app.post("/api/solve-question", async (req, res) => {
       config: {
         systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            tipo_resposta: { type: Type.STRING },
-            foto_ilegivel: { type: Type.BOOLEAN },
-            mensagem_erro_ilegivel: { type: Type.STRING },
-            materia: { type: Type.STRING },
-            transcricao_enunciado: { type: Type.STRING },
-            conceito_chave: { type: Type.STRING },
-            resolucao_passo_a_passo: { type: Type.STRING },
-            gabarito_resposta_final: { type: Type.STRING },
-            passo1_compreensao: { type: Type.STRING },
-            passo2_formula_conceito: { type: Type.STRING },
-            passo3_resolucao_guiada: { type: Type.STRING },
-            gabarito_final: { type: Type.STRING },
-            dica_rapida: { type: Type.STRING },
-          },
-          required: [
-            "tipo_resposta",
-            "foto_ilegivel",
-            "materia",
-            "transcricao_enunciado",
-            "conceito_chave",
-            "resolucao_passo_a_passo",
-            "gabarito_resposta_final",
-          ],
-        },
+        maxOutputTokens: 8192,
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    let parsedData: any = null;
+    if (response && response.text) {
+      parsedData = cleanAndRepairJson(response.text);
+    }
+
+    if (!parsedData) {
+      parsedData = {
+        categoria: "conhecimentos_gerais",
+        tipo_resposta: "tira_duvidas_livre",
+        foto_ilegivel: false,
+        mensagem_erro_ilegivel: "",
+        materia: "Conhecimentos Gerais",
+        transcricao_enunciado: duvida || "Pergunta do usuário",
+        conceito_chave: "Informação e Conhecimento Geral",
+        resposta_direta: `Aqui está a resposta para sua dúvida: ${duvida || ""}.`,
+        resolucao_passo_a_passo: `Explicação detalhada sobre ${duvida || "o tema pesquisado"}.`,
+        gabarito_resposta_final: "Resposta fornecida com clareza.",
+        passo1_compreensao: duvida || "Compreensão da dúvida",
+        passo2_formula_conceito: "Conceito Geral",
+        passo3_resolucao_guiada: "Explicação fornecida com clareza.",
+        gabarito_final: "Conclusão objetiva.",
+        dica_rapida: "Você pode perguntar sobre qualquer assunto: curiosidades, cotidiano, matérias escolares e muito mais!",
+      };
+    }
+
+    const isLivre = parsedData.categoria === "conhecimentos_gerais" || !parsedData.categoria;
+    const respostaFinal = parsedData.resposta_direta || parsedData.resolucao_passo_a_passo || parsedData.gabarito_final;
 
     // Ensure fallback structure compatibility
     const formattedData = {
       ...parsedData,
-      passo1_compreensao: parsedData.passo1_compreensao || parsedData.transcricao_enunciado,
-      passo2_formula_conceito: parsedData.passo2_formula_conceito || parsedData.conceito_chave,
-      passo3_resolucao_guiada: parsedData.passo3_resolucao_guiada || parsedData.resolucao_passo_a_passo,
-      gabarito_final: parsedData.gabarito_final || parsedData.gabarito_resposta_final,
-      dica_rapida: parsedData.dica_rapida || "Foque nos conceitos de base e releia a pergunta para não cair em pegadinhas!",
+      categoria: isLivre ? "conhecimentos_gerais" : "exercicio",
+      resposta_direta: respostaFinal,
+      passo1_compreensao: parsedData.passo1_compreensao || parsedData.transcricao_enunciado || duvida,
+      passo2_formula_conceito: parsedData.passo2_formula_conceito || parsedData.conceito_chave || "Fundamentos Gerais",
+      passo3_resolucao_guiada: parsedData.passo3_resolucao_guiada || parsedData.resolucao_passo_a_passo || respostaFinal,
+      gabarito_final: parsedData.gabarito_final || parsedData.gabarito_resposta_final || "Conclusão objetiva.",
+      dica_rapida: parsedData.dica_rapida || "Dica: Você pode fazer perguntas livres de qualquer tema a qualquer momento!",
     };
 
     res.json({
@@ -2382,10 +2555,10 @@ app.post("/api/solve-question", async (req, res) => {
       data: formattedData,
     });
   } catch (error: any) {
-    console.error("Erro no Scanner Tira-Dúvidas 3 Passos:", error);
+    console.error("Erro no Scanner Tira-Dúvidas:", error);
     res.status(500).json({
       success: false,
-      error: error.message || "Erro ao processar a resolução da questão com IA.",
+      error: error.message || "Erro ao processar a resposta com IA.",
     });
   }
 });

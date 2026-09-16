@@ -226,8 +226,8 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
         },
         {
           id: 'conteudo_ai_playground',
-          title: 'AI Studio Playground',
-          description: 'Laboratório multimodal para dúvidas, upload de imagens e documentos com Gemini',
+          title: 'Tira-Dúvidas Gabaritou AI',
+          description: 'Laboratório multimodal para dúvidas, redações, fotos e documentos com a Professora Gabi',
           icon: '🤖',
           tag: 'Multimodal',
           primaryTab: 'conteudos',

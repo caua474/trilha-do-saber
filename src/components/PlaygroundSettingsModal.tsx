@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Key, Cpu, Sliders, FileCode, Check, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { GabiAvatar } from './GabiAvatar';
 
 interface PlaygroundSettingsModalProps {
   apiKey: string;
@@ -116,15 +117,13 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-              <Sparkles className="w-4 h-4" />
-            </div>
+          <div className="flex items-center gap-3">
+            <GabiAvatar size={36} showOnlineStatus={true} statusBadgeSize={9} alt="Professora Gabi" />
             <div>
               <h3 className="text-base font-bold text-white leading-tight">
-                Configurações do Playground
+                Configurações do Tira-Dúvidas Gabaritou AI
               </h3>
-              <p className="text-xs text-slate-400">Personalize parâmetros de IA e chave Gemini</p>
+              <p className="text-xs text-slate-400">Personalize o modelo de IA e preferências da Professora Gabi</p>
             </div>
           </div>
           <button
@@ -174,18 +173,18 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
                   setValidationState('idle');
                   setValidationMessage(null);
                 }}
-                placeholder="Deixe em branco para usar a chave padrão do servidor"
+                placeholder="Deixe em branco para usar a chave padrão do Gabaritou"
                 className={`w-full bg-slate-950 border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none font-mono transition-colors ${
                   validationState === 'valid'
                     ? 'border-emerald-500/60 focus:border-emerald-500'
                     : validationState === 'invalid'
                     ? 'border-rose-500/60 focus:border-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500'
+                    : 'border-slate-800 focus:border-purple-500'
                 }`}
               />
 
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                {isValidating && <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />}
+                {isValidating && <Loader2 className="w-4 h-4 animate-spin text-purple-400" />}
                 {!isValidating && validationState === 'valid' && (
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 )}
@@ -214,7 +213,7 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
             )}
 
             <p className="text-[11px] text-slate-500">
-              Caso você tenha uma chave própria do Google AI Studio, insira aqui. Uma verificação leve será realizada antes de salvar.
+              Caso você queira utilizar uma chave própria do Gemini, insira aqui. O Gabaritou fará uma validação leve antes de salvar.
             </p>
           </div>
 
@@ -274,8 +273,8 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
               rows={3}
               value={systemInstruction}
               onChange={(e) => setSystemInstruction(e.target.value)}
-              placeholder="Ex: Responda a dúvidas acadêmicas complexas em exatamente 3 passos claros (Compreensão, Conceito/Fórmula e Resolução Guiada) e forneça respostas diretas e concisas a perguntas de conhecimentos gerais..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-none"
+              placeholder="Ex: Instrua a Professora Gabi a responder com foco pedagógico no ENEM e vestibulares em etapas claras..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 resize-none"
             />
           </div>
 
@@ -284,14 +283,14 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isValidating}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer disabled:cursor-not-allowed"
+              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-purple-600/20 cursor-pointer disabled:cursor-not-allowed"
             >
               {isValidating ? (
                 <>

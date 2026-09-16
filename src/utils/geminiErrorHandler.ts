@@ -84,7 +84,7 @@ export function classifyGeminiError(error: any): ClassifiedGeminiError {
       type: 'AUTH_ERROR',
       title: 'Chave da API Gemini Inválida ou Ausente',
       message:
-        'A chave de autenticação (VITE_GEMINI_API_KEY) não foi configurada ou expirou. Você pode inserir sua chave gratuita do Google AI Studio nas configurações para continuar gerando respostas com IA.',
+        'A chave de autenticação do Gemini não foi configurada ou expirou. Você pode inserir sua chave gratuita do Google AI Studio nas configurações para continuar gerando respostas com IA.',
       actionLabel: 'Configurar Chave da API',
       actionType: 'open_settings',
       isAuthError: true,

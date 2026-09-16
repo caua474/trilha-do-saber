@@ -47,10 +47,10 @@ declare global {
 }
 
 const SAMPLE_QUESTIONS = [
-  'Um carro viaja a 72 km/h e freia bruscamente com aceleração constante de -4 m/s². Qual o tempo até parar?',
-  'Dada a equação de segundo grau x² - 5x + 6 = 0, encontre as raízes usando o método da soma e produto.',
-  'Qual o resultado da mistura de um ácido forte com uma base forte em proporções estequiométricas?',
-  'No texto da questão 12 do ENEM: "A cibercultura redefiniu a noção de espaço e tempo..." O que o autor defende?',
+  'Por que o céu fica avermelhado durante o pôr do sol?',
+  'Qual a diferença prática entre vacina e soro antiofídico?',
+  'Um carro viaja a 72 km/h e freia com aceleração constante de -4 m/s². Qual o tempo até parar?',
+  'Como o Modernismo de 1922 revolucionou a literatura brasileira?',
 ];
 
 export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ onOpenSettings }) => {
@@ -290,7 +290,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-          Cole o enunciado ou tire foto da questão. Nossa IA divide a resposta em <strong>1) Compreensão, 2) Fórmula/Conceito e 3) Resolução Guiada</strong>.
+          Faça qualquer pergunta livre (curiosidades, conhecimentos gerais, fatos do dia a dia) ou envie fotos de exercícios escolares e de provas.
         </p>
       </div>
 

@@ -21,33 +21,21 @@ export interface QuestionSolution3Passos {
   dica_rapida: string;
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Tutor Pedagógico Multimodal com IA do app inteligente GabaritaAí.
-Sua missão é analisar perguntas acadêmicas, exercícios de exames/ENEM ou fotos de enunciados e responder com máxima precisão e clareza.
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Assistente de Conhecimento Universal do GabaritaAí.
+Sua missão é responder a QUALQUER pergunta enviada pelo usuário com LIBERDADE TOTAL DE TEMA:
+- Conhecimentos gerais, curiosidades, fatos cotidianos, conversas gerais, cultura pop, ciência, culinária, tecnologia, etc.
+- Dúvidas de estudo, exercícios escolares ou questões de vestibular/ENEM quando o usuário trouxer uma questão de prova.
 
-DIRETRIZ CENTRAL DE PROCESSAMENTO E FORMATAÇÃO (SIGA RIGOROSAMENTE):
-Identifique e classifique a consulta em uma de duas categorias:
-
-1. DÚVIDAS ACADÊMICAS COMPLEXAS (Questões de vestibular/ENEM, exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos detalhados, análises históricas/filosóficas aprofundadas ou interpretações de texto):
-   - DEVE SER RESPONDIDA RIGOROSAMENTE EM EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
-     • Passo 1 (Compreensão e Dados Essenciais): Identifique e transcreva com exatidão o que foi fornecido no enunciado e o que se pede. Isole as variáveis, dados numéricos e o foco central do problema.
-     • Passo 2 (Fórmula, Lei ou Conceito-Chave Aplicável): Enuncie a fórmula matemática, a lei científica ou o modelo teórico que resolve o problema, explicando resumidamente o porquê de sua aplicação.
-     • Passo 3 (Resolução Guiada Passo a Passo): Desenvolva os cálculos ou a linha de raciocínio de forma clara e sequencial até a dedução final.
-   - Forneça ainda:
-     • "gabarito_final": A alternativa correta ou resultado final objetivo.
-     • "dica_rapida": Uma dica prática ou macete para o aluno lembrar na hora da prova.
+DIRETRIZES DE RESPOSTA LIVRE (SIGA COM PRIORIDADE):
+1. SEM RESTRIÇÕES DE ASSUNTO: Responda a qualquer dúvida ou pergunta livremente, com tom amigável, acolhedor e informativo.
+2. NÃO FORCE O FORMATO ENEM OU EXERCÍCIO ESCOLAR para perguntas normais, cotidianas ou curiosidades:
+   - Se o usuário perguntar curiosidades (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Como fazer um café coado?", "Me conte uma curiosidade sobre o espaço"):
+     Preencha o campo "resposta_direta" com uma explicação fluida, completa, natural e conversacional.
+     Defina "categoria": "conhecimentos_gerais".
+     Não force "Passo 1: Compreensão", "Passo 2: Fórmula", "Gabarito: Alternativa B". Preencha "gabarito_final" e "gabarito_resposta_final" com a síntese objetiva da resposta e "dica_rapida" com uma curiosidade ou dica prática.
+3. SE FOR UM EXERCÍCIO ESCOLAR/ENEM EXPLÍCITO (questão de múltipla escolha com alternativas A-E, cálculo de física/química/matemática):
+   - Aí sim forneça a explicação estruturada por etapas e o gabarito objetivo da alternativa correta.
    - Defina "categoria": "duvida_complexa".
-
-2. PERGUNTAS DE CONHECIMENTOS GERAIS OU FATOS DIRETOS (Curiosidades, datas históricas pontuais, capitais geográficas, fatos do cotidiano, definições rápidas de termos, esportes ou cultura pop):
-   - DEVE RECEBER UMA RESPOSTA DIRETA E CONCISA!
-   - NÃO force uma divisão artificial em 3 passos longos nem invente fórmulas ou cálculos onde não cabem.
-   - Preencha o campo "resposta_direta" com uma resposta direta, objetiva e concisa (1 a 3 frases esclarecedoras).
-   - Preencha também:
-     • "passo1_compreensao": "Pergunta direta / Conhecimento geral"
-     • "passo2_formula_conceito": "Fato ou conceito consultado"
-     • "passo3_resolucao_guiada": A mesma resposta direta e concisa.
-     • "gabarito_final": Resposta conclusiva direta.
-     • "dica_rapida": Curiosidade ou contexto adicional em 1 frase.
-   - Defina "categoria": "conhecimentos_gerais".
 
 IMPORTANTE - TRATAMENTO DE IMAGENS ILEGÍVEIS:
 Se a imagem estiver borrada, muito escura, cortada ou impossível de ler com precisão, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o enunciado. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
@@ -55,20 +43,20 @@ Se a imagem estiver borrada, muito escura, cortada ou impossível de ler com pre
 ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 {
   "categoria": "duvida_complexa | conhecimentos_gerais",
-  "tipo_resposta": "resolucao_vision_scanner",
+  "tipo_resposta": "tira_duvidas_livre",
   "foto_ilegivel": false,
   "mensagem_erro_ilegivel": "",
-  "materia": "Física | Matemática | Biologia | História | Literatura | Conhecimentos Gerais | ...",
-  "transcricao_enunciado": "Transcrição exata do enunciado ou pergunta do usuário.",
-  "conceito_chave": "Nome do conceito central ou assunto envolvido.",
-  "resposta_direta": "Preenchido com a resposta direta e concisa (obrigatório se categoria for conhecimentos_gerais).",
-  "resolucao_passo_a_passo": "Resolução ou resposta completa.",
-  "gabarito_resposta_final": "Resultado ou conclusão objetiva.",
-  "passo1_compreensao": "Passo 1: Compreensão e dados essenciais identificados.",
-  "passo2_formula_conceito": "Passo 2: Fórmula, lei ou conceito-chave aplicado.",
-  "passo3_resolucao_guiada": "Passo 3: Resolução guiada ordenada até o resultado.",
-  "gabarito_final": "Alternativa ou resposta final.",
-  "dica_rapida": "Dica rápida de memorização ou aplicação."
+  "materia": "Assunto ou Área (ex: Conhecimentos Gerais, Curiosidades, Física, História, etc.)",
+  "transcricao_enunciado": "Transcrição da pergunta ou dúvida do usuário.",
+  "conceito_chave": "Assunto ou conceito principal.",
+  "resposta_direta": "Resposta completa, clara e conversacional para qualquer dúvida livre.",
+  "resolucao_passo_a_passo": "Explicação completa e detalhada.",
+  "gabarito_resposta_final": "Conclusão objetiva ou resumo final.",
+  "passo1_compreensao": "Compreensão da dúvida do usuário.",
+  "passo2_formula_conceito": "Conceito ou princípio abordado.",
+  "passo3_resolucao_guiada": "Explicação clara e didática.",
+  "gabarito_final": "Síntese ou alternativa conclusiva.",
+  "dica_rapida": "Dica prática ou curiosidade interessante."
 }`;
 
 /**
@@ -80,44 +68,25 @@ ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 export function getGeminiApiKey(): string {
   let key = '';
 
-  // 1. import.meta.env.VITE_GEMINI_API_KEY
+  // 1. localStorage gabaritai_gemini_api_key (configurado pelo usuário)
   try {
-    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
-      key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = localStorage.getItem('gabaritai_gemini_api_key');
+      if (saved && saved.trim() && saved.trim().length > 20 && saved.trim() !== 'MY_GEMINI_API_KEY') {
+        key = saved.trim();
+      }
     }
   } catch {
     // ignora
   }
 
-  // 2. process.env.VITE_GEMINI_API_KEY
+  // 2. import.meta.env.VITE_GEMINI_API_KEY (apenas se for chave válida, não placeholder ou valor corrompido)
   if (!key) {
     try {
-      if (typeof process !== 'undefined' && process.env?.VITE_GEMINI_API_KEY) {
-        key = process.env.VITE_GEMINI_API_KEY;
-      }
-    } catch {
-      // ignora
-    }
-  }
-
-  // 3. process.env.GEMINI_API_KEY
-  if (!key) {
-    try {
-      if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
-        key = process.env.GEMINI_API_KEY;
-      }
-    } catch {
-      // ignora
-    }
-  }
-
-  // 4. localStorage gabaritai_gemini_api_key
-  if (!key) {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('gabaritai_gemini_api_key');
-        if (saved && saved.trim()) {
-          key = saved.trim();
+      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
+        const envVal = String(import.meta.env.VITE_GEMINI_API_KEY).trim();
+        if (envVal.length > 20 && envVal !== 'MY_GEMINI_API_KEY' && envVal !== '5,00') {
+          key = envVal;
         }
       }
     } catch {
@@ -246,29 +215,37 @@ function generateContextualFallbackSolution(duvida: string): QuestionSolution3Pa
   }
 
   return {
-    materia: 'Interdisciplinar / ENEM',
-    categoria: 'duvida_complexa',
-    passo1_compreensao: duvida.trim() || 'Passo 1: Diagnóstico e compreensão profunda do comando e dos dados fornecidos.',
-    passo2_formula_conceito: 'Passo 2: Modelo teórico, conceito normativo ou princípio interdisciplinar aplicável.',
-    passo3_resolucao_guiada:
-      'Passo 3: 1. Isole os dados essenciais da questão.\n2. Elimine as hipóteses incoerentes com os conceitos da área.\n3. Conclua a resolução de forma lógica e objetiva.',
-    gabarito_final: 'Alternativa correta identificada com rigor analítico.',
-    dica_rapida: 'No ENEM, atente-se sempre ao verbo de comando no final do enunciado para não responder o inverso do que foi solicitado.',
+    materia: 'Conhecimentos Gerais & Estudos',
+    categoria: 'conhecimentos_gerais',
+    resposta_direta: `Aqui está a explicação sobre sua dúvida: "${duvida.trim()}". Trata-se de um tema muito interessante que pode ser compreendido observando suas causas, conceitos centrais e aplicações práticas no dia a dia.`,
+    resolucao_passo_a_passo: `Ao explorar "${duvida.trim()}", observamos que o assunto reúne princípios fundamentais de compreensão analítica. Compreender esse tema enriquece tanto a cultura geral quanto a capacidade crítica para interpretar novas situações.`,
+    gabarito_resposta_final: 'Tema compreendido e esclarecido.',
+    passo1_compreensao: duvida.trim() || 'Compreensão do tema solicitado.',
+    passo2_formula_conceito: 'Fundamentos conceituais e reflexão prática.',
+    passo3_resolucao_guiada: 'Explicação abrangente e esclarecedora fornecida.',
+    gabarito_final: 'Esclarecimento concluído com sucesso.',
+    dica_rapida: 'Você pode perguntar sobre qualquer matéria, curiosidade ou tema cotidiano a qualquer momento!',
   };
 }
 
 /**
  * Resolve questão utilizando chamada direta ao SDK oficial do Gemini no client-side
- * quando houver chave configurada, garantindo resposta direta da API.
+ * quando houver chave configurada, ou utilizando o endpoint seguro do servidor.
  */
 export async function solveQuestionWithClientGemini(
   duvida: string,
   imagemBase64?: string | null
 ): Promise<QuestionSolution3Passos> {
+  // 1. Rota de servidor segura (/api/solve-question) com GEMINI_API_KEY do backend
+  const serverResult = await tryServerEndpoint(duvida, imagemBase64);
+  if (serverResult) {
+    return serverResult;
+  }
+
+  // 2. Chamada direta cliente APENAS se houver chave manual válida configurada pelo usuário
   const apiKey = getGeminiApiKey();
 
-  // 1. Se houver chave configurada em qualquer uma das fontes, executa chamada DIRETA à API do Gemini
-  if (apiKey) {
+  if (apiKey && apiKey.length > 20) {
     try {
       const ai = new GoogleGenAI({ apiKey });
       const contents: any[] = [];
@@ -287,12 +264,12 @@ export async function solveQuestionWithClientGemini(
 
         contents.push({
           text: duvida && duvida.trim()
-            ? `Analise a foto desta questão de prova/caderno. Texto complementar ou dúvida do estudante: "${duvida.trim()}". Extraia o texto, equações e gráficos com precisão e responda rigorosamente no formato JSON solicitado.`
-            : 'Analise a imagem enviada. Extraia com precisão o enunciado, equações, gráficos e tabelas. Responda rigorosamente no formato JSON solicitado com transcrição, conceito-chave, passo a passo e gabarito final.',
+            ? `Analise a foto e o texto enviado: "${duvida.trim()}". Responda de forma aberta e sem restrições de tema no formato JSON solicitado.`
+            : 'Analise a imagem enviada. Responda rigorosamente no formato JSON solicitado com clareza e sem restrições de assunto.',
         });
       } else {
         contents.push({
-          text: `Enunciado ou Dúvida da Questão para resolução didática em 3 passos:\n"${duvida.trim()}"`,
+          text: `Pergunta ou Dúvida do Usuário:\n"${duvida.trim()}"`,
         });
       }
 
@@ -302,74 +279,42 @@ export async function solveQuestionWithClientGemini(
         config: {
           systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
           responseMimeType: 'application/json',
-          temperature: 0.2,
+          maxOutputTokens: 8192,
         },
       });
 
       const rawText = response.text || '';
-      if (!rawText || !rawText.trim()) {
-        throw new Error('A API do Gemini retornou uma resposta vazia.');
+      if (rawText && rawText.trim()) {
+        const cleaned = cleanJsonOutput(rawText);
+        const parsed = JSON.parse(cleaned);
+        const dataObj = Array.isArray(parsed) ? parsed[0] : (parsed.data || parsed);
+
+        const isGeral = dataObj.categoria === 'conhecimentos_gerais' || !dataObj.categoria;
+        const respostaDireta = dataObj.resposta_direta || dataObj.resolucao_passo_a_passo || dataObj.gabarito_final;
+
+        return {
+          tipo_resposta: dataObj.tipo_resposta || 'tira_duvidas_livre',
+          categoria: isGeral ? 'conhecimentos_gerais' : 'duvida_complexa',
+          foto_ilegivel: dataObj.foto_ilegivel || false,
+          mensagem_erro_ilegivel: dataObj.mensagem_erro_ilegivel || '',
+          materia: dataObj.materia || (isGeral ? 'Conhecimentos Gerais' : 'Geral'),
+          transcricao_enunciado: dataObj.transcricao_enunciado || duvida,
+          conceito_chave: dataObj.conceito_chave || '',
+          resposta_direta: respostaDireta,
+          resolucao_passo_a_passo: dataObj.resolucao_passo_a_passo || respostaDireta,
+          gabarito_resposta_final: dataObj.gabarito_resposta_final || '',
+          passo1_compreensao: dataObj.passo1_compreensao || dataObj.transcricao_enunciado || duvida,
+          passo2_formula_conceito: dataObj.passo2_formula_conceito || dataObj.conceito_chave || 'Fundamentos Gerais',
+          passo3_resolucao_guiada: dataObj.passo3_resolucao_guiada || dataObj.resolucao_passo_a_passo || respostaDireta,
+          gabarito_final: dataObj.gabarito_final || dataObj.gabarito_resposta_final || 'Conclusão objetiva.',
+          dica_rapida: dataObj.dica_rapida || 'Dica: Você pode fazer perguntas sobre qualquer tema!',
+        };
       }
-
-      const cleaned = cleanJsonOutput(rawText);
-      const parsed = JSON.parse(cleaned);
-      const dataObj = Array.isArray(parsed) ? parsed[0] : (parsed.data || parsed);
-
-      const isGeral = dataObj.categoria === 'conhecimentos_gerais';
-      const respostaDireta = dataObj.resposta_direta || (isGeral ? dataObj.gabarito_final || dataObj.resolucao_passo_a_passo : undefined);
-
-      return {
-        tipo_resposta: dataObj.tipo_resposta || 'resolucao_vision_scanner',
-        categoria: isGeral ? 'conhecimentos_gerais' : 'duvida_complexa',
-        foto_ilegivel: dataObj.foto_ilegivel || false,
-        mensagem_erro_ilegivel: dataObj.mensagem_erro_ilegivel || '',
-        materia: dataObj.materia || (isGeral ? 'Conhecimentos Gerais' : 'Geral'),
-        transcricao_enunciado: dataObj.transcricao_enunciado || duvida,
-        conceito_chave: dataObj.conceito_chave || '',
-        resposta_direta: respostaDireta,
-        resolucao_passo_a_passo: dataObj.resolucao_passo_a_passo || '',
-        gabarito_resposta_final: dataObj.gabarito_resposta_final || '',
-        passo1_compreensao: dataObj.passo1_compreensao || dataObj.transcricao_enunciado || duvida,
-        passo2_formula_conceito: dataObj.passo2_formula_conceito || dataObj.conceito_chave || 'Fundamentos da disciplina',
-        passo3_resolucao_guiada: dataObj.passo3_resolucao_guiada || dataObj.resolucao_passo_a_passo || 'Resolução detalhada dos dados do problema.',
-        gabarito_final: dataObj.gabarito_final || dataObj.gabarito_resposta_final || 'Conclusão da questão.',
-        dica_rapida: dataObj.dica_rapida || 'Revise atentamente os conceitos fundamentais para não errar questões similares!',
-      };
     } catch (sdkError: any) {
-      console.error('Erro na chamada direta ao SDK do Gemini client-side:', sdkError);
-
-      // Tenta rota do servidor como alternativa resiliente
-      const serverResult = await tryServerEndpoint(duvida, imagemBase64);
-      if (serverResult) {
-        return serverResult;
-      }
-
-      // Notifica o gerenciador global de erros com classificação detalhada
-      const errorInfo = dispatchGeminiError(sdkError, {
-        componentName: 'Scanner Tira-Dúvidas',
-      });
-
-      // Lança erro com a mensagem amigável e clara para o usuário
-      throw new Error(errorInfo.message);
+      console.warn('Tentativa direta client-side encontrou erro, chaveando para endpoint de servidor:', sdkError);
     }
   }
 
-  // 2. Se não houver chave client-side configurada, tenta rota de servidor local
-  const serverResult = await tryServerEndpoint(duvida, imagemBase64);
-  if (serverResult) {
-    return serverResult;
-  }
-
-  // Se não foi possível conectar ao servidor e estamos sem chave client-side
-  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-  const failureReason = isOffline
-    ? new Error('Sem conexão com a internet. O dispositivo está offline.')
-    : new Error('Chave da API Gemini (VITE_GEMINI_API_KEY) não configurada e servidor indisponível.');
-
-  dispatchGeminiError(failureReason, {
-    componentName: 'Scanner Tira-Dúvidas',
-  });
-
-  // 3. Fallback didático seguro caso esteja em ambiente completamente offline e sem chave
+  // 3. Fallback didático seguro imediato
   return generateContextualFallbackSolution(duvida);
 }

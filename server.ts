@@ -937,7 +937,7 @@ FORMATO DE RESPOSTA (OBRIGATORIAMENTE JSON):
 
 app.post("/api/gabi-support", async (req, res) => {
   try {
-    const { pergunta } = req.body;
+    const pergunta = req.body.pergunta || req.body.message || req.body.prompt || req.body.question;
 
     if (!pergunta || typeof pergunta !== "string" || !pergunta.trim()) {
       return res.status(400).json({ error: "Envie sua dúvida para a Professora Gabi." });

@@ -598,12 +598,17 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
               ) : (() => {
                 const isGreeting =
                   solution.categoria === 'cumprimento' ||
+                  solution.tipo_resposta === 'conversacional' ||
                   isGreetingOrInformal(solution.transcricao_enunciado || duvida);
                 const isExercicio =
                   !isGreeting &&
                   (solution.categoria === 'exercicio' || solution.categoria === 'duvida_complexa');
 
                 if (isGreeting) {
+                  const cleanedGreetingText = (solution.resposta_direta || '')
+                    .replace(/^Aqui est[aá] a explica[cç][aã]o sobre sua d[uú]vida:?\s*['"]?[^'"]*['"]?:?\s*/i, '')
+                    .trim();
+
                   return (
                     <div className="space-y-4">
                       {/* Header Badge para Conversa */}
@@ -642,7 +647,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                               </span>
                             </div>
                             <div className="text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-relaxed font-normal bg-purple-50/60 dark:bg-purple-950/30 p-4 sm:p-5 rounded-2xl border border-purple-100 dark:border-purple-900/40 whitespace-pre-line shadow-2xs">
-                              {solution.resposta_direta ||
+                              {cleanedGreetingText ||
                                 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas, exercícios escolares, redações ou a foto de uma questão para estudarmos juntos!'}
                             </div>
                           </div>

@@ -2627,7 +2627,7 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
   }
 });
 
-// 10. SYSTEM INSTRUCTION FOR SCANNER TIRA-DÚVIDAS (RESPOSTAS LIVRES E UNIVERSAIS)
+// 10. SYSTEM INSTRUCTION FOR SCANNER TIRA-DÚVIDAS (RESPOSTAS INTELIGENTES E ADAPTATIVAS)
 function isGreetingOrInformalServer(text: string): boolean {
   if (!text) return false;
   const clean = text
@@ -2642,56 +2642,114 @@ function isGreetingOrInformalServer(text: string): boolean {
   if (!clean) return false;
 
   const exactGreetings = new Set([
-    'oi', 'oie', 'ola', 'opa', 'e ai', 'eai',
-    'tudo bem', 'tudo bom', 'tudo certo', 'como vai', 'como voce esta',
-    'como vc esta', 'como vc ta', 'bom dia', 'boa tarde', 'boa noite',
-    'fala ai', 'fala tu', 'salve', 'hello', 'hi', 'hey',
-    'obrigado', 'obrigada', 'valeu', 'valeuu', 'muito obrigado',
-    'show', 'beleza', 'blz', 'professora', 'profa', 'gabi',
+    'oi', 'oie', 'ola', 'opa', 'opaa', 'e ai', 'eai', 'e aii',
+    'tudo bem', 'tudo bom', 'tudo certo', 'tudo joia', 'tudo sussa', 'tudo legal',
+    'como vai', 'como voce esta', 'como vc esta', 'como vc ta', 'como vai voce',
+    'bom dia', 'boa tarde', 'boa noite',
+    'fala ai', 'fala tu', 'salve', 'salve salve', 'hello', 'hi', 'hey',
+    'obrigado', 'obrigada', 'valeu', 'valeuu', 'muito obrigado', 'muito obrigada',
+    'show', 'show de bola', 'beleza', 'blz', 'perfeito', 'otimo',
+    'professora', 'profa', 'gabi',
     'oi gabi', 'ola gabi', 'oi professora', 'ola professora',
     'oi profa', 'ola profa', 'professora gabi', 'profa gabi',
-    'quem e voce', 'quem e vc', 'quem e a professora gabi',
-    'ajuda', 'socorro', 'preciso de ajuda'
+    'oi tudo bem', 'ola tudo bem', 'oi gabi tudo bem', 'ola gabi tudo bem',
+    'oi boa tarde', 'oi bom dia', 'oi boa noite', 'ola bom dia', 'ola boa tarde', 'ola boa noite',
+    'quem e voce', 'quem e vc', 'quem e a professora gabi', 'qual seu nome', 'qual e seu nome', 'qual e o seu nome',
+    'o que voce faz', 'oque voce faz', 'como voce funciona', 'como funciona',
+    'ajuda', 'socorro', 'preciso de ajuda', 'me ajuda', 'pode me ajudar', 'como voce pode me ajudar',
+    'teste', 'testando'
   ]);
 
   if (exactGreetings.has(clean)) return true;
 
-  const greetingStarts = ['oi ', 'ola ', 'oie ', 'opa ', 'e ai ', 'bom dia', 'boa tarde', 'boa noite'];
-  if (clean.length < 35 && greetingStarts.some((g) => clean.startsWith(g))) {
-    const academicWords = ['calcule', 'determine', 'encontre', 'quantos', 'quanto', 'resolva', 'qual', 'equacao', 'funcao', 'vestibular', 'enem', 'alternativa'];
-    const hasAcademic = academicWords.some((w) => clean.includes(w));
-    if (!hasAcademic) return true;
+  // Letras repetidas como 'oiii', 'olaaa', 'heyyy'
+  const collapsed = clean.replace(/(.)\1+/g, '$1');
+  if (exactGreetings.has(collapsed)) return true;
+
+  const greetingStarts = [
+    'oi ', 'ola ', 'oie ', 'opa ', 'e ai ', 'eai ', 'fala ', 'salve ',
+    'bom dia', 'boa tarde', 'boa noite'
+  ];
+
+  const academicWords = [
+    'calcule', 'determine', 'encontre', 'quantos', 'quanto', 'resolva', 'qual e a formula',
+    'equacao', 'funcao', 'vestibular', 'enem', 'alternativa', 'assinale', 'justifique',
+    'f(x)', 'aceleracao', 'velocidade', 'estequiometria', 'termodinamica'
+  ];
+
+  const hasAcademic = academicWords.some((w) => clean.includes(w));
+
+  if (clean.length < 55 && greetingStarts.some((g) => clean.startsWith(g)) && !hasAcademic) {
+    return true;
+  }
+
+  if ((clean.includes('tudo bem') || clean.includes('como vai') || clean.includes('como voce esta')) && !hasAcademic && clean.length < 50) {
+    return true;
   }
 
   return false;
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Tira-Dúvidas Inteligente e Assistente da Professora Gabi no Gabaritou.
-Sua missão é responder com naturalidade, simpatia, precisão pedagógica e adequação ao tipo de mensagem do usuário.
+function getConversationalGreetingResponseServer(text: string): string {
+  const clean = (text || '')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 
-CLASSIFICAÇÃO E DIRETRIZES DE RESPOSTA OBRIGATÓRIAS:
+  if (clean.includes('obrigad') || clean.includes('valeu')) {
+    return 'De nada! Fico muito feliz em ajudar nos seus estudos. Sempre que tiver dúvidas de qualquer matéria ou quiser resolver questões, conte comigo!';
+  }
 
-1. SAUDAÇÕES, CUMPRIMENTOS OU MENSAGENS INFORMAIS (ex: "Oi", "Olá", "Tudo bem?", "Bom dia", "Boa tarde", "Boa noite", "E aí", "Obrigado", "Valeu", "Quem é você?"):
-   - NUNCA trate saudações como se fossem questões de prova ou dúvidas acadêmicas.
-   - É ESTRITAMENTE PROIBIDO usar introduções burocráticas ou fórmulas como "Aqui está a explicação sobre sua dúvida: 'Oi'" ou "Tema compreendido e esclarecido".
-   - Responda como a Professora Gabi de forma conversacional, calorosa e receptiva (ex: "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie sua dúvida teórica, exercício ou a foto de uma questão para estudarmos juntos!").
+  if (clean.includes('quem e') || clean.includes('qual seu nome') || clean.includes('qual e seu nome')) {
+    return 'Olá! Eu sou a Professora Gabi, sua assistente pedagógica e tutora de estudos no Gabaritou! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
+  }
+
+  if (clean.includes('tudo bem') || clean.includes('como vai') || clean.includes('como voce esta') || clean.includes('como vc ta')) {
+    return 'Tudo ótimo por aqui, e com você? Pronta para te ajudar com seus estudos! Você pode me mandar qualquer dúvida, exercício escolar ou enviar a foto de uma questão que resolvemos juntos!';
+  }
+
+  if (clean.includes('o que voce faz') || clean.includes('pode me ajudar') || clean.includes('como voce pode')) {
+    return 'Eu posso te ajudar de várias formas: tirando dúvidas sobre qualquer tema, explicando conceitos difíceis com didática simples, resolvendo questões em 3 passos pedagógicos e analisando fotos de exercícios da sua apostila ou prova. O que você gostaria de ver hoje?';
+  }
+
+  return 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
+}
+
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no Gabaritou.
+Sua comunicação deve ser natural, simpática, acolhedora e inteligente, adaptando-se com precisão ao tipo de mensagem do usuário.
+
+IMPORTANTE: NEM TODA MENSAGEM DO USUÁRIO É UMA DÚVIDA DE MATÉRIA ESCOLAR OU EXERCÍCIO DE PROVA!
+O usuário pode mandar saudações simples ("Oi", "Olá", "Tudo bem?"), perguntas livres, curiosidades ou exercícios de prova.
+Você DEVE identificar a intenção real e responder no estilo apropriado:
+
+1. SAUDAÇÕES, CUMPRIMENTOS OU CONVERSAS INFORMAIS (ex: "Oi", "Olá", "Tudo bem?", "Bom dia", "Boa tarde", "Boa noite", "E aí", "Valeu", "Obrigado", "Quem é você?", "Como você pode me ajudar?"):
+   - Responda de forma direta, amigável e conversacional como a Professora Gabi em um chat normal.
+   - NUNCA use introduções burocráticas ou fórmulas pré-formatadas como "Aqui está a explicação sobre sua dúvida: 'Oi'" ou "Tema compreendido e esclarecido".
+   - NÃO force explicações acadêmicas, fórmulas ou conceitos escolares para um cumprimento simples.
    - Defina "categoria": "cumprimento" e "tipo_resposta": "conversacional".
-   - Defina "resposta_direta" com sua resposta amigável e conversacional.
-   - Deixe os campos "passo1_compreensao", "passo2_formula_conceito", "passo3_resolucao_guiada", "gabarito_final" e "gabarito_resposta_final" como strings vazias ("").
-   - Defina "materia": "Conversa & Saudações".
+   - Preencha o campo "resposta_direta" com sua resposta acolhedora em linguagem natural.
+   - Deixe os campos "passo1_compreensao", "passo2_formula_conceito", "passo3_resolucao_guiada", "gabarito_final", "gabarito_resposta_final" e "conceito_chave" como strings vazias ("").
+   - Defina "materia": "Conversa & Boas-Vindas".
 
-2. CONHECIMENTOS GERAIS, CURIOSIDADES E COTIDIANO (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Como organizar minha rotina de estudos?"):
-   - Responda de forma direta, clara e acessível em "resposta_direta", sem forçar etapas artificiais de resolução escolar.
+2. CURIOSIDADES, PERGUNTAS LIVRES E CONHECIMENTOS GERAIS (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Dicas para não procrastinar"):
+   - Responda de forma clara, interessante e didática diretamente no campo "resposta_direta".
    - Defina "categoria": "conhecimentos_gerais" e "tipo_resposta": "conhecimentos_gerais".
-   - Defina "gabarito_resposta_final" com uma síntese objetiva e "dica_rapida" com uma curiosidade ou dica útil.
+   - Defina "gabarito_resposta_final" com uma síntese direta e "dica_rapida" com uma dica prática.
+   - Deixe as etapas rígidas de exercício de prova vazias se não for um exercício.
 
-3. EXERCÍCIOS DE PROVA, VESTIBULARES OU ENEM (questões de múltipla escolha com alternativas A-E, cálculos de física/matemática/química, interpretação de texto acadêmico):
-   - Estruture a resolução didática em 3 passos com clareza.
+3. EXERCÍCIOS ESCOLARES, QUESTÕES DE PROVA OU ENEM/VESTIBULARES (ex: cálculos matemáticos/físicos/químicos, questões de múltipla escolha A-E, interpretação acadêmica):
+   - Estruture a resolução didática:
+     * Passo 1 ("passo1_compreensao"): Identificação das variáveis e comando da questão.
+     * Passo 2 ("passo2_formula_conceito"): Fórmula ou lei científica aplicável.
+     * Passo 3 ("passo3_resolucao_guiada"): Aplicação guiada e cálculo passo a passo.
+     * Gabarito final objetivo em "gabarito_final".
    - Defina "categoria": "exercicio" e "tipo_resposta": "exercicio_3passos".
-   - Preencha "passo1_compreensao", "passo2_formula_conceito", "passo3_resolucao_guiada" e "gabarito_final".
 
 4. IMAGEM ILEGÍVEL:
-   - Se a imagem enviada estiver borrada, muito escura ou impossível de ler, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o texto da foto. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
+   - Se uma imagem foi anexada e estiver escura, cortada ou ilegível:
+     * "foto_ilegivel": true
+     * "mensagem_erro_ilegivel": "Ops! Não consegui ler bem a imagem da foto. Tente tirar outra foto mais nítida e bem iluminada! 📸"
 
 ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 {
@@ -2699,17 +2757,17 @@ ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
   "tipo_resposta": "conversacional | conhecimentos_gerais | exercicio_3passos",
   "foto_ilegivel": false,
   "mensagem_erro_ilegivel": "",
-  "materia": "Área ou Assunto (ex: Conversa & Saudações, Física, Matemática, Conhecimentos Gerais...)",
-  "transcricao_enunciado": "Mensagem ou questão enviada.",
-  "conceito_chave": "Conceito principal (vazio se for cumprimento)",
-  "resposta_direta": "Resposta conversacional ou explicação direta.",
-  "resolucao_passo_a_passo": "Resolução detalhada (apenas para exercícios/conteúdos complexos).",
-  "gabarito_resposta_final": "Síntese conclusiva (vazio se for cumprimento).",
+  "materia": "Área correspondente (ex: Conversa & Boas-Vindas, Física, Biologia, História...)",
+  "transcricao_enunciado": "Texto ou questão enviada pelo usuário.",
+  "conceito_chave": "Conceito central (vazio se for cumprimento)",
+  "resposta_direta": "Resposta conversacional para saudações/curiosidades ou síntese explicativa.",
+  "resolucao_passo_a_passo": "Resolução guiada (apenas para exercícios acadêmicos).",
+  "gabarito_resposta_final": "Conclusão objetiva (vazio se for cumprimento).",
   "passo1_compreensao": "",
   "passo2_formula_conceito": "",
   "passo3_resolucao_guiada": "",
   "gabarito_final": "",
-  "dica_rapida": "Dica prática ou curiosidade."
+  "dica_rapida": "Dica prática de estudo ou curiosidade relevante."
 }`;
 
 app.post("/api/solve-question", async (req, res) => {
@@ -2721,6 +2779,31 @@ app.post("/api/solve-question", async (req, res) => {
     }
 
     const isGreeting = isGreetingOrInformalServer(duvida || "");
+
+    // Se for uma saudação ou cumprimento puro sem imagem, responda imediatamente de forma calorosa e conversacional
+    if (isGreeting && !imagemBase64) {
+      const greetingResponse = getConversationalGreetingResponseServer(duvida || "");
+      return res.json({
+        success: true,
+        data: {
+          categoria: "cumprimento",
+          tipo_resposta: "conversacional",
+          foto_ilegivel: false,
+          mensagem_erro_ilegivel: "",
+          materia: "Conversa & Boas-Vindas",
+          transcricao_enunciado: (duvida || "").trim() || "Olá!",
+          conceito_chave: "",
+          resposta_direta: greetingResponse,
+          resolucao_passo_a_passo: "",
+          gabarito_resposta_final: "",
+          passo1_compreensao: "",
+          passo2_formula_conceito: "",
+          passo3_resolucao_guiada: "",
+          gabarito_final: "",
+          dica_rapida: "Você pode me mandar uma dúvida sobre qualquer matéria ou anexar a foto de uma questão para resolvermos juntos!",
+        },
+      });
+    }
 
     const ai = getGenAI();
     let contents: any[] = [];
@@ -2771,11 +2854,10 @@ app.post("/api/solve-question", async (req, res) => {
           tipo_resposta: "conversacional",
           foto_ilegivel: false,
           mensagem_erro_ilegivel: "",
-          materia: "Conversa & Saudações",
+          materia: "Conversa & Boas-Vindas",
           transcricao_enunciado: duvida || "Olá!",
           conceito_chave: "",
-          resposta_direta:
-            "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares, redações ou a foto de uma questão para estudarmos juntos!",
+          resposta_direta: getConversationalGreetingResponseServer(duvida || ""),
           resolucao_passo_a_passo: "",
           gabarito_resposta_final: "",
           passo1_compreensao: "",
@@ -2792,20 +2874,20 @@ app.post("/api/solve-question", async (req, res) => {
           mensagem_erro_ilegivel: "",
           materia: "Conhecimentos Gerais",
           transcricao_enunciado: duvida || "Pergunta do usuário",
-          conceito_chave: "Informação Geral",
-          resposta_direta: `Aqui estão as informações sobre "${duvida || ""}".`,
+          conceito_chave: "",
+          resposta_direta: `Sobre "${duvida || ""}": analisamos os principais pontos desse assunto para esclarecer sua dúvida com didática.`,
           resolucao_passo_a_passo: `Explicação didática sobre ${duvida || "o tema pesquisado"}.`,
-          gabarito_resposta_final: "Esclarecimento concluído com didática.",
-          passo1_compreensao: duvida || "Compreensão da dúvida",
-          passo2_formula_conceito: "Conceito Geral",
-          passo3_resolucao_guiada: "Explicação fornecida com clareza.",
-          gabarito_final: "Conclusão objetiva.",
+          gabarito_resposta_final: "Conceito esclarecido com clareza.",
+          passo1_compreensao: "",
+          passo2_formula_conceito: "",
+          passo3_resolucao_guiada: "",
+          gabarito_final: "",
           dica_rapida: "Você pode perguntar sobre qualquer assunto: matérias escolares, curiosidades e muito mais!",
         };
       }
     }
 
-    const userGreetingDetected = isGreeting || parsedData.categoria === "cumprimento";
+    const userGreetingDetected = isGreeting || parsedData.categoria === "cumprimento" || parsedData.tipo_resposta === "conversacional";
     const isExercicio = !userGreetingDetected && (parsedData.categoria === "exercicio" || parsedData.categoria === "duvida_complexa");
     const isLivre = !userGreetingDetected && !isExercicio;
 
@@ -2820,8 +2902,8 @@ app.post("/api/solve-question", async (req, res) => {
       parsedData.resolucao_passo_a_passo ||
       parsedData.gabarito_final ||
       (userGreetingDetected
-        ? "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje?"
-        : "Aqui está a resposta.");
+        ? getConversationalGreetingResponseServer(duvida || "")
+        : "Aqui está a explicação sobre o tema.");
 
     const formattedData = {
       ...parsedData,
@@ -2831,7 +2913,7 @@ app.post("/api/solve-question", async (req, res) => {
         : isExercicio
         ? "exercicio_3passos"
         : "conhecimentos_gerais",
-      materia: parsedData.materia || (userGreetingDetected ? "Conversa & Saudações" : isLivre ? "Conhecimentos Gerais" : "Geral"),
+      materia: parsedData.materia || (userGreetingDetected ? "Conversa & Boas-Vindas" : isLivre ? "Conhecimentos Gerais" : "Geral"),
       resposta_direta: respostaFinal,
       conceito_chave: userGreetingDetected ? "" : (parsedData.conceito_chave || ""),
       resolucao_passo_a_passo: userGreetingDetected ? "" : (parsedData.resolucao_passo_a_passo || (isExercicio ? respostaFinal : "")),

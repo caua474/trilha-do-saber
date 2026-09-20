@@ -216,7 +216,7 @@ export interface TopDuelist {
 
 export interface QuestionSolution3Passos {
   tipo_resposta?: string;
-  categoria?: 'duvida_complexa' | 'conhecimentos_gerais';
+  categoria?: 'cumprimento' | 'conhecimentos_gerais' | 'exercicio' | 'duvida_complexa';
   foto_ilegivel?: boolean;
   mensagem_erro_ilegivel?: string;
   materia: string;

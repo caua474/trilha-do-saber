@@ -500,7 +500,7 @@ export default function Simulados() {
                       <span className="w-6 h-6 rounded-full bg-slate-900 border border-slate-700 text-xs font-bold flex items-center justify-center shrink-0 text-slate-200">
                         {String.fromCharCode(65 + optIndex)}
                       </span>
-                      <span className="leading-snug pt-0.5">{opcao}</span>
+                      <span className="leading-snug pt-0.5">{opcao.replace(/^[A-E]\)\s*/, '')}</span>
                     </button>
                   );
                 })}
@@ -632,7 +632,7 @@ export default function Simulados() {
                           <span className="w-5 h-5 rounded-full bg-slate-900 border border-slate-700 text-[11px] font-bold flex items-center justify-center shrink-0 text-slate-200">
                             {String.fromCharCode(65 + optIndex)}
                           </span>
-                          <span className="leading-snug pt-0.5">{opcao}</span>
+                          <span className="leading-snug pt-0.5">{opcao.replace(/^[A-E]\)\s*/, '')}</span>
                         </button>
                       );
                     })}

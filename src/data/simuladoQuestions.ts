@@ -400,5 +400,26 @@ export function getSimuladoQuestionsByFilter(
     }
   }
 
-  return list.slice(0, Math.min(batchSize, list.length));
+  const selected = list.slice(0, Math.min(batchSize, list.length));
+
+  // Embaralha dinamicamente as alternativas de cada questão para que a resposta correta nunca fique fixa (ex: sempre letra A)
+  return selected.map((q) => {
+    const rawOptions = q.opcoes.map((opt) => opt.replace(/^[A-E]\)\s*/, '').trim());
+    const correctText = rawOptions[q.correta] || rawOptions[0];
+
+    // Fisher-Yates shuffle nas alternativas
+    const shuffled = [...rawOptions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const newCorrectIndex = shuffled.findIndex((opt) => opt === correctText);
+
+    return {
+      ...q,
+      opcoes: shuffled,
+      correta: newCorrectIndex !== -1 ? newCorrectIndex : 0,
+    };
+  });
 }

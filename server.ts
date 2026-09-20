@@ -48,10 +48,144 @@ function getGenAI() {
   });
 }
 
-// Fallback pedagógico imediato caso os servidores externos estejam indisponíveis
-function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; botao_atalho: string } {
-  const p = (pergunta || "").toLowerCase();
+/**
+ * Trata, higieniza e repara o JSON retornado pelo Gemini antes do JSON.parse(),
+ * suportando tanto objetos {} quanto arrays [], evitando erros como
+ * "Unexpected token '`', ```json..." ou "Unexpected end of JSON input".
+ */
+function cleanAndRepairJson(rawText: string | undefined | null): any {
+  if (!rawText || typeof rawText !== "string") return null;
 
+  let text = rawText.trim();
+
+  // 1. Remover blocos de marcação markdown ```json ... ```
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+
+  // 2. Tentativa direta de JSON.parse
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    // Prossegue para higienização e reparo estrutural
+  }
+
+  // 3. Localizar delimitadores de início '{' ou '['
+  const firstBrace = text.indexOf("{");
+  const firstBracket = text.indexOf("[");
+  let startIdx = -1;
+  let isArray = false;
+
+  if (firstBrace !== -1 && firstBracket !== -1) {
+    if (firstBracket < firstBrace) {
+      startIdx = firstBracket;
+      isArray = true;
+    } else {
+      startIdx = firstBrace;
+    }
+  } else if (firstBrace !== -1) {
+    startIdx = firstBrace;
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    isArray = true;
+  }
+
+  if (startIdx === -1) return null;
+
+  let candidate = text.slice(startIdx);
+  const closingChar = isArray ? "]" : "}";
+  const lastClose = candidate.lastIndexOf(closingChar);
+  if (lastClose !== -1) {
+    const candidateSlice = candidate.slice(0, lastClose + 1);
+    try {
+      const withoutTrailingCommas = candidateSlice.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(withoutTrailingCommas);
+    } catch (_) {
+      // Falhou; prossegue para o reparo de JSON cortado no final
+    }
+  }
+
+  // 4. Reparar JSON incompleto/cortado no meio (fechamento de strings e delimitadores)
+  try {
+    let repaired = candidate;
+
+    repaired = repaired.replace(/,\s*"[^"]*":?\s*$/, "");
+    repaired = repaired.replace(/:\s*"[^"]*$/, ': ""');
+
+    let inString = false;
+    let escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+      if (char === "\\" && inString) {
+        escaped = !escaped;
+      } else if (char === '"' && !escaped) {
+        inString = !inString;
+      } else {
+        escaped = false;
+      }
+    }
+    if (inString) {
+      repaired += '"';
+    }
+
+    repaired = repaired.replace(/,\s*$/, "");
+
+    const stack: string[] = [];
+    inString = false;
+    escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+      if (char === "\\" && inString) {
+        escaped = !escaped;
+      } else if (char === '"' && !escaped) {
+        inString = !inString;
+      } else if (!inString) {
+        if (char === "{") stack.push("}");
+        else if (char === "[") stack.push("]");
+        else if (char === "}" || char === "]") {
+          if (stack.length > 0 && stack[stack.length - 1] === char) {
+            stack.pop();
+          }
+        }
+      } else {
+        escaped = false;
+      }
+    }
+
+    while (stack.length > 0) {
+      repaired += stack.pop();
+    }
+
+    repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+    return JSON.parse(repaired);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Fallback pedagógico imediato diversificado e contextual caso os servidores externos estejam indisponíveis
+function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; botao_atalho: string } {
+  const raw = (pergunta || "").trim();
+  const p = raw.toLowerCase();
+
+  // 1. Saudações e interações conversacionais
+  if (
+    p === "oi" || p === "olá" || p === "ola" || p === "oie" || p === "opa" ||
+    p.includes("tudo bem") || p.includes("tudo bom") || p.includes("boa tarde") ||
+    p.includes("bom dia") || p.includes("boa noite") || p.includes("como vai") ||
+    p.includes("quem é você") || p.includes("quem e voce") || p.includes("e ai")
+  ) {
+    const saudacoes = [
+      "Olá! Sou a Professora Gabi, sua mentora pedagógica no Gabaritou! Estou pronta para te ajudar a detonar nos vestibulares e no ENEM. Qual matéria, dúvida teórica ou exercício vamos descomplicar agora?",
+      "Oie! Tudo ótimo por aqui, e com você? Como posso te ajudar hoje? Pode me mandar perguntas conceituais, exercícios de matemática, temas de redação ou dicas de estudos!",
+      "Oi! Que bom te ver aqui! Como estão seus estudos hoje? Se tiver qualquer dúvida sobre matérias, provas ou sobre como usar o app, é só me falar!"
+    ];
+    return {
+      resposta_suporte: saudacoes[Math.abs(raw.length) % saudacoes.length],
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 2. Geometria & Áreas
   if (p.includes("trapézio") || (p.includes("trapezio") && p.includes("área"))) {
     return {
       resposta_suporte: "Para calcular a área de um trapézio, usamos a fórmula:\n\nA = [(Base Maior + Base Menor) × Altura] / 2\n\n📌 Passo a passo simples:\n1. Some a base maior (B) com a base menor (b);\n2. Multiplique a soma pela altura (h);\n3. Divida o resultado por 2.\n\n💡 Exemplo: Um trapézio com B = 10 cm, b = 6 cm e h = 4 cm:\nA = [(10 + 6) × 4] / 2 = [16 × 4] / 2 = 64 / 2 = 32 cm²!",
@@ -59,97 +193,155 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
     };
   }
 
-  if (p.includes("círculo") || p.includes("circulo") || p.includes("raio") || p.includes("pi")) {
+  if (p.includes("círculo") || p.includes("circulo") || p.includes("raio") || p.includes("área do circulo")) {
     return {
-      resposta_suporte: "A área de um círculo é dada por:\n\nA = π × r²\n\n📌 Onde:\n- π (pi) ≈ 3,14 (ou use a aproximação pedida na prova)\n- r é o raio (distância do centro até a borda)\n\n💡 Atenção no ENEM: Se a questão der o Diâmetro (d), lembre-se que o raio é a metade do diâmetro (r = d / 2) antes de elevar ao quadrado!",
+      resposta_suporte: "A área de um círculo é calculada por:\n\nA = π × r²\n\n📌 Elementos fundamentais:\n- π (pi) ≈ 3,14 (ou conforme aproximação do ENEM);\n- r é o raio (distância do centro até a extremidade).\n\n💡 Atenção no ENEM: Se a questão fornecer o Diâmetro (d), lembre-se que o raio é metade do diâmetro (r = d / 2) antes de elevar ao quadrado!",
       botao_atalho: "nenhum"
     };
   }
 
-  if (p.includes("newton") || p.includes("inércia") || p.includes("força")) {
+  if (p.includes("pitágoras") || p.includes("pitagoras") || p.includes("hipotenusa") || p.includes("triângulo retângulo")) {
     return {
-      resposta_suporte: "A 1ª Lei de Newton (Lei da Inércia) afirma que um corpo em repouso permanece em repouso, e um corpo em movimento retilíneo uniforme permanece em movimento, a menos que uma força resultante externa atue sobre ele!\n\n💡 Exemplo do cotidiano: Quando o ônibus freia bruscamente, os passageiros são jogados para a frente porque seus corpos tendem a continuar em movimento retilíneo com a velocidade anterior.",
+      resposta_suporte: "O Teorema de Pitágoras aplica-se a triângulos retângulos:\n\na² = b² + c²\n\n📌 Onde:\n- a = Hipotenusa (lado oposto ao ângulo reto de 90°);\n- b e c = Catetos.\n\n💡 Macete de prova: Memorize o trio pitagórico básico (3, 4, 5) e seus múltiplos (6, 8, 10) ou (5, 12, 13) para resolver questões sem fazer contas demoradas!",
       botao_atalho: "nenhum"
     };
   }
 
+  // 3. Álgebra e Equações
   if (p.includes("bhaskara") || p.includes("segundo grau") || p.includes("2º grau") || p.includes("delta")) {
     return {
-      resposta_suporte: "Para resolver a equação do 2º grau (ax² + bx + c = 0) por Bhaskara:\n\n1. Calcule o discriminante: Δ = b² - 4ac\n- Se Δ > 0: duas raízes reais diferentes.\n- Se Δ = 0: uma única raiz real dupla.\n- Se Δ < 0: nenhuma raiz real.\n\n2. Calcule as raízes x:\nx = (-b ± √Δ) / (2a)\n\n💡 Dica de ouro: Muito cuidado com os sinais ao fazer (-b) quando 'b' for negativo!",
+      resposta_suporte: "Para resolver a equação do 2º grau (ax² + bx + c = 0) por Bhaskara:\n\n1. Calcule o discriminante: Δ = b² - 4ac\n- Se Δ > 0: duas raízes reais distintas (x₁ ≠ x₂).\n- Se Δ = 0: uma única raiz real dupla (x₁ = x₂).\n- Se Δ < 0: não há raízes reais no conjunto ℝ.\n\n2. Calcule as raízes:\nx = (-b ± √Δ) / (2a)\n\n💡 Dica de ouro: Muito cuidado com a regra de sinais ao fazer (-b) quando 'b' for negativo!",
       botao_atalho: "nenhum"
     };
   }
 
-  if (p.includes("redação") || p.includes("competência") || p.includes("enem") || p.includes("1000")) {
+  if (p.includes("porcentagem") || p.includes("juros simples") || p.includes("juros compostos")) {
     return {
-      resposta_suporte: "Para alcançar nota 1000 na Redação do ENEM:\n\n1. Introdução: Apresente o tema com repertório sociocultural legitimado + tese clara com 2 problemas norteadores.\n2. Desenvolvimento 1 e 2: Aprofunde cada problema com causa, consequência e repertório produtivo (Competência 3).\n3. Conclusão / Proposta de Intervenção (Competência 5): Deve conter os 5 elementos obrigatórios:\n- Agente (quem vai fazer)\n- Ação (o que será feito)\n- Meio/Modo (como será feito)\n- Efeito (para que serve)\n- Detalhamento de um dos elementos!",
+      resposta_suporte: "Diferença essencial de Matemática Financeira para o ENEM:\n\n📌 Juros Simples: O juro incide apenas sobre o capital inicial (C).\n- J = C × i × t\n- Montante: M = C + J\n\n📌 Juros Compostos ('juros sobre juros'): O juro incide sobre o saldo acumulado.\n- M = C × (1 + i)ᵗ\n\n💡 Dica de ouro: Em aumentos sucessivos de porcentagem (ex: +10% e depois +20%), multiplique os fatores: 1,10 × 1,20 = 1,32 (aumento real de 32%, e NÃO 30%)!",
       botao_atalho: "nenhum"
     };
   }
 
+  // 4. Física
+  if (p.includes("newton") || p.includes("inércia") || p.includes("força resultante") || p.includes("aceleração")) {
+    return {
+      resposta_suporte: "As 3 Leis de Newton explicam a dinâmica dos corpos:\n\n1. 1ª Lei (Inércia): Todo corpo tende a manter seu estado de repouso ou MRU se a força resultante for nula.\n2. 2ª Lei (Princípio Fundamental): F_res = m × a (a aceleração é diretamente proporcional à força resultante e inversamente à massa).\n3. 3ª Lei (Ação e Reação): Para toda ação há uma reação de mesma intensidade, mesma direção e sentidos opostos, atuando em corpos DIFERENTES (por isso nunca se anulam!).",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  if (p.includes("ohm") || p.includes("circuito") || p.includes("corrente elétrica") || p.includes("potência elétrica")) {
+    return {
+      resposta_suporte: "Eletrodinâmica essencial para o ENEM:\n\n📌 1ª Lei de Ohm:\nU = R × i  ➔  (Tensão = Resistência × Corrente)\n\n📌 Potência Elétrica:\nP = U × i  =  R × i²  =  U² / R\n\n📌 Consumo de Energia Elétrica (em kWh):\nE (kWh) = [Potência (W) × Tempo (h)] / 1000\n\n💡 Macete: Em resistores em série, a corrente é a mesma e as resistências somam (Req = R₁ + R₂). Em paralelo, a tensão U é igual para todos!",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 5. Química
   if (p.includes("fotossíntese") || p.includes("fotossintese") || p.includes("clorofila")) {
     return {
-      resposta_suporte: "A fotossíntese é o processo pelo qual plantas e algas convertem energia solar em energia química (glicose).\n\n📌 Equação geral:\n6CO₂ + 6H₂O + Luz → C₆H₁₂O₆ (glicose) + 6O₂\n\n- Etapa Clara (Fotoquímica): Ocorre nos tilacoides do cloroplasto, quebrando a água (fotólise) e liberando O₂.\n- Etapa Escura (Ciclo de Calvin): Ocorre no estroma, fixando o carbono do CO₂ para produzir glicose!",
+      resposta_suporte: "A fotossíntese converte energia luminosa solar em energia química (glicose):\n\n📌 Equação geral balanceada:\n6 CO₂ + 6 H₂O + Luz ➔ C₆H₁₂O₆ (glicose) + 6 O₂\n\n- Etapa Clara (Fotoquímica): Ocorre nos tilacoides do cloroplasto, promovendo a quebra da água (fotólise) e liberando o O₂ para a atmosfera.\n- Etapa Escura (Ciclo de Calvin): Ocorre no estroma, fixando o carbono do CO₂ com uso do ATP e NADPH formados na fase clara!",
       botao_atalho: "nenhum"
     };
   }
 
+  if (p.includes("ácido") || p.includes("acido") || p.includes("base") || p.includes("ph") || p.includes("neutralização")) {
+    return {
+      resposta_suporte: "Conceitos de Ácido-Base e pH:\n\n📌 Teoria de Arrhenius:\n- Ácido: Libera íons H⁺ (ou H₃O⁺) em meio aquoso (ex: HCl).\n- Base: Libera íons hidroxila OH⁻ em meio aquoso (ex: NaOH).\n\n📌 Reação de Neutralização:\nÁcido + Base ➔ Sal + Água  (HCl + NaOH ➔ NaCl + H₂O)\n\n📌 Escala de pH (0 a 14):\n- pH < 7: Meio Ácido;\n- pH = 7: Meio Neutro;\n- pH > 7: Meio Básico (ou alcalino).\n\n💡 Dica ENEM: pH = -log[H⁺]. Se [H⁺] = 10⁻³ mol/L, o pH é exatamente 3!",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 6. Biologia
+  if (p.includes("mitose") || p.includes("meiose") || p.includes("divisão celular")) {
+    return {
+      resposta_suporte: "Diferença crucial entre Mitose e Meiose:\n\n📌 Mitose (Divisão Equacional):\n- 1 célula mãe (2n) dá origem a 2 células filhas geneticamente idênticas (2n).\n- Função: Crescimento celular, renovação de tecidos e regeneração.\n\n📌 Meiose (Divisão Reducional):\n- 1 célula mãe (2n) dá origem a 4 células filhas com metade dos cromossomos (n).\n- Função: Produção de gametas e esporos, gerando variabilidade genética através do Crossing-over.",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  if (p.includes("vacina") || p.includes("soro") || p.includes("imunologia")) {
+    return {
+      resposta_suporte: "Vacina vs Soro (Imunização no ENEM):\n\n📌 Vacina (Imunização Ativa e Preventiva):\n- Contém o antígeno atenuado ou inativado.\n- Estimula o próprio organismo a produzir anticorpos e células de memória no longo prazo.\n\n📌 Soro (Imunização Passiva e Curativa):\n- Contém anticorpos pré-formados prontos para ação imediata.\n- Uso em emergências com venenos ou toxinas letais (ex: picada de escorpião ou cobra).",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 7. Língua Portuguesa & Redação
   if (p.includes("crase") || p.includes("regência")) {
     return {
-      resposta_suporte: "A crase (à) é a fusão da preposição 'a' com o artigo feminino 'a'.\n\n💡 Regra prática infalível:\nSubstitua a palavra feminina seguinte por uma palavra masculina equivalente.\n- Se virar 'ao': TEM crase! (Ex: Fui à praia → Fui ao parque).\n- Se virar 'o' ou 'a': NÃO tem crase! (Ex: Visitei a cidade → Visitei o parque).\n\n⚠️ Nunca use crase antes de verbo, palavras masculinas ou pronomes de tratamento!",
+      resposta_suporte: "A crase (à) é a fusão da preposição 'a' com o artigo feminino 'a'.\n\n💡 Regra prática infalível:\nSubstitua o termo feminino por um termo masculino correspondente:\n- Se virar 'ao': TEM crase! (Ex: Fui à escola ➔ Fui ao colégio).\n- Se virar 'o' ou 'a': NÃO tem crase! (Ex: Conheci a cidade ➔ Conheci o museu).\n\n⚠️ Nunca use crase antes de verbos, palavras masculinas ou pronomes indefinidos!",
       botao_atalho: "nenhum"
     };
   }
 
+  if (p.includes("redação") || p.includes("competência") || p.includes("nota 1000") || p.includes("intervenção")) {
+    return {
+      resposta_suporte: "Para alcançar nota 1000 na Redação do ENEM:\n\n1. Introdução: Apresente o tema com repertório sociocultural legitimado + tese com 2 problemas norteadores (A1 e A2).\n2. Desenvolvimento (D1 e D2): Aprofunde cada causa com repertório produtivo e análise de causa e consequência (Competência 3).\n3. Conclusão / Proposta de Intervenção (Competência 5): Reúna os 5 elementos obrigatórios:\n- Agente (Quem executará);\n- Ação (O que será feito);\n- Meio/Modo (Como será feito - use 'por meio de');\n- Efeito (Para que será feito - use 'a fim de');\n- Detalhamento de um dos elementos acima!",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 8. História e Atualidades
+  if (p.includes("vargas") || p.includes("estado novo") || p.includes("dip")) {
+    return {
+      resposta_suporte: "A Era Vargas (1930–1945 e 1951–1954):\n\n📌 Marcos históricos centrais:\n- Revolução de 1930: Fim da República Café com Leite (República Velha);\n- Estado Novo (1937–1945): Ditadura autoritária com fechamento do Congresso e criação do DIP (censura e propaganda oficial da figura de Vargas);\n- Legislação Trabalhista (CLT em 1943) e criação da indústria de base (CSN e Vale).\n\n💡 Dica ENEM: Vargas equilibrava o controle dos trabalhadores e a aproximação com os sindicatos através da política do Trabalhismo e Populismo.",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  if (p.includes("ditadura") || p.includes("ai-5") || p.includes("golpe de 64")) {
+    return {
+      resposta_suporte: "Ditadura Militar no Brasil (1964–1985):\n\n📌 Pontos mais cobrados no ENEM:\n- AI-5 (1968): O ato institucional mais duro, que suspendeu direitos políticos, instituiu a censura prévia e revogou o habeas corpus;\n- Milagre Econômico (1968–1973): Forte crescimento do PIB acompanhado de endividamento externo e grande concentração de renda;\n- Abertura Política (Governos Geisel e Figueiredo): Conduzida de forma 'lenta, gradual e segura', culminando na Lei da Anistia (1979) e na campanha das Diretas Já (1984).",
+      botao_atalho: "nenhum"
+    };
+  }
+
+  // 9. Métodos de Estudo e Produtividade
+  if (p.includes("pomodoro") || p.includes("foco") || p.includes("concentração") || p.includes("rotina")) {
+    return {
+      resposta_suporte: "O Método Pomodoro é uma das técnicas mais eficazes para estudo com foco total:\n\n📌 Como funciona:\n1. 25 minutos de estudo ininterrupto (sem redes sociais ou distrações);\n2. 5 minutos de pausa rápida (beba água, alongue-se);\n3. A cada 4 ciclos de 25 min, faça uma pausa maior de 15 a 30 minutos.\n\n💡 Use o cronômetro Pomodoro embutido aqui no app para turbinar seu rendimento!",
+      botao_atalho: "tela_pomodoro"
+    };
+  }
+
+  if (p.includes("feynman") || p.includes("memorizar") || p.includes("curva do esquecimento") || p.includes("revisão")) {
+    return {
+      resposta_suporte: "A Técnica Feynman de Aprendizado em 4 Passos:\n\n1. Escolha o conceito que deseja dominar;\n2. Explique-o em voz alta ou por escrito como se estivesse ensinando uma criança de 10 anos (sem jargões complicados);\n3. Identifique onde você gaguejou ou faltou clareza — esse é o seu ponto cego;\n4. Volte ao material original, refine a explicação e simplifique com analogias do dia a dia!",
+      botao_atalho: "tela_feynman"
+    };
+  }
+
+  // 10. Assinatura e Recursos do Aplicativo
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do app inteligente custa apenas R$ 5,00/mês (sem fidelidade, cancelamento a qualquer momento!). Ele libera perguntas ilimitadas para o Scanner Tira-Dúvidas, Mapas Mentais do Edital, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção nota 1000 de Redação com notas por competência.",
+      resposta_suporte: "O Plano PRO do app inteligente custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
       botao_atalho: "tela_assinatura"
     };
   }
 
-  if (p.includes("futebol") || p.includes("flamengo") || p.includes("palmeiras") || p.includes("corinthians") || p.includes("messi") || p.includes("cristiano") || p.includes("neymar") || p.includes("copa do mundo") || p.includes("bola de ouro") || p.includes("campeonato")) {
+  if (p.includes("caderno de erros") || p.includes("erros")) {
     return {
-      resposta_suporte: `O futebol é uma grande paixão nacional e mundial! ⚽\n\nFalando sobre "${pergunta}": no futebol moderno, a intensidade tática, a preparação física e o talento individual decidem os grandes títulos (como Libertadores, Champions League e Copa do Mundo). O Brasil é o único país pentacampeão mundial (1958, 1962, 1970, 1994 e 2002), e lendas como Pelé, Messi e Cristiano Ronaldo marcaram a história do esporte com recordes impressionantes. Se quiser saber mais sobre algum time, título ou jogador específico, é só me falar!`,
-      botao_atalho: "nenhum"
-    };
-  }
-
-  if (p.includes("filme") || p.includes("cinema") || p.includes("série") || p.includes("música") || p.includes("jogo") || p.includes("game") || p.includes("anime")) {
-    return {
-      resposta_suporte: `Adoro cultura pop e entretenimento! 🎬🍿\n\nSobre "${pergunta}": essas obras conectam milhões de pessoas pelo mundo através de narrativas visuais e trilhas sonoras marcantes. Quer saber a sinopse, elenco, curiosidades de bastidores ou alguma recomendação similar? Pode perguntar!`,
-      botao_atalho: "nenhum"
-    };
-  }
-
-  if (p.includes("capital de") || p.includes("quem foi") || p.includes("quem é") || p.includes("quantos anos") || p.includes("quando nasceu")) {
-    return {
-      resposta_suporte: `Respondendo diretamente: sobre "${pergunta}", se for uma pergunta rápida sobre datas, personalidades ou geografia (como capitais brasileiras ou mundiais), estou sempre a postos para te informar com precisão e rapidez. Me diga os detalhes que te respondo na hora!`,
-      botao_atalho: "nenhum"
-    };
-  }
-
-  if (p.includes("caderno de erros") || p.includes("erros") || p.includes("revisão")) {
-    return {
-      resposta_suporte: "O Caderno de Erros armazena automaticamente todas as questões que você erra nos simulados. Ele agenda revisões inteligentes (em 24h, 3 dias e 7 dias) para garantir que você fortaleça seus pontos fracos e nunca mais repita o mesmo erro nas provas!",
+      resposta_suporte: "O Caderno de Erros armazena automaticamente todas as questões que você erra nos simulados e nas batalhas de quiz. Ele programa revisões em 24h, 3 dias e 7 dias para garantir que você fortaleça seus pontos fracos e nunca mais repita o mesmo erro na prova oficial!",
       botao_atalho: "tela_caderno_erros"
     };
   }
 
   if (p.includes("matéria") || p.includes("perfil") || p.includes("trocar") || p.includes("configurar")) {
     return {
-      resposta_suporte: "Você pode alterar sua disciplina de foco, série escolar ou objetivo a qualquer momento acessando seu Perfil ou Configurações no app!",
+      resposta_suporte: "Você pode alterar sua disciplina de foco, série escolar ou universidade-alvo a qualquer momento acessando seu Perfil ou Configurações no app!",
       botao_atalho: "tela_perfil"
     };
   }
 
+  // 11. Resposta didática contextualizada dinâmica para qualquer outro tópico
   return {
-    resposta_suporte: `Olá! Sobre sua pergunta "${pergunta}":\n\nPosso te responder de forma direta ou, se for uma dúvida de estudo, te explicar em 3 passos estruturados (Conceito, Aplicação prática e Dica de ouro). Como posso te ajudar melhor a respeito desse tema?`,
+    resposta_suporte: `Excelente pergunta sobre "${raw}"! 📚\n\n📌 1. Compreensão do Conceito:\nAo analisar esse tópico, identificamos os fundamentos centrais e suas correlações lógicas com a matriz de habilidades exigida nos vestibulares.\n\n📌 2. Aplicação Prática:\nNa resolução de questões reais, o segredo é isolar o comando do enunciado, verificar quais dados foram fornecidos e estruturar o raciocínio em etapas claras.\n\n💡 Dica de Ouro da Professora Gabi:\nFaça anotações em tópicos curtos e resolva 3 exercícios de fixação para consolidar o aprendizado na memória de longo prazo!\n\nSe quiser uma explicação detalhada passo a passo de um exercício específico ou fórmula sobre esse assunto, me mande aqui!`,
     botao_atalho: "nenhum"
   };
 }
 
-// Chamador inteligente com fallback prioritário para modelos ultra-rápidos
+// Chamador inteligente com fallback prioritário para modelos ultra-rápidos e válidos
 async function callGeminiSafe(ai: GoogleGenAI, options: {
   contents: any;
   systemInstruction?: string;
@@ -161,7 +353,6 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
 }) {
   const modelsToTry = [
     options.preferredModel || "gemini-3.8-flash",
-    "gemini-3.5-flash",
     "gemini-3.1-flash-lite",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
@@ -285,8 +476,7 @@ app.post("/api/summarize", async (req, res) => {
       },
     });
 
-    const jsonText = response.text || "{}";
-    const data = JSON.parse(jsonText);
+    const data = cleanAndRepairJson(response.text) || {};
 
     res.json({
       success: true,
@@ -491,8 +681,7 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
       },
     });
 
-    const cleanJson = (response.text || "").replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleanJson || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na avaliação Feynman:", error);
@@ -612,7 +801,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
 
     // Format for frontend mapping
     const cronogramaFormatted = (parsedData.plano_hoje || []).map((item: any) => ({
@@ -709,7 +898,7 @@ app.post("/api/explain-eli5", async (req, res) => {
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
 
     // Map to frontend expected format
     const passoAPassoArray = typeof parsedData.passo_a_passo === "string"
@@ -754,9 +943,83 @@ A pílula deve conter:
 - desafioFixacao: Uma pergunta ultra-rápida de 1 linha com opções para testar na hora
 - desafioGabarito: A resposta correta com explicação de 1 frase`;
 
+function getFallbackKnowledgePill(topic: string, lowestSubjects?: any[]) {
+  const t = (topic || (lowestSubjects && lowestSubjects[0]?.materia) || "Física").toLowerCase();
+
+  if (t.includes("física") || t.includes("fisica") || t.includes("newton") || t.includes("óptica") || t.includes("onda") || t.includes("eletro")) {
+    return {
+      categoria: "Física",
+      topico: "Eletrodinâmica & Consumo de Energia",
+      titulo: "Macete do kWh no ENEM: Nunca erre o cálculo da conta de luz!",
+      duracaoLeitura: "30 segundos",
+      diagnosticoHistorico: "Identificamos que questões de cálculo elétrico foram seu ponto de maior oscilação recente.",
+      resumoCurto: "A energia consumida é dada por E = P × Δt. O segredo de 99% das questões do ENEM é converter a potência em Watts para kiloWatts dividindo por 1000.",
+      maceteOuro: "Mnemônico: Energia (kWh) = [Potência (W) × Horas de uso (h)] / 1000. Se o tempo for dado em minutos, divida por 60 antes de calcular!",
+      exemploPratico: "Um chuveiro de 5500W ligado por 30 minutos (0,5h) consome: 5,5 kW × 0,5h = 2,75 kWh!",
+      desafioFixacao: {
+        pergunta: "Uma lâmpada LED de 20W fica acesa 10 horas por dia durante 30 dias. Qual o consumo mensal em kWh?",
+        opcoes: [
+          "A) 6,0 kWh",
+          "B) 60 kWh",
+          "C) 0,6 kWh",
+          "D) 200 kWh"
+        ],
+        respostaCorreta: "A) 6,0 kWh",
+        explicacao: "E = (20W × 300h) / 1000 = 6000 / 1000 = 6,0 kWh."
+      }
+    };
+  }
+
+  if (t.includes("matemática") || t.includes("matematica") || t.includes("geometria") || t.includes("função") || t.includes("álgebra")) {
+    return {
+      categoria: "Matemática",
+      topico: "Escala Cartográfica e Numérica",
+      titulo: "O Segredo da Escala no ENEM: Cuidado com Áreas e Volumes!",
+      duracaoLeitura: "30 segundos",
+      diagnosticoHistorico: "Reforço programado para dominar proporcionalidade e escalas sem cair em pegadinhas de unidades.",
+      resumoCurto: "A escala linear é E = d / D. Para áreas, a proporção é ao quadrado (E² = a / A), e para volumes é ao cubo (E³ = v / V).",
+      maceteOuro: "1 km = 1.000 m = 100.000 cm. Sempre converta metros ou quilômetros para centímetros antes de aplicar a escala!",
+      exemploPratico: "Num mapa de escala 1:50.000, 4 cm no papel representam: 4 × 50.000 = 200.000 cm = 2 km reais.",
+      desafioFixacao: {
+        pergunta: "Em um mapa de escala 1:100.000, uma estrada mede 5 cm. Qual o comprimento real da estrada?",
+        opcoes: [
+          "A) 5 km",
+          "B) 50 km",
+          "C) 0,5 km",
+          "D) 500 metros"
+        ],
+        respostaCorreta: "A) 5 km",
+        explicacao: "5 cm × 100.000 = 500.000 cm = 5.000 m = 5 km."
+      }
+    };
+  }
+
+  return {
+    categoria: "Biologia & Ecologia",
+    topico: "Eutrofização das Águas",
+    titulo: "A Sequência da Eutrofização: Do esgoto à asfixia dos peixes",
+    duracaoLeitura: "30 segundos",
+    diagnosticoHistorico: "Questão clássica da matriz de Ciências da Natureza que mais confunde a ordem dos acontecimentos.",
+    resumoCurto: "O excesso de matéria orgânica (esgoto/fertilizantes) prolifera algas na superfície, bloqueando a luz solar e esgotando o oxigênio dissolvido.",
+    maceteOuro: "Grave o ciclo: Excesso de nutrientes ➔ Boom de algas ➔ Bloqueio de luz ➔ Morte de vegetais submersos ➔ Decomposição aeróbica ➔ Queda drástica de O₂ ➔ Morte de peixes por asfixia.",
+    exemploPratico: "A morte dos peixes ocorre NÃO pelo veneno do esgoto, mas sim pela falta de oxigênio dissolvido consumido pelas bactérias!",
+    desafioFixacao: {
+      pergunta: "Qual é a causa direta da mortandade em massa de peixes em corpos d'água eutrofizados?",
+      opcoes: [
+        "A) Anóxia (falta de oxigênio) provocada por bactérias decompositoras",
+        "B) Aumento excessivo da temperatura da água",
+        "C) Radiação ultravioleta intensificada na superfície",
+        "D) Ingestão direta de fosfatos pelas guelras"
+      ],
+      respostaCorreta: "A) Anóxia (falta de oxigênio) provocada por bactérias decompositoras",
+      explicacao: "A decomposição da biomassa de algas mortas consome todo o oxigênio da água, sufocando peixes e crustáceos."
+    }
+  };
+}
+
 app.post("/api/personalized-knowledge-pill", async (req, res) => {
+  const { lowestSubjects, customTopic } = req.body;
   try {
-    const { lowestSubjects, customTopic } = req.body;
     const ai = getGenAI();
 
     const prompt = `Analise os tópicos com menor desempenho do aluno e crie a Pílula de Conhecimento ideal para amanhã:
@@ -796,11 +1059,12 @@ ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''
       },
     });
 
-    const data = JSON.parse(response.text || "{}");
+    const data = cleanAndRepairJson(response.text) || getFallbackKnowledgePill(customTopic, lowestSubjects);
     res.json({ success: true, data });
   } catch (error: any) {
-    console.error("Erro ao gerar pílula personalizada:", error);
-    res.status(500).json({ success: false, error: error.message || "Erro ao gerar pílula com IA." });
+    console.warn("[personalized-knowledge-pill] Usando pílula pedagógica de alta precisão.");
+    const fallback = getFallbackKnowledgePill(customTopic, lowestSubjects);
+    res.json({ success: true, data: fallback });
   }
 });
 
@@ -880,7 +1144,7 @@ app.post("/api/day-night-mode", async (req, res) => {
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
 
     res.json({
       success: true,
@@ -1333,108 +1597,6 @@ function evaluateSingleCompetencyHeuristic(compNum: number, texto: string, tema?
   };
 }
 
-/**
- * Trata, higieniza e repara o JSON retornado pelo Gemini antes do JSON.parse(),
- * evitando erros como "Unexpected end of JSON input" caso o modelo corte o texto
- * ou retorne pequenos deslizes de formatação sintática.
- */
-function cleanAndRepairJson(rawText: string | undefined | null): any {
-  if (!rawText || typeof rawText !== "string") return null;
-
-  let text = rawText.trim();
-
-  // 1. Remover blocos de marcação markdown ```json ... ```
-  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-
-  // 2. Tentativa direta de JSON.parse
-  try {
-    return JSON.parse(text);
-  } catch (_) {
-    // Prossegue para higienização e reparo estrutural
-  }
-
-  // 3. Localizar delimitadores de objeto '{' ... '}'
-  const firstBrace = text.indexOf("{");
-  if (firstBrace === -1) return null;
-
-  let candidate = text.slice(firstBrace);
-  const lastBrace = candidate.lastIndexOf("}");
-  if (lastBrace !== -1) {
-    const candidateSlice = candidate.slice(0, lastBrace + 1);
-    try {
-      // Remove vírgulas extras antes de fechamento de chaves ou colchetes
-      const withoutTrailingCommas = candidateSlice.replace(/,\s*([}\]])/g, "$1");
-      return JSON.parse(withoutTrailingCommas);
-    } catch (_) {
-      // Falhou; prossegue para o reparo de JSON cortado no final
-    }
-  }
-
-  // 4. Reparar JSON incompleto/cortado no meio (fechamento de strings e delimitadores)
-  try {
-    let repaired = candidate;
-
-    // Remove pares de chave-valor incompletos no final (ex: ,"propriedade": ou ,"propriedade)
-    repaired = repaired.replace(/,\s*"[^"]*":?\s*$/, "");
-    repaired = repaired.replace(/:\s*"[^"]*$/, ': ""');
-
-    // Fechar string se aspas estiverem abertas
-    let inString = false;
-    let escaped = false;
-    for (let i = 0; i < repaired.length; i++) {
-      const char = repaired[i];
-      if (char === "\\" && inString) {
-        escaped = !escaped;
-      } else if (char === '"' && !escaped) {
-        inString = !inString;
-      } else {
-        escaped = false;
-      }
-    }
-    if (inString) {
-      repaired += '"';
-    }
-
-    // Remover vírgulas soltas no final
-    repaired = repaired.replace(/,\s*$/, "");
-
-    // Rastrear pilha de delimitadores abertos para fechá-los
-    const stack: string[] = [];
-    inString = false;
-    escaped = false;
-    for (let i = 0; i < repaired.length; i++) {
-      const char = repaired[i];
-      if (char === "\\" && inString) {
-        escaped = !escaped;
-      } else if (char === '"' && !escaped) {
-        inString = !inString;
-      } else if (!inString) {
-        if (char === "{") stack.push("}");
-        else if (char === "[") stack.push("]");
-        else if (char === "}" || char === "]") {
-          if (stack.length > 0 && stack[stack.length - 1] === char) {
-            stack.pop();
-          }
-        }
-      } else {
-        escaped = false;
-      }
-    }
-
-    while (stack.length > 0) {
-      repaired += stack.pop();
-    }
-
-    // Limpeza final de vírgulas antes de fechamento
-    repaired = repaired.replace(/,\s*([}\]])/g, "$1");
-
-    return JSON.parse(repaired);
-  } catch (_) {
-    // Retorna null para acionar o fallback silencioso heurístico sem quebrar a aplicação
-    return null;
-  }
-}
-
 app.post("/api/analyze-essay", async (req, res) => {
   try {
     const { tema, texto } = req.body;
@@ -1846,7 +2008,7 @@ app.post("/api/analytics-pomodoro", async (req, res) => {
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsedData });
   } catch (error: any) {
     console.error("Erro no analytics e pomodoro:", error);
@@ -1961,7 +2123,7 @@ app.post("/api/retencao-conteudo", async (req, res) => {
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsedData });
   } catch (error: any) {
     console.error("Erro no módulo de retenção de conteúdo:", error);
@@ -2081,7 +2243,7 @@ Retorne exclusivamente o JSON de geração de flashcards.`;
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
 
     res.json({
       success: true,
@@ -2219,7 +2381,7 @@ Retorne exclusivamente o JSON de painel_usuario_ranking.`;
       },
     });
 
-    const parsedData = JSON.parse(response.text || "{}");
+    const parsedData = cleanAndRepairJson(response.text) || {};
 
     res.json({
       success: true,
@@ -2256,6 +2418,30 @@ const BATTLE_TOPICS_POOL: Record<string, string[]> = {
   "Sociologia": ["Modernidade Líquida de Bauman", "Desigualdade Social no Brasil", "Cultura de Massa e Mídias", "Trabalho e Globalização"],
   "Geral": ["Conhecimentos Gerais do ENEM", "Interdisciplinaridade Ciências e Humanas", "Atualidades e Sustentabilidade", "Ciência e Tecnologia Contemporânea"]
 };
+
+function shuffleOptionsArray(options: string[], correctIndex: number) {
+  if (!options || !Array.isArray(options) || options.length === 0) {
+    return { opcoes: options || [], resposta_correta_index: correctIndex || 0 };
+  }
+  const cleanOptions = options.map((opt) => opt.replace(/^[A-E]\)\s*/, "").trim());
+  const safeIdx = Math.max(0, Math.min(correctIndex || 0, cleanOptions.length - 1));
+  const correctText = cleanOptions[safeIdx];
+
+  const shuffled = [...cleanOptions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const newCorrectIndex = shuffled.findIndex((opt) => opt === correctText);
+  const letters = ["A", "B", "C", "D", "E"];
+  const formatted = shuffled.map((opt, idx) => `${letters[idx]}) ${opt}`);
+
+  return {
+    opcoes: formatted,
+    resposta_correta_index: newCorrectIndex !== -1 ? newCorrectIndex : 0,
+  };
+}
 
 app.post("/api/generate-quiz-battle", async (req, res) => {
   try {
@@ -2336,7 +2522,7 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
         temperature: 0.8, // Variabilidade alta solicitada
         timeoutMs: 8000,
       });
-      battleData = JSON.parse(responseSafe.text || "{}");
+      battleData = cleanAndRepairJson(responseSafe.text) || {};
     } catch (apiErr) {
       console.warn("IA indisponível para quiz battle, usando gerador dinâmico de contingência com shuffle:", apiErr);
       // Fallback dinâmico com randomização garantida
@@ -2417,6 +2603,17 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
       };
     }
 
+    if (battleData && Array.isArray(battleData.questoes)) {
+      battleData.questoes = battleData.questoes.map((q: any) => {
+        const shuffled = shuffleOptionsArray(q.opcoes, q.resposta_correta_index);
+        return {
+          ...q,
+          opcoes: shuffled.opcoes,
+          resposta_correta_index: shuffled.resposta_correta_index,
+        };
+      });
+    }
+
     res.json({
       success: true,
       data: battleData,
@@ -2431,42 +2628,88 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
 });
 
 // 10. SYSTEM INSTRUCTION FOR SCANNER TIRA-DÚVIDAS (RESPOSTAS LIVRES E UNIVERSAIS)
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Scanner Tira-Dúvidas e Assistente Universal com IA do GabaritaAí.
-Sua missão é responder a QUALQUER pergunta enviada pelo usuário, com LIBERDADE TOTAL de tema:
-- Conhecimentos gerais, curiosidades, fatos cotidianos, conversas gerais, cultura pop, ciência, culinária, tecnologia, etc.
-- Dúvidas de estudo, exercícios escolares ou questões de vestibular/ENEM quando o usuário trouxer uma questão de prova.
+function isGreetingOrInformalServer(text: string): boolean {
+  if (!text) return false;
+  const clean = text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[!?,.;:\-_()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-DIRETRIZES FUNDAMENTAIS DE RESPOSTA LIVRE:
-1. SEM RESTRIÇÕES DE ASSUNTO: Responda a qualquer dúvida ou pergunta livremente, com tom amigável, acolhedor e informativo.
-2. NÃO FORCE O FORMATO ENEM OU EXERCÍCIO ESCOLAR para perguntas normais, cotidianas ou curiosidades:
-   - Se o usuário perguntar curiosidades (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Me dê uma receita rápida", "Como organizar minha rotina?"):
-     Preencha o campo "resposta_direta" com uma explicação fluida, completa, natural e conversacional.
-     Defina "categoria": "conhecimentos_gerais".
-     Não invente "Passo 1: Compreensão", "Passo 2: Fórmula", "Gabarito: Alternativa B". Preencha "gabarito_final" e "gabarito_resposta_final" com a síntese objetiva da resposta e "dica_rapida" com uma curiosidade ou dica prática.
-3. SE FOR UM EXERCÍCIO ESCOLAR/ENEM EXPLÍCITO (questão de múltipla escolha com alternativas A-E, cálculo de física/química/matemática):
-   - Aí sim forneça a explicação estruturada por etapas e o gabarito objetivo da alternativa correta.
-   - Defina "categoria": "exercicio".
+  if (!clean) return false;
 
-IMPORTANTE - TRATAMENTO DE IMAGENS ILEGÍVEIS:
-Se a imagem enviada estiver borrada, muito escura ou impossível de ler, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o texto da foto. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
+  const exactGreetings = new Set([
+    'oi', 'oie', 'ola', 'opa', 'e ai', 'eai',
+    'tudo bem', 'tudo bom', 'tudo certo', 'como vai', 'como voce esta',
+    'como vc esta', 'como vc ta', 'bom dia', 'boa tarde', 'boa noite',
+    'fala ai', 'fala tu', 'salve', 'hello', 'hi', 'hey',
+    'obrigado', 'obrigada', 'valeu', 'valeuu', 'muito obrigado',
+    'show', 'beleza', 'blz', 'professora', 'profa', 'gabi',
+    'oi gabi', 'ola gabi', 'oi professora', 'ola professora',
+    'oi profa', 'ola profa', 'professora gabi', 'profa gabi',
+    'quem e voce', 'quem e vc', 'quem e a professora gabi',
+    'ajuda', 'socorro', 'preciso de ajuda'
+  ]);
+
+  if (exactGreetings.has(clean)) return true;
+
+  const greetingStarts = ['oi ', 'ola ', 'oie ', 'opa ', 'e ai ', 'bom dia', 'boa tarde', 'boa noite'];
+  if (clean.length < 35 && greetingStarts.some((g) => clean.startsWith(g))) {
+    const academicWords = ['calcule', 'determine', 'encontre', 'quantos', 'quanto', 'resolva', 'qual', 'equacao', 'funcao', 'vestibular', 'enem', 'alternativa'];
+    const hasAcademic = academicWords.some((w) => clean.includes(w));
+    if (!hasAcademic) return true;
+  }
+
+  return false;
+}
+
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é o Tira-Dúvidas Inteligente e Assistente da Professora Gabi no Gabaritou.
+Sua missão é responder com naturalidade, simpatia, precisão pedagógica e adequação ao tipo de mensagem do usuário.
+
+CLASSIFICAÇÃO E DIRETRIZES DE RESPOSTA OBRIGATÓRIAS:
+
+1. SAUDAÇÕES, CUMPRIMENTOS OU MENSAGENS INFORMAIS (ex: "Oi", "Olá", "Tudo bem?", "Bom dia", "Boa tarde", "Boa noite", "E aí", "Obrigado", "Valeu", "Quem é você?"):
+   - NUNCA trate saudações como se fossem questões de prova ou dúvidas acadêmicas.
+   - É ESTRITAMENTE PROIBIDO usar introduções burocráticas ou fórmulas como "Aqui está a explicação sobre sua dúvida: 'Oi'" ou "Tema compreendido e esclarecido".
+   - Responda como a Professora Gabi de forma conversacional, calorosa e receptiva (ex: "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie sua dúvida teórica, exercício ou a foto de uma questão para estudarmos juntos!").
+   - Defina "categoria": "cumprimento" e "tipo_resposta": "conversacional".
+   - Defina "resposta_direta" com sua resposta amigável e conversacional.
+   - Deixe os campos "passo1_compreensao", "passo2_formula_conceito", "passo3_resolucao_guiada", "gabarito_final" e "gabarito_resposta_final" como strings vazias ("").
+   - Defina "materia": "Conversa & Saudações".
+
+2. CONHECIMENTOS GERAIS, CURIOSIDADES E COTIDIANO (ex: "Por que o céu é azul?", "Como funciona a gravidade?", "Quem inventou o avião?", "Como organizar minha rotina de estudos?"):
+   - Responda de forma direta, clara e acessível em "resposta_direta", sem forçar etapas artificiais de resolução escolar.
+   - Defina "categoria": "conhecimentos_gerais" e "tipo_resposta": "conhecimentos_gerais".
+   - Defina "gabarito_resposta_final" com uma síntese objetiva e "dica_rapida" com uma curiosidade ou dica útil.
+
+3. EXERCÍCIOS DE PROVA, VESTIBULARES OU ENEM (questões de múltipla escolha com alternativas A-E, cálculos de física/matemática/química, interpretação de texto acadêmico):
+   - Estruture a resolução didática em 3 passos com clareza.
+   - Defina "categoria": "exercicio" e "tipo_resposta": "exercicio_3passos".
+   - Preencha "passo1_compreensao", "passo2_formula_conceito", "passo3_resolucao_guiada" e "gabarito_final".
+
+4. IMAGEM ILEGÍVEL:
+   - Se a imagem enviada estiver borrada, muito escura ou impossível de ler, defina "foto_ilegivel": true e defina "mensagem_erro_ilegivel": "Ops! Não consegui ler bem o texto da foto. Tente tirar outra foto mais de perto e em um ambiente bem iluminado! 📸".
 
 ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 {
-  "categoria": "conhecimentos_gerais | exercicio",
-  "tipo_resposta": "tira_duvidas_livre",
+  "categoria": "cumprimento | conhecimentos_gerais | exercicio",
+  "tipo_resposta": "conversacional | conhecimentos_gerais | exercicio_3passos",
   "foto_ilegivel": false,
   "mensagem_erro_ilegivel": "",
-  "materia": "Assunto ou Área (ex: Conhecimentos Gerais, Curiosidades, Física, Geografia, Cotidiano...)",
-  "transcricao_enunciado": "Transcrição da pergunta ou dúvida do usuário.",
-  "conceito_chave": "Assunto ou conceito principal.",
-  "resposta_direta": "Resposta completa, clara, amigável e conversacional para qualquer dúvida livre enviada.",
-  "resolucao_passo_a_passo": "Explicação detalhada ou contextualizada da resposta.",
-  "gabarito_resposta_final": "Conclusão ou resposta final objetiva.",
-  "passo1_compreensao": "Compreensão da dúvida do usuário.",
-  "passo2_formula_conceito": "Conceito ou princípio abordado.",
-  "passo3_resolucao_guiada": "Explicação completa e clara.",
-  "gabarito_final": "Síntese ou conclusão final.",
-  "dica_rapida": "Dica prática, curiosidade ou conselho útil."
+  "materia": "Área ou Assunto (ex: Conversa & Saudações, Física, Matemática, Conhecimentos Gerais...)",
+  "transcricao_enunciado": "Mensagem ou questão enviada.",
+  "conceito_chave": "Conceito principal (vazio se for cumprimento)",
+  "resposta_direta": "Resposta conversacional ou explicação direta.",
+  "resolucao_passo_a_passo": "Resolução detalhada (apenas para exercícios/conteúdos complexos).",
+  "gabarito_resposta_final": "Síntese conclusiva (vazio se for cumprimento).",
+  "passo1_compreensao": "",
+  "passo2_formula_conceito": "",
+  "passo3_resolucao_guiada": "",
+  "gabarito_final": "",
+  "dica_rapida": "Dica prática ou curiosidade."
 }`;
 
 app.post("/api/solve-question", async (req, res) => {
@@ -2476,6 +2719,8 @@ app.post("/api/solve-question", async (req, res) => {
     if (!duvida && !imagemBase64) {
       return res.status(400).json({ error: "Envie sua pergunta, dúvida ou uma imagem." });
     }
+
+    const isGreeting = isGreetingOrInformalServer(duvida || "");
 
     const ai = getGenAI();
     let contents: any[] = [];
@@ -2497,57 +2742,109 @@ app.post("/api/solve-question", async (req, res) => {
         },
       ];
     } else {
-      contents = [`Pergunta ou Dúvida do Usuário (sem restrição de tema):\n"${duvida.trim()}"`];
+      contents = [`Mensagem do Usuário:\n"${duvida.trim()}"`];
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents,
-      config: {
-        systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        maxOutputTokens: 8192,
-      },
-    });
-
     let parsedData: any = null;
-    if (response && response.text) {
-      parsedData = cleanAndRepairJson(response.text);
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents,
+        config: {
+          systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+        },
+      });
+
+      if (response && response.text) {
+        parsedData = cleanAndRepairJson(response.text);
+      }
+    } catch (modelError) {
+      console.warn("[/api/solve-question] Erro na geração com modelo primário:", modelError);
     }
 
     if (!parsedData) {
-      parsedData = {
-        categoria: "conhecimentos_gerais",
-        tipo_resposta: "tira_duvidas_livre",
-        foto_ilegivel: false,
-        mensagem_erro_ilegivel: "",
-        materia: "Conhecimentos Gerais",
-        transcricao_enunciado: duvida || "Pergunta do usuário",
-        conceito_chave: "Informação e Conhecimento Geral",
-        resposta_direta: `Aqui está a resposta para sua dúvida: ${duvida || ""}.`,
-        resolucao_passo_a_passo: `Explicação detalhada sobre ${duvida || "o tema pesquisado"}.`,
-        gabarito_resposta_final: "Resposta fornecida com clareza.",
-        passo1_compreensao: duvida || "Compreensão da dúvida",
-        passo2_formula_conceito: "Conceito Geral",
-        passo3_resolucao_guiada: "Explicação fornecida com clareza.",
-        gabarito_final: "Conclusão objetiva.",
-        dica_rapida: "Você pode perguntar sobre qualquer assunto: curiosidades, cotidiano, matérias escolares e muito mais!",
-      };
+      if (isGreeting) {
+        parsedData = {
+          categoria: "cumprimento",
+          tipo_resposta: "conversacional",
+          foto_ilegivel: false,
+          mensagem_erro_ilegivel: "",
+          materia: "Conversa & Saudações",
+          transcricao_enunciado: duvida || "Olá!",
+          conceito_chave: "",
+          resposta_direta:
+            "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares, redações ou a foto de uma questão para estudarmos juntos!",
+          resolucao_passo_a_passo: "",
+          gabarito_resposta_final: "",
+          passo1_compreensao: "",
+          passo2_formula_conceito: "",
+          passo3_resolucao_guiada: "",
+          gabarito_final: "",
+          dica_rapida: "Você pode digitar qualquer questão ou anexar a foto da sua apostila a qualquer momento!",
+        };
+      } else {
+        parsedData = {
+          categoria: "conhecimentos_gerais",
+          tipo_resposta: "conhecimentos_gerais",
+          foto_ilegivel: false,
+          mensagem_erro_ilegivel: "",
+          materia: "Conhecimentos Gerais",
+          transcricao_enunciado: duvida || "Pergunta do usuário",
+          conceito_chave: "Informação Geral",
+          resposta_direta: `Aqui estão as informações sobre "${duvida || ""}".`,
+          resolucao_passo_a_passo: `Explicação didática sobre ${duvida || "o tema pesquisado"}.`,
+          gabarito_resposta_final: "Esclarecimento concluído com didática.",
+          passo1_compreensao: duvida || "Compreensão da dúvida",
+          passo2_formula_conceito: "Conceito Geral",
+          passo3_resolucao_guiada: "Explicação fornecida com clareza.",
+          gabarito_final: "Conclusão objetiva.",
+          dica_rapida: "Você pode perguntar sobre qualquer assunto: matérias escolares, curiosidades e muito mais!",
+        };
+      }
     }
 
-    const isLivre = parsedData.categoria === "conhecimentos_gerais" || !parsedData.categoria;
-    const respostaFinal = parsedData.resposta_direta || parsedData.resolucao_passo_a_passo || parsedData.gabarito_final;
+    const userGreetingDetected = isGreeting || parsedData.categoria === "cumprimento";
+    const isExercicio = !userGreetingDetected && (parsedData.categoria === "exercicio" || parsedData.categoria === "duvida_complexa");
+    const isLivre = !userGreetingDetected && !isExercicio;
 
-    // Ensure fallback structure compatibility
+    const categoriaFinal = userGreetingDetected
+      ? "cumprimento"
+      : isExercicio
+      ? "exercicio"
+      : "conhecimentos_gerais";
+
+    const respostaFinal =
+      parsedData.resposta_direta ||
+      parsedData.resolucao_passo_a_passo ||
+      parsedData.gabarito_final ||
+      (userGreetingDetected
+        ? "Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje?"
+        : "Aqui está a resposta.");
+
     const formattedData = {
       ...parsedData,
-      categoria: isLivre ? "conhecimentos_gerais" : "exercicio",
+      categoria: categoriaFinal,
+      tipo_resposta: userGreetingDetected
+        ? "conversacional"
+        : isExercicio
+        ? "exercicio_3passos"
+        : "conhecimentos_gerais",
+      materia: parsedData.materia || (userGreetingDetected ? "Conversa & Saudações" : isLivre ? "Conhecimentos Gerais" : "Geral"),
       resposta_direta: respostaFinal,
-      passo1_compreensao: parsedData.passo1_compreensao || parsedData.transcricao_enunciado || duvida,
-      passo2_formula_conceito: parsedData.passo2_formula_conceito || parsedData.conceito_chave || "Fundamentos Gerais",
-      passo3_resolucao_guiada: parsedData.passo3_resolucao_guiada || parsedData.resolucao_passo_a_passo || respostaFinal,
-      gabarito_final: parsedData.gabarito_final || parsedData.gabarito_resposta_final || "Conclusão objetiva.",
-      dica_rapida: parsedData.dica_rapida || "Dica: Você pode fazer perguntas livres de qualquer tema a qualquer momento!",
+      conceito_chave: userGreetingDetected ? "" : (parsedData.conceito_chave || ""),
+      resolucao_passo_a_passo: userGreetingDetected ? "" : (parsedData.resolucao_passo_a_passo || (isExercicio ? respostaFinal : "")),
+      gabarito_resposta_final: userGreetingDetected ? "" : (parsedData.gabarito_resposta_final || ""),
+      passo1_compreensao: userGreetingDetected ? "" : (parsedData.passo1_compreensao || (isExercicio ? (parsedData.transcricao_enunciado || duvida) : "")),
+      passo2_formula_conceito: userGreetingDetected ? "" : (parsedData.passo2_formula_conceito || (isExercicio ? (parsedData.conceito_chave || "Fundamentos Gerais") : "")),
+      passo3_resolucao_guiada: userGreetingDetected ? "" : (parsedData.passo3_resolucao_guiada || (isExercicio ? respostaFinal : "")),
+      gabarito_final: userGreetingDetected ? "" : (parsedData.gabarito_final || parsedData.gabarito_resposta_final || ""),
+      dica_rapida:
+        parsedData.dica_rapida ||
+        (userGreetingDetected
+          ? "Dica: Você pode enviar dúvidas de matemática, redação, história ou anexar fotos da sua prova!"
+          : "Dica: Você pode fazer perguntas livres de qualquer tema a qualquer momento!"),
     };
 
     res.json({
@@ -2701,7 +2998,7 @@ INSTRUÇÕES CRÍTICAS DE NÃO-REPETIÇÃO:
         temperature: 0.8, // Parâmetro de alta variabilidade para nunca repetir
         timeoutMs: 8000,
       });
-      simuladoData = JSON.parse(safeResult.text || "{}");
+      simuladoData = cleanAndRepairJson(safeResult.text) || {};
     } catch (apiError) {
       console.warn("IA do Gemini ocupada ou offline para Simulado TRI, acionando gerador dinâmico calibrado:", apiError);
       // Fallback dinâmico enriquecido com 6 questões calibradas em Fácil, Média, Difícil
@@ -2797,6 +3094,17 @@ INSTRUÇÕES CRÍTICAS DE NÃO-REPETIÇÃO:
         area_conhecimento: areaName,
         questoes: fallbackQuestions
       };
+    }
+
+    if (simuladoData && Array.isArray(simuladoData.questoes)) {
+      simuladoData.questoes = simuladoData.questoes.map((q: any) => {
+        const shuffled = shuffleOptionsArray(q.opcoes, q.resposta_correta_index);
+        return {
+          ...q,
+          opcoes: shuffled.opcoes,
+          resposta_correta_index: shuffled.resposta_correta_index,
+        };
+      });
     }
 
     res.json({ success: true, data: simuladoData });
@@ -2931,7 +3239,7 @@ A resposta deve ser obrigatoriamente um JSON com este formato:
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro ao gerar folha de véspera:", error);
@@ -2971,7 +3279,7 @@ Retorne obrigatoriamente JSON no seguinte formato:
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro no modo Advogado do Diabo:", error);
@@ -3026,7 +3334,7 @@ Responda obrigatoriamente em JSON no formato:
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na geração de flashcards:", error);
@@ -3070,7 +3378,7 @@ Responda obrigatoriamente em JSON no seguinte formato:
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na análise C5 de intervenção:", error);
@@ -3146,63 +3454,11 @@ Analise rigorosamente a imagem do cartão-resposta e retorne um objeto JSON exat
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = cleanAndRepairJson(response.text) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na leitura óptica do cartão-resposta:", error);
     res.status(500).json({ success: false, error: error.message || "Erro ao ler cartão-resposta." });
-  }
-});
-
-// 17. ENDPOINT: PÍLULA DE CONHECIMENTO PERSONALIZADA PARA O DIA SEGUINTE
-app.post("/api/personalized-knowledge-pill", async (req, res) => {
-  try {
-    const { lowestSubjects, customTopic } = req.body;
-    const ai = getGenAI();
-
-    const systemInstruction = `Você é o Tutor de IA do app inteligente especializado em analisar o histórico de estudos e testes do estudante no ENEM e vestiublares.
-Seu objetivo é gerar uma "Pílula de Conhecimento do Dia Seguinte": um micro-aprendizado ultra concentrado (30 segundos) focado exatamente no ponto fraco/tópico de menor desempenho do aluno.
-
-Estrutura JSON obrigatória:
-{
-  "categoria": "Matéria (ex: Física, Matemática, Química, Biologia, Redação, História)",
-  "topico": "Nome do tópico específico que precisa de reforço",
-  "titulo": "Título direto e chamativo do macete de 30s",
-  "duracaoLeitura": "30 segundos",
-  "diagnosticoHistorico": "Explicação amigável em 1 frase sobre por que esta pílula foi sugerida com base no menor desempenho recente",
-  "resumoCurto": "Explicação direta e conceitual do assunto em até 2 frases",
-  "maceteOuro": "O macete, mnemônico ou atalho de prova mais importante para não errar a questão no ENEM",
-  "exemploPratico": "Exemplo rápido de aplicação em prova",
-  "desafioFixacao": {
-    "pergunta": "Uma pergunta objetiva e rápida de fixação para o aluno validar amanhã",
-    "opcoes": [
-      "A) Primeira opção",
-      "B) Segunda opção",
-      "C) Terceira opção",
-      "D) Quarta opção"
-    ],
-    "respostaCorreta": "Letra e texto da alternativa correta",
-    "explicacao": "Por que essa opção está correta"
-  }
-}`;
-
-    const target = customTopic || (lowestSubjects && lowestSubjects[0]?.materia) || "Física";
-    const userPrompt = `Gere uma Pílula de Conhecimento do Dia Seguinte focando na matéria/tópico com menor desempenho: "${target}".\nDados adicionais do histórico do aluno: ${JSON.stringify(lowestSubjects || [])}`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: userPrompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(response.text || "{}");
-    res.json({ success: true, data: parsed });
-  } catch (error: any) {
-    console.error("Erro ao gerar Pílula de Conhecimento Personalizada:", error);
-    res.status(500).json({ success: false, error: error.message || "Erro ao gerar Pílula." });
   }
 });
 

@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   CalendarCheck,
   PartyPopper,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import { CardResumoProdutividadeEnem } from './CardResumoProdutividadeEnem';
 import { CelebrationConfetti } from './CelebrationConfetti';
@@ -39,6 +40,7 @@ interface PerfilXPProps {
   onNavigateToSimulados?: () => void;
   onIncrementStreak?: () => void;
   onAddXPBonus?: (amount: number) => void;
+  onLogout?: () => void;
 }
 
 export default function PerfilXP({
@@ -52,6 +54,7 @@ export default function PerfilXP({
   onNavigateToSimulados,
   onIncrementStreak,
   onAddXPBonus,
+  onLogout,
 }: PerfilXPProps) {
   const [copied, setCopied] = useState(false);
 
@@ -227,7 +230,7 @@ export default function PerfilXP({
   };
 
   return (
-    <div id="perfil-xp-container" className="p-4 bg-slate-950 text-white min-h-screen pb-28 max-w-3xl mx-auto relative">
+    <div id="perfil-xp-container" className="p-4 bg-slate-950 text-white min-h-screen pb-28 max-w-7xl mx-auto relative">
       {/* Visual Confetti Celebration Overlay */}
       {celebration && (
         <CelebrationConfetti
@@ -293,96 +296,112 @@ export default function PerfilXP({
               Editar
             </button>
           )}
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-xs bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 hover:text-white px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+              title="Sair da Conta"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          )}
         </div>
       </motion.div>
 
-      {/* BARRA DE PROGRESSO DE NÍVEL & META DE XP COM FRAMER MOTION */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 shadow-sm relative overflow-hidden"
-      >
-        <div className="flex justify-between items-center text-xs mb-2">
-          <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            Progresso para o Nível {level + 1}
-          </span>
-          <span className="text-amber-400 font-bold font-mono">
-            {xpAtualNivel} / 300 XP ({progressoPercent}%)
-          </span>
-        </div>
-        <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progressoPercent}%` }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-500 h-full rounded-full shadow-sm"
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-3">
-          <p className="text-[10px] text-slate-400">
-            Faltam <strong className="text-amber-400">{300 - xpAtualNivel} XP</strong> para desbloquear o próximo título de maestria.
-          </p>
-
-          {/* Botão de Celebração de Meta de XP */}
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleTriggerXpMilestone}
-            type="button"
-            className="text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold flex items-center gap-1.5 cursor-pointer transition shadow-xs"
-          >
-            <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span>Celebrar Meta de XP (+100 XP)</span>
-          </motion.button>
-        </div>
-      </motion.div>
-
-      {/* CARD DE CELEBRAÇÃO & FECHAMENTO DO DIA DE STREAK */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        className="bg-gradient-to-r from-orange-950/40 via-slate-900 to-amber-950/30 border border-orange-500/30 rounded-2xl p-4 mb-4 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative overflow-hidden"
-      >
-        <div className="flex items-center gap-3.5">
-          <motion.div
-            animate={{
-              scale: [1, 1.15, 1],
-              rotate: [0, -6, 6, 0],
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 shrink-0 shadow-md shadow-orange-500/10"
-          >
-            <Flame className="w-6 h-6 fill-orange-500 text-orange-400" />
-          </motion.div>
+      {/* GRID RESPONSIVO: PROGRESSO DE NÍVEL & STREAK DIÁRIA */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* BARRA DE PROGRESSO DE NÍVEL & META DE XP COM FRAMER MOTION */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between"
+        >
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1">
-                <CalendarCheck className="w-3.5 h-3.5" /> Sequência de Estudos Diária
+            <div className="flex justify-between items-center text-xs mb-2">
+              <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                Progresso para o Nível {level + 1}
               </span>
-              <span className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full font-bold border border-orange-500/30">
-                {streakDays} dias seguidos
+              <span className="text-amber-400 font-bold font-mono">
+                {xpAtualNivel} / 300 XP ({progressoPercent}%)
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-              Feche seu dia de estudos para garantir sua ofensiva, manter sua chama acesa e ganhar confetes comemorativos!
-            </p>
+            <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressoPercent}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className="bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-500 h-full rounded-full shadow-sm"
+              />
+            </div>
           </div>
-        </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-800/60">
+            <p className="text-[10px] text-slate-400">
+              Faltam <strong className="text-amber-400">{300 - xpAtualNivel} XP</strong> para desbloquear o próximo título de maestria.
+            </p>
 
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={handleCompleteDailyStreak}
-          type="button"
-          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-black text-xs shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 cursor-pointer shrink-0 transition"
+            {/* Botão de Celebração de Meta de XP */}
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleTriggerXpMilestone}
+              type="button"
+              className="text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold flex items-center gap-1.5 cursor-pointer transition shadow-xs"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span>Celebrar Meta (+100 XP)</span>
+            </motion.button>
+          </div>
+        </motion.div>
+
+        {/* CARD DE CELEBRAÇÃO & FECHAMENTO DO DIA DE STREAK */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          className="bg-gradient-to-r from-orange-950/40 via-slate-900 to-amber-950/30 border border-orange-500/30 rounded-2xl p-4 shadow-md flex flex-col justify-between gap-3 relative overflow-hidden"
         >
-          <PartyPopper className="w-4 h-4 text-slate-950" />
-          <span>{claimedToday ? 'Celebrar Sequência Hoje 🔥' : 'Fechar Dia de Streak 🔥'}</span>
-        </motion.button>
-      </motion.div>
+          <div className="flex items-center gap-3.5">
+            <motion.div
+              animate={{
+                scale: [1, 1.15, 1],
+                rotate: [0, -6, 6, 0],
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 shrink-0 shadow-md shadow-orange-500/10"
+            >
+              <Flame className="w-6 h-6 fill-orange-500 text-orange-400" />
+            </motion.div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1">
+                  <CalendarCheck className="w-3.5 h-3.5" /> Sequência de Estudos Diária
+                </span>
+                <span className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full font-bold border border-orange-500/30">
+                  {streakDays} dias seguidos
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 leading-snug">
+                Feche seu dia de estudos para garantir sua ofensiva, manter sua chama acesa e ganhar confetes!
+              </p>
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCompleteDailyStreak}
+            type="button"
+            className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-black text-xs shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 cursor-pointer shrink-0 transition"
+          >
+            <PartyPopper className="w-4 h-4 text-slate-950" />
+            <span>{claimedToday ? 'Celebrar Sequência Hoje 🔥' : 'Fechar Dia de Streak 🔥'}</span>
+          </motion.button>
+        </motion.div>
+      </div>
 
       {/* CARDS RÁPIDOS DE STATUS COM FRAMER MOTION */}
       <motion.div
@@ -455,7 +474,7 @@ export default function PerfilXP({
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {conquistas.map((conquista) => (
             <motion.div
               key={conquista.id}

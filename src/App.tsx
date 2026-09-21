@@ -42,6 +42,7 @@ import { GeminiErrorBanner } from './components/GeminiErrorBanner';
 import { GeminiErrorProvider } from './context/GeminiErrorContext';
 import { HomeHubCategories } from './components/HomeHubCategories';
 import { AiStudioPlayground } from './components/AiStudioPlayground';
+import { LoginScreen } from './components/LoginScreen';
 
 // Modals
 import { ProfileSettingsModal, getSavedUserProfile } from './components/ProfileSettingsModal';
@@ -61,7 +62,7 @@ import { MicrophonePermissionModal } from './components/MicrophonePermissionModa
 import { OpcoesGeraisModal } from './components/OpcoesGeraisModal';
 
 // Utilities & Data
-import { StudyMaterial, TutorPlan, ELI5Explanation, UserProfile } from './types';
+import { StudyMaterial, TutorPlan, ELI5Explanation, UserProfile, AuthUser } from './types';
 
 // Audio feedback utilities (self-contained Web Audio API)
 function playClickSound(): void {
@@ -202,6 +203,27 @@ async function clearEntireIndexedDB(): Promise<void> {
 }
 
 function GabaritouApp() {
+  // Authentication State
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('gabaritai_auth_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  });
+
+  const handleLogout = useCallback(() => {
+    try {
+      localStorage.removeItem('gabaritai_auth_user');
+    } catch (e) {
+      console.error(e);
+    }
+    setAuthUser(null);
+    setActiveModal(null);
+  }, []);
+
   // Navigation States
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('home');
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('flashcards');
@@ -363,6 +385,37 @@ function GabaritouApp() {
       setAbaAtiva('arena_x1');
     }
   };
+
+  // Se o usuário não estiver autenticado, exibe a Tela de Login e Cadastro moderna
+  if (!authUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+        <LoginScreen
+          onLogin={(user) => {
+            try {
+              localStorage.setItem('gabaritai_auth_user', JSON.stringify(user));
+            } catch (err) {
+              console.error('Erro ao gravar sessão:', err);
+            }
+            setAuthUser(user);
+            if (user.name) {
+              setUserProfile((prev) => ({ ...prev, name: user.name }));
+            }
+          }}
+          onOpenProModal={() => setActiveModal('pro')}
+        />
+
+        {/* Modal do Plano PRO acessível da tela de login */}
+        <AnimatePresence>
+          {activeModal === 'pro' && (
+            <ProSubscriptionModal
+              onClose={() => setActiveModal(null)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -630,7 +683,7 @@ function GabaritouApp() {
           <main className="max-w-7xl mx-auto px-4 pb-28 pt-2">
             {abaAtiva === 'mascote_xp' && (
               <PerfilXP
-                userName={userProfile?.name || 'Estudante ENEM'}
+                userName={authUser?.name || userProfile?.name || 'Estudante ENEM'}
                 userXP={userXP}
                 level={Math.min(10, Math.floor(userXP / 350) + 1)}
                 levelTitle="Mestre dos Simulados"
@@ -658,6 +711,7 @@ function GabaritouApp() {
                 onAddXPBonus={(amount) => {
                   handleAddXP(amount);
                 }}
+                onLogout={handleLogout}
               />
             )}
             {abaAtiva === 'estatisticas_estudo' && <StudyStatisticsSection />}
@@ -690,7 +744,7 @@ function GabaritouApp() {
               'folha_vespera',
             ].includes(abaAtiva) && (
               <PerfilXP
-                userName={userProfile?.name || 'Estudante ENEM'}
+                userName={authUser?.name || userProfile?.name || 'Estudante ENEM'}
                 userXP={userXP}
                 level={Math.min(10, Math.floor(userXP / 350) + 1)}
                 levelTitle="Mestre dos Simulados"
@@ -704,6 +758,7 @@ function GabaritouApp() {
                   setPrimaryTab('simulados_treino');
                   setAbaAtiva('simulado_tri');
                 }}
+                onLogout={handleLogout}
               />
             )}
           </main>
@@ -724,6 +779,7 @@ function GabaritouApp() {
             onOpenGabi={() => setActiveModal('gabi')}
             onOpenPro={() => setActiveModal('pro')}
             onGoHome={() => setPrimaryTab('home')}
+            onLogout={handleLogout}
           />
         )}
       </div>
@@ -743,6 +799,7 @@ function GabaritouApp() {
             theme={theme}
             onToggleTheme={handleToggleTheme}
             onOpenOnboarding={() => setActiveModal('onboarding')}
+            onLogout={handleLogout}
             onClose={() => setActiveModal(null)}
           />
         )}

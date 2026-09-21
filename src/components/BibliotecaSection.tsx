@@ -1225,7 +1225,7 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
   const totalMapas = SAVED_MIND_MAPS.length;
 
   return (
-    <div id="biblioteca-conteudos-section" className="BibliotecaSection space-y-8 pb-12">
+    <div id="biblioteca-conteudos-section" className="BibliotecaSection max-w-7xl mx-auto space-y-8 pb-12">
       {/* 1. CABEÇALHO & ESTRUTURA PRINCIPAL */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -1512,7 +1512,7 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                           <span>Planos de Estudo Guiados ({discPlans.length})</span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                           {discPlans.map((plan) => (
                             <motion.div
                               key={plan.id}
@@ -1567,7 +1567,7 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                           <span>Resumos & Fichamentos Express ({discMaterials.length})</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                           {discMaterials.map((item) => (
                             <motion.div
                               key={item.id}

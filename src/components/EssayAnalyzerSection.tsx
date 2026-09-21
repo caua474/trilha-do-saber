@@ -243,7 +243,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
-                Corretor Especialista • app inteligente
+                Corretor Especialista • CFVJM
               </span>
               <span className="bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
                 Modelo Oficial ENEM 2026
@@ -272,7 +272,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                app inteligente Redação
+                CFVJM Redação
               </span>
               <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>📌 Card de Dica do Dia: Regras & Conectivos Fundamentais</span>
@@ -458,7 +458,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                        Diagnóstico • app inteligente
+                        Diagnóstico • CFVJM
                       </span>
                       <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                         {analysis.tema_detectado || 'Tema Identificado'}

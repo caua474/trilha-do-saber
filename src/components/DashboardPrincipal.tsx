@@ -17,18 +17,20 @@ export default function DashboardPrincipal({
 }: DashboardPrincipalProps) {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-white pb-32">
-      {/* 1. Meta Diária com Gráfico Principal (com tooltips e metas dos últimos 7 dias) */}
-      <section className="px-4 py-3">
-        <CardMetaDiaria onNavigateTab={onNavigateTab} />
-      </section>
+      <div className="w-full max-w-7xl mx-auto">
+        {/* 1. Meta Diária com Gráfico Principal (com tooltips e metas dos últimos 7 dias) */}
+        <section className="px-4 py-3">
+          <CardMetaDiaria onNavigateTab={onNavigateTab} />
+        </section>
 
-      {/* 2. Raio-X por Disciplina com Empty States */}
-      <section className="px-4 py-3">
-        <RaioXDisciplinas onSelectDisciplina={onSelectDisciplina} />
-      </section>
+        {/* 2. Raio-X por Disciplina com Empty States */}
+        <section className="px-4 py-3">
+          <RaioXDisciplinas onSelectDisciplina={onSelectDisciplina} />
+        </section>
 
-      {/* Conteúdo adicional do Dashboard */}
-      {children && <div className="space-y-4">{children}</div>}
+        {/* Conteúdo adicional do Dashboard */}
+        {children && <div className="space-y-4 px-4">{children}</div>}
+      </div>
 
       {/* Botão da Gabi IA ancorado acima da barra inferior sem cobrir os dados */}
       {onOpenGabi && (

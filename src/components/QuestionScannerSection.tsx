@@ -37,6 +37,7 @@ import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 import { useGeminiError } from '../context/GeminiErrorContext';
 import { classifyGeminiError } from '../utils/geminiErrorHandler';
 import { GeminiApiErrorInfo } from '../types';
+import { validateScannerInput, sanitizeInputText } from '../utils/textValidation';
 
 interface QuestionScannerSectionProps {
   onOpenSettings?: () => void;
@@ -235,17 +236,23 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
 
   const handleSolveQuestion = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!duvida.trim() && !selectedImage) {
-      setError('Por favor, digite a questão ou envie uma imagem da prova/caderno.');
+
+    // Validação e sanitização rigorosa do texto e imagem
+    const validation = validateScannerInput(duvida, !!selectedImage);
+    if (!validation.isValid) {
+      setError(validation.errorMessage || 'Por favor, informe uma questão com enunciado válido.');
       return;
     }
+
+    const cleanDuvida = validation.sanitizedText;
+    setDuvida(cleanDuvida);
 
     setIsLoading(true);
     setError(null);
     setErrorDetails(null);
 
     try {
-      const data = await solveQuestionWithClientGemini(duvida, selectedImage);
+      const data = await solveQuestionWithClientGemini(cleanDuvida, selectedImage);
 
       if (!data) {
         throw new Error('Não foi possível obter a resolução da questão.');
@@ -405,7 +412,10 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
 
                 <textarea
                   value={duvida}
-                  onChange={(e) => setDuvida(e.target.value)}
+                  onChange={(e) => {
+                    setDuvida(e.target.value);
+                    if (error) setError(null);
+                  }}
                   placeholder="Cole aqui o texto da questão, dite por voz usando o microfone ou envie uma foto..."
                   rows={4}
                   className={`w-full bg-slate-50 dark:bg-slate-950 border rounded-2xl p-3.5 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition resize-none ${
@@ -414,6 +424,16 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                       : 'border-slate-200 dark:border-slate-800'
                   }`}
                 />
+                <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  <span>
+                    {duvida.trim() ? `${duvida.trim().length} caracteres` : 'Nenhum texto inserido'}
+                  </span>
+                  {selectedImage && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Imagem anexada
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Photo Upload / Camera Scan / Voice Buttons */}

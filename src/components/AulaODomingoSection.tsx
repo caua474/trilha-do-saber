@@ -79,7 +79,7 @@ const CANDIDATOS_RANKING = [
   { posicao: 1, nome: 'Lucas Mendonça (SP)', pontuacao: 980.5, acertos: '5/5', estado: '🟢 São Paulo' },
   { posicao: 2, nome: 'Beatriz Vasconcelos (RJ)', pontuacao: 965.0, acertos: '5/5', estado: '🔵 Rio de Janeiro' },
   { posicao: 3, nome: 'Matheus Oliveira (MG)', pontuacao: 942.0, acertos: '5/5', estado: '🔴 Minas Gerais' },
-  { posicao: 4, nome: 'Você (app inteligente Aluno)', pontuacao: 0, acertos: '0/5', estado: '⚡ Seu Desempenho' },
+  { posicao: 4, nome: 'Você (CFVJM Aluno)', pontuacao: 0, acertos: '0/5', estado: '⚡ Seu Desempenho' },
   { posicao: 5, nome: 'Camila Ferreira (CE)', pontuacao: 880.0, acertos: '4/5', estado: '🟡 Ceará' },
   { posicao: 6, nome: 'Gabriel Santos (PR)', pontuacao: 855.5, acertos: '4/5', estado: '🟢 Paraná' },
 ];

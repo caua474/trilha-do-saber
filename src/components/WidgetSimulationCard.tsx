@@ -117,7 +117,7 @@ export const WidgetSimulationCard: React.FC<WidgetProps> = ({
             <div className="flex items-center space-x-2">
               <span className="text-base">🎓</span>
               <span className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                app inteligente
+                CFVJM
               </span>
             </div>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800 flex items-center gap-1">

@@ -679,7 +679,7 @@ export default function Simulados() {
   // TELA PRINCIPAL: SELEÇÃO DE SIMULADOS & CONFIGURAÇÃO DE LOTE
   // ==========================================
   return (
-    <div id="simulados-hub-container" className="p-3 sm:p-4 bg-slate-950 text-white min-h-screen pb-28 max-w-4xl mx-auto">
+    <div id="simulados-hub-container" className="p-3 sm:p-4 bg-slate-950 text-white min-h-screen pb-28 max-w-7xl mx-auto">
       {/* CABEÇALHO DO MÓDULO */}
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
         <div>
@@ -760,36 +760,36 @@ export default function Simulados() {
         </div>
       </div>
 
-      {/* LISTA DE SIMULADOS DISPONÍVEIS */}
-      <div className="space-y-3">
+      {/* LISTA DE SIMULADOS DISPONÍVEIS COM GRID DE 2 OU 3 COLUNAS EM TELAS MAIORES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {PROVAS_CATALOGO.map((prova) => (
           <div
             key={prova.id}
-            className={`bg-slate-900 border ${prova.corBorder} rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg hover:border-amber-500 transition-all`}
+            className={`bg-slate-900 border ${prova.corBorder} rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 shadow-lg hover:border-amber-500 transition-all`}
           >
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-bold text-slate-100">{prova.titulo}</h3>
                 <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${prova.badgeBg}`}>
                   {prova.badge}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed max-w-xl">{prova.descricao}</p>
+              <p className="text-xs text-slate-300 leading-relaxed">{prova.descricao}</p>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap pt-0.5">
-                <span className="text-indigo-400 font-semibold">{tamanhoLote} questões neste lote</span>
+                <span className="text-indigo-400 font-semibold">{tamanhoLote} questões</span>
                 <span>•</span>
                 <span className="text-amber-400 font-semibold">
-                  ~{Math.min(prova.tempoMinutosPadrao, Math.max(5, tamanhoLote * 3))} min sugeridos
+                  ~{Math.min(prova.tempoMinutosPadrao, Math.max(5, tamanhoLote * 3))} min
                 </span>
                 <span>•</span>
-                <span className="text-slate-500">{prova.disciplinas}</span>
+                <span className="text-slate-500 text-[10px]">{prova.disciplinas}</span>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => iniciarProva(prova)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 shrink-0"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 shrink-0 mt-2"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Iniciar Simulado</span>

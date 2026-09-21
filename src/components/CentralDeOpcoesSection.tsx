@@ -26,7 +26,8 @@ import {
   Clock,
   RotateCcw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 import { playClickSound, getSoundEnabled, setSoundEnabled } from '../utils/audio';
 import {
@@ -52,6 +53,7 @@ interface CentralDeOpcoesSectionProps {
   onOpenGabi: () => void;
   onOpenPro?: () => void;
   onGoHome: () => void;
+  onLogout?: () => void;
 }
 
 export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
@@ -67,6 +69,7 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
   onOpenGabi,
   onOpenPro,
   onGoHome,
+  onLogout,
 }) => {
   const [soundActive, setSoundActive] = useState(() => getSoundEnabled());
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
@@ -511,7 +514,7 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
             <div className="space-y-2 text-xs text-slate-600 dark:text-zinc-300">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold">app inteligente • Plataforma de Estudos</span>
+                <span className="font-bold">Gabaritou • Plataforma de Estudos Inteligente</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
                 Seus dados de simulados, pontuações TRI e fichamentos são salvos com persistência local no seu navegador através de banco de dados IndexedDB.
@@ -519,9 +522,25 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
             </div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
-            <span>Versão da Aplicação:</span>
-            <span className="font-mono font-bold text-slate-900 dark:text-white">v2.6 Pro (Build 2026)</span>
+          <div className="space-y-2">
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
+              <span>Versão da Aplicação:</span>
+              <span className="font-mono font-bold text-slate-900 dark:text-white">v2.6 Pro (Build 2026)</span>
+            </div>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  onLogout();
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair da Conta (Logout)</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

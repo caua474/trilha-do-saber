@@ -28,6 +28,7 @@ import { exportEssayCorrectionToPdf, PdfVisualTheme } from '../utils/pdfExport';
 import { EnemEssayFullAnalysis, EssayCompetencyDetail, SingleCompetencyAnalysis } from '../types';
 import { useGeminiError } from '../context/GeminiErrorContext';
 import { classifyGeminiError, ClassifiedGeminiError } from '../utils/geminiErrorHandler';
+import { validateEssayInput, validateSingleCompetencyInput, sanitizeInputText } from '../utils/textValidation';
 
 interface RedacaoCorretorProps {
   onOpenSettings?: () => void;
@@ -145,15 +146,17 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
 
   // Avaliação no Modo Redação Completa (0 a 1000 pontos)
   const handleAvaliarCompleta = async () => {
-    if (!texto.trim()) {
-      setErro('Por favor, digite ou cole sua redação para iniciar a correção.');
+    // Validação e sanitização robusta do texto e tema da redação
+    const validation = validateEssayInput(texto, tema);
+    if (!validation.isValid) {
+      setErro(validation.errorMessage || 'Por favor, insira uma redação válida para iniciar a correção.');
       return;
     }
 
-    if (totalPalavras < 40) {
-      setErro('Sua redação possui poucas palavras. Para uma análise completa das 5 competências do ENEM, envie um texto mais desenvolvido.');
-      return;
-    }
+    const cleanTexto = validation.sanitizedText;
+    const cleanTema = sanitizeInputText(tema);
+    setTexto(cleanTexto);
+    if (tema) setTema(cleanTema);
 
     setIsAvaliando(true);
     setErro(null);
@@ -163,8 +166,8 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tema: tema.trim() || undefined,
-          texto: texto.trim(),
+          tema: cleanTema || undefined,
+          texto: cleanTexto,
         }),
       });
 
@@ -193,7 +196,7 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
         clearError(); // Oculta qualquer banner de erro no topo da página
       } else {
         // Fallback silencioso: calcula a nota e relatório pelas diretrizes oficiais do ENEM
-        const fallbackData = json?.data || gerarAnaliseLocal(texto, tema);
+        const fallbackData = json?.data || gerarAnaliseLocal(cleanTexto, cleanTema);
         setAnaliseCompleta(fallbackData);
         setFallbackActive(false);
         setFallbackReason(null);
@@ -203,7 +206,7 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
     } catch (err: any) {
       console.warn('Falha na chamada da API. Executando contingência silenciosa com sucesso:', err);
       // Se a nota e o relatório do ENEM forem calculados com sucesso, não exiba o banner de erro no topo da página
-      const fallbackData = gerarAnaliseLocal(texto, tema);
+      const fallbackData = gerarAnaliseLocal(cleanTexto, cleanTema);
       setAnaliseCompleta(fallbackData);
       setFallbackActive(false);
       setFallbackReason(null);
@@ -216,15 +219,17 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
 
   // Avaliação no Modo Competência Individual (0 a 200 pontos)
   const handleAvaliarIndividual = async () => {
-    if (!texto.trim()) {
-      setErro('Por favor, insira o parágrafo ou trecho a ser avaliado.');
+    // Validação e sanitização robusta do parágrafo específico
+    const validation = validateSingleCompetencyInput(texto, competenciaSelecionada);
+    if (!validation.isValid) {
+      setErro(validation.errorMessage || 'Por favor, insira um parágrafo ou trecho válido.');
       return;
     }
 
-    if (totalPalavras < 8) {
-      setErro('Por favor, insira ao menos um período completo para avaliar a competência selecionada.');
-      return;
-    }
+    const cleanTexto = validation.sanitizedText;
+    const cleanTema = sanitizeInputText(tema);
+    setTexto(cleanTexto);
+    if (tema) setTema(cleanTema);
 
     setIsAvaliando(true);
     setErro(null);
@@ -235,8 +240,8 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           competencia: competenciaSelecionada,
-          tema: tema.trim() || undefined,
-          texto: texto.trim(),
+          tema: cleanTema || undefined,
+          texto: cleanTexto,
         }),
       });
 
@@ -358,7 +363,7 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -573,7 +578,10 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
           <input
             type="text"
             value={tema}
-            onChange={(e) => setTema(e.target.value)}
+            onChange={(e) => {
+              setTema(e.target.value);
+              if (erro) setErro(null);
+            }}
             placeholder="Ex: Invisibilidade do trabalho de cuidado realizado pela mulher no Brasil..."
             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
           />
@@ -629,7 +637,10 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
           <textarea
             rows={modo === 'completa' ? 12 : 8}
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              if (erro) setErro(null);
+            }}
             placeholder={
               modo === 'completa'
                 ? 'Cole ou digite aqui sua redação dissertativo-argumentativa completa (com Introdução, Desenvolvimento 1, Desenvolvimento 2 e Conclusão com Proposta de Intervenção)...'
@@ -643,6 +654,16 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
             }
             className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-normal"
           />
+          <div className="flex items-center justify-between px-1 pt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+            <span>
+              {texto.trim() ? `${texto.trim().length} caracteres digitados` : 'Nenhum texto inserido'}
+            </span>
+            <span className="text-[10px]">
+              {modo === 'completa'
+                ? 'Mínimo recomendado para o ENEM: ~150 palavras (4 parágrafos)'
+                : 'Mínimo para avaliação da competência: 1 período completo (~7 palavras)'}
+            </span>
+          </div>
         </div>
 
         {/* Erro */}
@@ -856,7 +877,7 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {(analiseCompleta.competencias || []).map((comp: EssayCompetencyDetail) => {
                 const percent = (comp.nota / 200) * 100;
                 let colorClass = 'bg-indigo-600';

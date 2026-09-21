@@ -137,6 +137,17 @@ export interface UserProgressResponse {
   mensagem_incentivo: string;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  isGuest?: boolean;
+  isPro?: boolean;
+  provider: 'google' | 'email' | 'guest';
+  createdAt: string;
+}
+
 export interface UserProfile {
   name: string;
   avatar: string;

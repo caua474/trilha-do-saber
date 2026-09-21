@@ -165,25 +165,16 @@ function cleanAndRepairJson(rawText: string | undefined | null): any {
 // Fallback pedagógico imediato diversificado e contextual caso os servidores externos estejam indisponíveis
 function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; botao_atalho: string } {
   const raw = (pergunta || "").trim();
-  const p = raw.toLowerCase();
 
-  // 1. Saudações e interações conversacionais
-  if (
-    p === "oi" || p === "olá" || p === "ola" || p === "oie" || p === "opa" ||
-    p.includes("tudo bem") || p.includes("tudo bom") || p.includes("boa tarde") ||
-    p.includes("bom dia") || p.includes("boa noite") || p.includes("como vai") ||
-    p.includes("quem é você") || p.includes("quem e voce") || p.includes("e ai")
-  ) {
-    const saudacoes = [
-      "Olá! Sou a Professora Gabi, sua mentora pedagógica no Gabaritou! Estou pronta para te ajudar a detonar nos vestibulares e no ENEM. Qual matéria, dúvida teórica ou exercício vamos descomplicar agora?",
-      "Oie! Tudo ótimo por aqui, e com você? Como posso te ajudar hoje? Pode me mandar perguntas conceituais, exercícios de matemática, temas de redação ou dicas de estudos!",
-      "Oi! Que bom te ver aqui! Como estão seus estudos hoje? Se tiver qualquer dúvida sobre matérias, provas ou sobre como usar o app, é só me falar!"
-    ];
+  // Verificação de saudações e conversas informais
+  if (isGreetingOrInformalServer(raw)) {
     return {
-      resposta_suporte: saudacoes[Math.abs(raw.length) % saudacoes.length],
+      resposta_suporte: getConversationalGreetingResponseServer(raw),
       botao_atalho: "nenhum"
     };
   }
+
+  const p = raw.toLowerCase();
 
   // 2. Geometria & Áreas
   if (p.includes("trapézio") || (p.includes("trapezio") && p.includes("área"))) {
@@ -315,7 +306,7 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 10. Assinatura e Recursos do Aplicativo
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do app inteligente custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
+      resposta_suporte: "O Plano PRO do CFVJM custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
       botao_atalho: "tela_assinatura"
     };
   }
@@ -1160,10 +1151,15 @@ app.post("/api/day-night-mode", async (req, res) => {
 });
 
 // 5. SYSTEM INSTRUCTION FOR GABI (VIRTUAL ASSISTANT, TUTOR & APP GUIDE)
-const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a "Professora Gabi", a mentora educacional inteligente, professora especialista e assistente oficial do app inteligente, equipada com a inteligência do Gemini 3.8 Flash.
-Sua missão é responder com máxima empatia, clareza, simpatia e precisão a TODAS as perguntas enviadas pelo estudante.
+const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a "Professora Gabi", a mentora educacional inteligente, professora especialista e assistente oficial do aplicativo Gabaritou.
+Sua missão é responder com máxima empatia, clareza, simpatia e precisão a TODAS as perguntas enviadas pelo estudante (estudos, curiosidades, conhecimentos gerais e conversas cotidianas).
 
 DIRETRIZES FUNDAMENTAIS DE RESPOSTA (SIGA RIGOROSAMENTE):
+
+0. SAUDAÇÕES, CUMPRIMENTOS OU CONVERSAS INFORMAIS (ex: "Oi", "Olá", "Tudo bem?", "Bom dia", "Boa tarde", "Boa noite", "E aí", "Valeu", "Obrigado", "Quem é você?", "Como você pode me ajudar?"):
+   - RESPONDA DE FORMA 100% NATURAL, DIRETA, SIMPÁTICA E ACOLHEDORA, em tom de chat de conversa humana comum!
+   - NUNCA force formatação acadêmica, nunca divida em passos de aula e nunca force explicações de conceitos escolares para um cumprimento simples.
+   - Deixe "botao_atalho": "nenhum".
 
 1. CONHECIMENTOS GERAIS, FATOS HISTÓRICOS PONTUAIS, ESPORTES, CURIOSIDADES E DIA A DIA:
    - Se a pergunta for de conhecimentos gerais (capitais, datas, fatos históricos simples, quem descobriu X, futebol, música, filmes, séries, curiosidades gerais):
@@ -1178,13 +1174,13 @@ DIRETRIZES FUNDAMENTAIS DE RESPOSTA (SIGA RIGOROSAMENTE):
 
 3. DÚVIDAS ACADÊMICAS COMPLEXAS, TEÓRICAS OU RESOLUÇÃO DE EXERCÍCIOS:
    - Se for uma dúvida acadêmica conceitual profunda, cálculos matemáticos, fórmulas de física/química, processos biológicos, análise de redação ou questão de prova/vestibular:
-   - Responda OBRIGATORIAMENTE em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS no texto da resposta:
+   - Responda em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS no texto da resposta:
      • **Passo 1 (Compreensão e Dados Essenciais):** Explique com simplicidade e precisão o que está em jogo, as variáveis fornecidas e o que se pede.
      • **Passo 2 (Fórmula, Teorema ou Conceito-Chave):** Apresente a base teórica, fórmula ou regra científica necessária para solucionar a questão.
      • **Passo 3 (Resolução Guiada e Gabarito Final):** Mostre o desenvolvimento ordenado dos passos até chegar à resposta final, acompanhado de uma dica de ouro para fixar na prova.
    - Deixe "botao_atalho": "nenhum".
 
-4. DÚVIDAS DE USO E NAVEGAÇÃO DO APP INTELIGENTE:
+4. DÚVIDAS DE USO E NAVEGAÇÃO DO APLICATIVO GABARITOU:
    - Scanner Tira-Dúvidas com IA Vision, Mapas Mentais do Edital com exportação em PDF, Cronograma Inteligente, Simulados TRI e Caderno de Erros.
    - Plano Grátis: Teste gratuito diário do scanner e recursos essenciais.
    - Plano PRO: R$ 5,00/mês (sem fidelidade), perguntas ilimitadas, simulados TRI e correção de redação.
@@ -1207,11 +1203,26 @@ app.post("/api/gabi-support", async (req, res) => {
       return res.status(400).json({ error: "Envie sua dúvida para a Professora Gabi." });
     }
 
+    const trimmedPergunta = pergunta.trim();
+
+    // Verificação de conversas informais e saudações para resposta conversacional instantânea
+    if (isGreetingOrInformalServer(trimmedPergunta)) {
+      const respostaNatural = getConversationalGreetingResponseServer(trimmedPergunta);
+      return res.json({
+        success: true,
+        modelUsed: "gabi-conversational-instant",
+        data: {
+          resposta_suporte: respostaNatural,
+          botao_atalho: "nenhum",
+        },
+      });
+    }
+
     const ai = getGenAI();
 
     try {
       const { text, modelUsed } = await callGeminiSafe(ai, {
-        contents: `Pergunta do aluno para a Professora Gabi:\n"${pergunta.trim()}"`,
+        contents: `Pergunta do aluno para a Professora Gabi:\n"${trimmedPergunta}"`,
         systemInstruction: GABI_SUPPORT_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         preferredModel: "gemini-3.5-flash",
@@ -1601,13 +1612,23 @@ app.post("/api/analyze-essay", async (req, res) => {
   try {
     const { tema, texto } = req.body;
 
-    if (!texto || typeof texto !== "string" || !texto.trim() || texto.trim().length < 50) {
+    const sanitizedTexto = sanitizeServerInput(texto || "");
+    const sanitizedTema = sanitizeServerInput(tema || "");
+
+    if (!sanitizedTexto || sanitizedTexto.length < 50) {
       return res.status(400).json({
         error: "Por favor, insira uma redação com pelo menos 50 caracteres para uma análise completa estilo ENEM.",
       });
     }
 
-    const temaInformado = tema && tema.trim() ? tema.trim() : "Tema Geral / Não Especificado";
+    const meaninglessCheck = isMeaninglessTextServer(sanitizedTexto);
+    if (meaninglessCheck.isMeaningless) {
+      return res.status(400).json({
+        error: meaninglessCheck.reason || "O texto enviado não apresenta estrutura dissertativa compreensível.",
+      });
+    }
+
+    const temaInformado = sanitizedTema || "Tema Geral / Não Especificado";
     let parsedData: any = null;
 
     try {
@@ -1616,7 +1637,7 @@ app.post("/api/analyze-essay", async (req, res) => {
 Tema Informado: "${temaInformado}"
 Texto da Redação:
 """
-${texto.trim()}
+${sanitizedTexto}
 """`;
 
       const response = await ai.models.generateContent({
@@ -1740,9 +1761,19 @@ app.post("/api/analyze-single-competency", async (req, res) => {
     const { competencia, tema, texto } = req.body;
     const compNum = Number(competencia) || 5;
 
-    if (!texto || typeof texto !== "string" || !texto.trim() || texto.trim().length < 20) {
+    const sanitizedTexto = sanitizeServerInput(texto || "");
+    const sanitizedTema = sanitizeServerInput(tema || "");
+
+    if (!sanitizedTexto || sanitizedTexto.length < 20) {
       return res.status(400).json({
         error: "Por favor, insira o texto com pelo menos 20 caracteres para avaliar a competência selecionada.",
+      });
+    }
+
+    const meaninglessCheck = isMeaninglessTextServer(sanitizedTexto);
+    if (meaninglessCheck.isMeaningless) {
+      return res.status(400).json({
+        error: meaninglessCheck.reason || "O texto enviado não apresenta estrutura linguística compreensível.",
       });
     }
 
@@ -1760,10 +1791,10 @@ app.post("/api/analyze-single-competency", async (req, res) => {
     try {
       const ai = getGenAI();
       const prompt = `Você é um avaliador oficial da banca de correção da redação do ENEM, especialista na ${compNome}.
-Tema da Redação: "${tema || 'Tema Geral do ENEM'}"
+Tema da Redação: "${sanitizedTema || 'Tema Geral do ENEM'}"
 Texto/Trecho submetido pelo estudante:
 """
-${texto.trim()}
+${sanitizedTexto}
 """
 
 Avalie RIGOROSAMENTE este texto EXCLUSIVAMENTE sob a ótica da ${compNome}.
@@ -2628,6 +2659,60 @@ Gere o JSON estrito com "tipo_resposta": "batalha_quiz_x1", id_batalha, materia,
 });
 
 // 10. SYSTEM INSTRUCTION FOR SCANNER TIRA-DÚVIDAS (RESPOSTAS INTELIGENTES E ADAPTATIVAS)
+function sanitizeServerInput(rawText: string): string {
+  if (!rawText || typeof rawText !== "string") return "";
+  return rawText
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "")
+    .replace(/[\u200B-\u200D\uFEFF\u202A-\u202E]/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{4,}/g, "   ")
+    .trim();
+}
+
+function isMeaninglessTextServer(text: string): { isMeaningless: boolean; reason?: string } {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { isMeaningless: true, reason: "O texto enviado está vazio." };
+  }
+
+  // Remove pontuações e símbolos comuns
+  const alphanumericOnly = trimmed.replace(/[\s.,;:!?@#$%&*()_+=\-[\]{}|\\/<>~`^'"]/g, "");
+  if (alphanumericOnly.length === 0) {
+    return {
+      isMeaningless: true,
+      reason: "O texto contém apenas pontuações, símbolos ou caracteres não textuais.",
+    };
+  }
+
+  // Sequências mecânicas de caractere repetido (ex: "aaaaaaaaaa" ou "1111111111")
+  const collapsed = trimmed.replace(/\s+/g, "");
+  if (collapsed.length >= 6) {
+    const firstChar = collapsed[0];
+    if (collapsed.split("").every((c) => c === firstChar)) {
+      return {
+        isMeaningless: true,
+        reason: "O texto contém sequências repetitivas de um único caractere.",
+      };
+    }
+  }
+
+  // Teclado martelado longo sem vogais (ex: "asdfghjklasdfg")
+  if (alphanumericOnly.length > 15) {
+    const vowels = alphanumericOnly.match(/[aeiouyáéíóúãõâêîôûà]/gi);
+    const vowelRatio = vowels ? vowels.length / alphanumericOnly.length : 0;
+    if (vowelRatio < 0.08) {
+      return {
+        isMeaningless: true,
+        reason: "O texto não parece conter termos ou palavras estruturadas compreensíveis.",
+      };
+    }
+  }
+
+  return { isMeaningless: false };
+}
+
 function isGreetingOrInformalServer(text: string): boolean {
   if (!text) return false;
   const clean = text
@@ -2774,15 +2859,37 @@ app.post("/api/solve-question", async (req, res) => {
   try {
     const { duvida, imagemBase64 } = req.body;
 
-    if (!duvida && !imagemBase64) {
-      return res.status(400).json({ error: "Envie sua pergunta, dúvida ou uma imagem." });
+    const sanitizedDuvida = sanitizeServerInput(duvida || "");
+    const hasImage = !!(imagemBase64 && typeof imagemBase64 === "string" && imagemBase64.trim().length > 100);
+
+    // Se não há nem imagem nem texto útil, bloqueie imediatamente
+    if (!sanitizedDuvida && !hasImage) {
+      return res.status(400).json({
+        error: "Por favor, envie uma dúvida com texto válido ou anexe a foto de uma questão.",
+      });
     }
 
-    const isGreeting = isGreetingOrInformalServer(duvida || "");
+    // Se enviou texto sem imagem, valide se não são caracteres inválidos/espúrios
+    if (!hasImage) {
+      if (sanitizedDuvida.length < 2) {
+        return res.status(400).json({
+          error: "A mensagem é muito curta. Digite uma dúvida ou questão com enunciado compreensível.",
+        });
+      }
+
+      const meaninglessCheck = isMeaninglessTextServer(sanitizedDuvida);
+      if (meaninglessCheck.isMeaningless) {
+        return res.status(400).json({
+          error: meaninglessCheck.reason || "Por favor, digite uma questão ou dúvida com palavras inteligíveis.",
+        });
+      }
+    }
+
+    const isGreeting = isGreetingOrInformalServer(sanitizedDuvida || "");
 
     // Se for uma saudação ou cumprimento puro sem imagem, responda imediatamente de forma calorosa e conversacional
-    if (isGreeting && !imagemBase64) {
-      const greetingResponse = getConversationalGreetingResponseServer(duvida || "");
+    if (isGreeting && !hasImage) {
+      const greetingResponse = getConversationalGreetingResponseServer(sanitizedDuvida || "");
       return res.json({
         success: true,
         data: {
@@ -2791,7 +2898,7 @@ app.post("/api/solve-question", async (req, res) => {
           foto_ilegivel: false,
           mensagem_erro_ilegivel: "",
           materia: "Conversa & Boas-Vindas",
-          transcricao_enunciado: (duvida || "").trim() || "Olá!",
+          transcricao_enunciado: sanitizedDuvida || "Olá!",
           conceito_chave: "",
           resposta_direta: greetingResponse,
           resolucao_passo_a_passo: "",
@@ -2808,7 +2915,7 @@ app.post("/api/solve-question", async (req, res) => {
     const ai = getGenAI();
     let contents: any[] = [];
 
-    if (imagemBase64) {
+    if (hasImage) {
       // Clean data url prefix if present
       const cleanBase64 = imagemBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
       contents = [
@@ -2819,13 +2926,13 @@ app.post("/api/solve-question", async (req, res) => {
           },
         },
         {
-          text: duvida && duvida.trim()
-            ? `Analise a foto enviada. Texto complementar ou dúvida do usuário: "${duvida}". Responda de forma aberta, clara e sem restrições no formato JSON solicitado.`
+          text: sanitizedDuvida
+            ? `Analise a foto enviada. Texto complementar ou dúvida do usuário: "${sanitizedDuvida}". Responda de forma aberta, clara e sem restrições no formato JSON solicitado.`
             : "Analise a imagem enviada. Extraia texto, gráficos ou fórmulas e responda com clareza e sem restrições no formato JSON solicitado.",
         },
       ];
     } else {
-      contents = [`Mensagem do Usuário:\n"${duvida.trim()}"`];
+      contents = [`Mensagem do Usuário:\n"${sanitizedDuvida}"`];
     }
 
     let parsedData: any = null;
@@ -3430,7 +3537,7 @@ app.post("/api/detect-c5-intervention", async (req, res) => {
     const { textoConclusao } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do app inteligente.
+    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do CFVJM.
 Analise detalhadamente a conclusão da redação fornecida e verifique a presença dos 5 elementos obrigatórios:
 1. Agente (Quem realiza a ação?)
 2. Ação (O que deve ser feito?)
@@ -3474,7 +3581,7 @@ app.post("/api/scan-answer-sheet", async (req, res) => {
     const { imagemBase64, gabaritoOficial } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do app inteligente.
+    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do CFVJM.
 Sua tarefa é analisar visualmente a foto da folha de gabarito enviada e identificar quais bolinhas (A, B, C, D, E) foram preenchidas/rasuradas em cada questão.
 
 Gabarito Oficial Esperado / Fornecido: ${

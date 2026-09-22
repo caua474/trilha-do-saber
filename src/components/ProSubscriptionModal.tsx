@@ -26,7 +26,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                 <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full">
                   Mercado Pago
                 </span>
-                <span className="text-xs font-bold text-amber-200">CFVJM Premium</span>
+                <span className="text-xs font-bold text-amber-200">Gabaritou Premium</span>
               </div>
               <h3 className="text-lg font-extrabold text-white">
                 Planos & Assinatura
@@ -50,7 +50,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({ onCl
                 🎉
               </div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                Parabéns! Você é assinante do CFVJM PRO!
+                Parabéns! Você é assinante do Gabaritou PRO!
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed font-medium">
                 Sua assinatura foi ativada com sucesso! Agora você tem acesso ilimitado ao Scanner Tira-Dúvidas com explicação detalhada em 3 passos e suporte completo à IA.

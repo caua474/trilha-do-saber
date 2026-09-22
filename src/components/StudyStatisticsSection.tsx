@@ -443,7 +443,7 @@ export const StudyStatisticsSection: React.FC = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(67, 56, 202);
-      doc.text('Recomendação CFVJM:', 18, currentY + 5);
+      doc.text('Recomendação Gabaritou:', 18, currentY + 5);
       doc.text('Mantenha a régua de resolução diária de questões para consolidar sua nota na TRI.', 18, currentY + 9.5);
 
       // Save PDF

@@ -88,13 +88,13 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
     playSuccessSound();
     let text = '';
     if (type === 'redacao') {
-      text = `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no CFVJM! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #CFVJM #ENEM2026 #Redacao1000`;
+      text = `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no Gabaritou! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #Gabaritou #ENEM2026 #Redacao1000`;
     } else if (type === 'mascote') {
-      text = `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no CFVJM! Rumo ao ENEM! 🚀 #CFVJM #Estudos`;
+      text = `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no Gabaritou! Rumo ao ENEM! 🚀 #Gabaritou #Estudos`;
     } else if (type === 'quiz') {
-      text = `⚡ Gabaritei o Quiz Rápido da Professora Gabi no CFVJM! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #CFVJM #ENEM2026 #ProfessoraGabi #QuizENEM`;
+      text = `⚡ Gabaritei o Quiz Rápido da Professora Gabi no Gabaritou! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #Gabaritou #ENEM2026 #ProfessoraGabi #QuizENEM`;
     } else {
-      text = `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no CFVJM! Foco total na aprovação! 🎓 #Streak #CFVJM #FocoENEM`;
+      text = `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no Gabaritou! Foco total na aprovação! 🎓 #Streak #Gabaritou #FocoENEM`;
     }
 
     navigator.clipboard.writeText(text);
@@ -104,13 +104,13 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
 
   const getShareText = () => {
     if (type === 'redacao') {
-      return `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no CFVJM! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #CFVJM #ENEM2026 #Redacao1000`;
+      return `🔥 Tirei ${data.score || 920}/1000 na Redação ENEM treinando no Gabaritou! 🚀 Rumo à aprovação em ${data.courseTarget || 'Medicina'}! #Gabaritou #ENEM2026 #Redacao1000`;
     } else if (type === 'mascote') {
-      return `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no CFVJM! Rumo ao ENEM! 🚀 #CFVJM #Estudos`;
+      return `⭐ Meu mascote ${data.mascotName || 'Gabaritão'} atingiu o Nível ${data.mascotLevel || 5} com ${data.mascotXp || 1200} XP no Gabaritou! Rumo ao ENEM! 🚀 #Gabaritou #Estudos`;
     } else if (type === 'quiz') {
-      return `⚡ Gabaritei o Quiz Rápido da Professora Gabi no CFVJM! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #CFVJM #ENEM2026 #ProfessoraGabi #QuizENEM`;
+      return `⚡ Gabaritei o Quiz Rápido da Professora Gabi no Gabaritou! 🎯 ${data.quizScore || 3}/${data.quizTotal || 3} acertos (${data.quizPercent || 100}%) no tema "${data.quizTopic || 'Revisão Rápida ENEM'}". Rumo à nota máxima no ENEM! 🚀 #Gabaritou #ENEM2026 #ProfessoraGabi #QuizENEM`;
     } else {
-      return `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no CFVJM! Foco total na aprovação! 🎓 #Streak #CFVJM #FocoENEM`;
+      return `🔥 Consegui ${data.streakDays || 14} Dias Seguidos de Ofensiva Diária no Gabaritou! Foco total na aprovação! 🎓 #Streak #Gabaritou #FocoENEM`;
     }
   };
 
@@ -130,7 +130,7 @@ export const SocialShareStoryModal: React.FC<SocialShareStoryModalProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Meu Desempenho no CFVJM',
+          title: 'Meu Desempenho no Gabaritou',
           text: getShareText(),
           url: window.location.origin,
         });

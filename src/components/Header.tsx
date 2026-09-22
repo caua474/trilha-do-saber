@@ -56,6 +56,7 @@ interface HeaderProps {
   onOpenBanca?: () => void;
   onOpenGraficosTri?: () => void;
   onOpenOnboarding?: () => void;
+  onOpenTour?: () => void;
   onOpenOpcoesPage?: () => void;
   onResetView?: () => void;
   activeAbaTopo?: AbaTopo;
@@ -89,6 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBanca,
   onOpenGraficosTri,
   onOpenOnboarding,
+  onOpenTour,
   onOpenOpcoesPage,
   onResetView,
   activeAbaTopo: controlledAbaTopo,
@@ -335,7 +337,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center space-x-1.5 sm:space-x-2">
                     <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                      CFVJM
+                      CFJVMG
                     </h1>
                     <span className="hidden sm:inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/80 uppercase tracking-wider shrink-0">
                       <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1 text-indigo-600 dark:text-indigo-400" /> IA
@@ -445,6 +447,20 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Professora Gabi</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   </span>
+                </button>
+              )}
+
+              {/* Tour Guiado Button (Desktop) */}
+              {onOpenTour && (
+                <button
+                  id="header-open-welcome-tour-btn"
+                  type="button"
+                  onClick={onOpenTour}
+                  className="hidden xl:inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-black transition shadow-xs cursor-pointer pointer-events-auto active:scale-95 shrink-0"
+                  title="Abrir Tour Guiado de Boas-Vindas (Scanner, Redação e Simulados)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Tour Guiado</span>
                 </button>
               )}
 

@@ -43,6 +43,7 @@ import { GeminiErrorProvider } from './context/GeminiErrorContext';
 import { HomeHubCategories } from './components/HomeHubCategories';
 import { AiStudioPlayground } from './components/AiStudioPlayground';
 import { LoginScreen } from './components/LoginScreen';
+import { WelcomeTourModal, hasSeenWelcomeTour } from './components/WelcomeTourModal';
 
 // Modals
 import { ProfileSettingsModal, getSavedUserProfile } from './components/ProfileSettingsModal';
@@ -202,7 +203,7 @@ async function clearEntireIndexedDB(): Promise<void> {
   ]);
 }
 
-function GabaritouApp() {
+function CFJVMGApp() {
   // Authentication State
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
@@ -401,6 +402,10 @@ function GabaritouApp() {
             if (user.name) {
               setUserProfile((prev) => ({ ...prev, name: user.name }));
             }
+            // Disparar tour de boas-vindas com 3 passos para novos usuários após login
+            if (!hasSeenWelcomeTour()) {
+              setActiveModal('welcome_tour');
+            }
           }}
           onOpenProModal={() => setActiveModal('pro')}
         />
@@ -456,6 +461,7 @@ function GabaritouApp() {
           setAbaAtiva('simulado_tri');
         }}
         onOpenOnboarding={() => setActiveModal('onboarding')}
+        onOpenTour={() => setActiveModal('welcome_tour')}
         onOpenOpcoesPage={() => setPrimaryTab('opcoes_hub')}
         onResetView={() => {
           setPrimaryTab('home');
@@ -776,6 +782,7 @@ function GabaritouApp() {
             onOpenHistory={() => setActiveModal('history')}
             onOpenHelp={() => setActiveModal('how_it_works')}
             onOpenOnboarding={() => setActiveModal('onboarding')}
+            onOpenTour={() => setActiveModal('welcome_tour')}
             onOpenGabi={() => setActiveModal('gabi')}
             onOpenPro={() => setActiveModal('pro')}
             onGoHome={() => setPrimaryTab('home')}
@@ -830,6 +837,19 @@ function GabaritouApp() {
               setActiveModal(null);
               setGabiInitialPrompt(null);
             }}
+          />
+        )}
+
+        {/* Welcome Tour 3-Steps Modal */}
+        {activeModal === 'welcome_tour' && (
+          <WelcomeTourModal
+            userName={userProfile.name || authUser?.name || 'Estudante'}
+            onNavigateToFeature={(targetPrimary, targetAba) => {
+              setPrimaryTab(targetPrimary);
+              setAbaAtiva(targetAba);
+              setActiveModal(null);
+            }}
+            onClose={() => setActiveModal(null)}
           />
         )}
 
@@ -938,6 +958,7 @@ function GabaritouApp() {
             onOpenHistory={() => setActiveModal('history')}
             onOpenHelp={() => setActiveModal('how_it_works')}
             onOpenOnboarding={() => setActiveModal('onboarding')}
+            onOpenTour={() => setActiveModal('welcome_tour')}
             onClose={() => setActiveModal(null)}
           />
         )}
@@ -1039,7 +1060,7 @@ function GabaritouApp() {
 export default function App() {
   return (
     <GeminiErrorProvider>
-      <GabaritouApp />
+      <CFJVMGApp />
     </GeminiErrorProvider>
   );
 }

@@ -59,7 +59,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
     {
       id: 'welcome',
       sender: 'gabi',
-      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora pedagógica no Gabaritou! Estou aqui para responder qualquer dúvida de estudos, curiosidades, conversas do dia a dia ou te guiar pelos recursos do app. Como posso te ajudar agora?',
+      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora pedagógica no CFJVMG! Estou aqui para responder qualquer dúvida de estudos, curiosidades, conversas do dia a dia ou te guiar pelos recursos do app. Como posso te ajudar agora?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);

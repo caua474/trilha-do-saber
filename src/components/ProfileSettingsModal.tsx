@@ -392,7 +392,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   </div>
 
                   <p className="text-xs text-indigo-300 font-bold mt-0.5">
-                    Estudante app inteligente
+                    Estudante Gabaritou
                   </p>
                 </div>
 

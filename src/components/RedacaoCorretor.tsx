@@ -298,7 +298,7 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
   const handleCopiarResultadoCompleto = () => {
     if (!analiseCompleta) return;
     const comps = analiseCompleta.competencias || [];
-    const textoCopiado = `📊 GABARITOU • CORREÇÃO OFICIAL DE REDAÇÃO ENEM
+    const textoCopiado = `📊 CFJVMG • CORREÇÃO OFICIAL DE REDAÇÃO ENEM
 Tema: ${analiseCompleta.tema_detectado || tema || 'Geral'}
 🏆 NOTA FINAL (0 a 1000): ${analiseCompleta.nota_final} PONTOS
 
@@ -325,7 +325,7 @@ ${analiseCompleta.sugestao_reescrita || analiseCompleta.dica_de_ouro || ''}`;
 
   const handleCopiarResultadoIndividual = () => {
     if (!analiseIndividual) return;
-    const textoCopiado = `🎯 GABARITOU • TREINO DE COMPETÊNCIA ENEM
+    const textoCopiado = `🎯 CFJVMG • TREINO DE COMPETÊNCIA ENEM
 Competência: C${analiseIndividual.competencia_numero} - ${analiseIndividual.competencia_nome}
 Tema: ${tema || 'Geral'}
 🏆 NOTA OBTIDA (0 a 200): ${analiseIndividual.nota} PONTOS (${analiseIndividual.nivel || ''})

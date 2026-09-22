@@ -50,6 +50,7 @@ interface CentralDeOpcoesSectionProps {
   onOpenHistory: () => void;
   onOpenHelp: () => void;
   onOpenOnboarding: () => void;
+  onOpenTour?: () => void;
   onOpenGabi: () => void;
   onOpenPro?: () => void;
   onGoHome: () => void;
@@ -66,6 +67,7 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
   onOpenHistory,
   onOpenHelp,
   onOpenOnboarding,
+  onOpenTour,
   onOpenGabi,
   onOpenPro,
   onGoHome,
@@ -469,15 +471,37 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
               type="button"
               onClick={() => {
                 playClickSound();
+                if (onOpenTour) {
+                  onOpenTour();
+                } else {
+                  onOpenOnboarding();
+                }
+              }}
+              className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-slate-200 dark:border-white/5 hover:border-indigo-300 dark:hover:border-indigo-500/40 text-left transition group cursor-pointer flex items-center justify-between"
+            >
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-300 flex items-center gap-1.5">
+                  <span>Tour de Boas-Vindas</span>
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">3 Passos</span>
+                </h4>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Scanner, Redação & Provas</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
                 onOpenOnboarding();
               }}
               className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 hover:bg-pink-50 dark:hover:bg-pink-950/40 border border-slate-200 dark:border-white/5 hover:border-pink-300 dark:hover:border-pink-500/40 text-left transition group cursor-pointer flex items-center justify-between"
             >
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-300">
-                  Rever Tour do App
+                  Configuração de Metas
                 </h4>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Apresentação guiada</p>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Curso, faculdade e horas</p>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </button>
@@ -514,7 +538,7 @@ export const CentralDeOpcoesSection: React.FC<CentralDeOpcoesSectionProps> = ({
             <div className="space-y-2 text-xs text-slate-600 dark:text-zinc-300">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold">Gabaritou • Plataforma de Estudos Inteligente</span>
+                <span className="font-bold">CFJVMG • Plataforma de Estudos Inteligente</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
                 Seus dados de simulados, pontuações TRI e fichamentos são salvos com persistência local no seu navegador através de banco de dados IndexedDB.

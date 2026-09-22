@@ -226,7 +226,7 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
         },
         {
           id: 'conteudo_ai_playground',
-          title: 'Tira-Dúvidas Gabaritou AI',
+          title: 'Tira-Dúvidas CFJVMG AI',
           description: 'Laboratório multimodal para dúvidas, redações, fotos e documentos com a Professora Gabi',
           icon: '🤖',
           tag: 'Multimodal',

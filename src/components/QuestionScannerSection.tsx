@@ -222,7 +222,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
       ctx.fillRect(0, 0, 600, 300);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText('⚡ app inteligente • Scanner de Questão', 30, 50);
+      ctx.fillText('⚡ Gabaritou • Scanner de Questão', 30, 50);
       ctx.font = '14px sans-serif';
       ctx.fillStyle = '#cbd5e1';
       ctx.fillText('Questão: Um bloco de 5 kg é puxado por uma força F = 20 N em superfície lisa.', 30, 110);

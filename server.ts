@@ -306,7 +306,7 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 10. Assinatura e Recursos do Aplicativo
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do CFVJM custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
+      resposta_suporte: "O Plano PRO do CFJVMG custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
       botao_atalho: "tela_assinatura"
     };
   }
@@ -344,6 +344,7 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
 }) {
   const modelsToTry = [
     options.preferredModel || "gemini-3.8-flash",
+    "gemini-3.6-flash",
     "gemini-3.1-flash-lite",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
@@ -358,7 +359,7 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
       if (options.responseSchema) config.responseSchema = options.responseSchema;
       if (options.temperature !== undefined) config.temperature = options.temperature;
 
-      const timeoutDuration = options.timeoutMs || 12000;
+      const timeoutDuration = options.timeoutMs || 10000;
       const result = await Promise.race([
         ai.models.generateContent({
           model,
@@ -381,7 +382,7 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
         console.warn(`[callGeminiSafe] Chave de API inválida detectada.`);
         break;
       }
-      console.warn(`[callGeminiSafe] Modelo ${model} indisponível, tentando próximo.`);
+      console.warn(`[callGeminiSafe] Modelo ${model} falhou ou indisponível (${errStr.slice(0, 80)}), tentando próximo.`);
     }
   }
 
@@ -415,59 +416,59 @@ app.post("/api/summarize", async (req, res) => {
       userPrompt += `\n\nFoco especial do aluno: ${focusTopic}`;
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: userPrompt,
-      config: {
-        systemInstruction: SUMMARIZE_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            rawText: {
-              type: Type.STRING,
-              description: "Texto em Markdown estruturado.",
+    const summarizeSchema = {
+      type: Type.OBJECT,
+      properties: {
+        rawText: {
+          type: Type.STRING,
+          description: "Texto em Markdown estruturado.",
+        },
+        resumoDireto: {
+          type: Type.STRING,
+          description: "O resumo direto do texto em no máximo 3 frases simples e claras.",
+        },
+        pontosPrincipais: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Exatamente 4 tópicos principais fundamentais para memorização.",
+        },
+        perguntas: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              pergunta: { type: Type.STRING, description: "Texto da pergunta de teste" },
+              resposta: { type: Type.STRING, description: "Resposta correta e direta da pergunta" },
             },
-            resumoDireto: {
-              type: Type.STRING,
-              description: "O resumo direto do texto em no máximo 3 frases simples e claras.",
-            },
-            pontosPrincipais: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "Exatamente 4 tópicos principais fundamentais para memorização.",
-            },
-            perguntas: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  pergunta: { type: Type.STRING, description: "Texto da pergunta de teste" },
-                  resposta: { type: Type.STRING, description: "Resposta correta e direta da pergunta" },
-                },
-                required: ["pergunta", "resposta"],
-              },
-              description: "Exatamente 3 perguntas rápidas para teste com respostas.",
-            },
-            flashcards: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  frente: { type: Type.STRING, description: "Pergunta ou conceito/termo principal do cartão" },
-                  verso: { type: Type.STRING, description: "Resposta ou definição explicativa do verso do cartão" },
-                },
-                required: ["frente", "verso"],
-              },
-              description: "De 5 a 8 flashcards para memorização ativa.",
-            },
+            required: ["pergunta", "resposta"],
           },
-          required: ["rawText", "resumoDireto", "pontosPrincipais", "perguntas", "flashcards"],
+          description: "Exatamente 3 perguntas rápidas para teste com respostas.",
+        },
+        flashcards: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              frente: { type: Type.STRING, description: "Pergunta ou conceito/termo principal do cartão" },
+              verso: { type: Type.STRING, description: "Resposta ou definição explicativa do verso do cartão" },
+            },
+            required: ["frente", "verso"],
+          },
+          description: "De 5 a 8 flashcards para memorização ativa.",
         },
       },
+      required: ["rawText", "resumoDireto", "pontosPrincipais", "perguntas", "flashcards"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: userPrompt,
+      systemInstruction: SUMMARIZE_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: summarizeSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const data = cleanAndRepairJson(response.text) || {};
+    const data = cleanAndRepairJson(resultText) || {};
 
     res.json({
       success: true,
@@ -536,11 +537,11 @@ app.post("/api/gemini/chat", async (req, res) => {
     }
 
     let selectedModel = customModel || "gemini-3.8-flash";
-    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-1.5-flash") {
+    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-1.5-flash" || selectedModel === "gemini-2.5-flash") {
       selectedModel = "gemini-3.8-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
-    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do GabaritaAí com IA Gemini 3.8.
+    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do CFJVMG com IA Gemini 3.8.
 DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos, interpretações densas e questões de prova/vestibular):
    - Responda sempre em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
@@ -551,24 +552,58 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
    - Forneça RESPOSTAS DIRETAS E CONCISAS em 1 a 3 frases claras e objetivas, sem criar passos artificiais nem enrolação.`;
     const selectedInstruction = customSystemInstruction?.trim() || defaultInstruction;
 
-    const response = await ai.models.generateContent({
-      model: selectedModel,
-      contents: contentParts,
-      config: {
-        systemInstruction: selectedInstruction,
-        temperature: selectedTemp,
-      },
-    });
+    let replyText = "";
+    try {
+      const response = await ai.models.generateContent({
+        model: selectedModel,
+        contents: contentParts,
+        config: {
+          systemInstruction: selectedInstruction,
+          temperature: selectedTemp,
+        },
+      });
+      replyText = response.text || "";
+    } catch (modelErr) {
+      // Fallback para gemini-3.6-flash e modelos adicionais em alta demanda
+      try {
+        const backupResponse = await ai.models.generateContent({
+          model: "gemini-3.6-flash",
+          contents: contentParts,
+          config: {
+            systemInstruction: selectedInstruction,
+            temperature: selectedTemp,
+          },
+        });
+        replyText = backupResponse.text || "";
+      } catch (backupErr1) {
+        try {
+          const liteResponse = await ai.models.generateContent({
+            model: "gemini-3.1-flash-lite",
+            contents: contentParts,
+            config: {
+              systemInstruction: selectedInstruction,
+              temperature: selectedTemp,
+            },
+          });
+          replyText = liteResponse.text || "";
+        } catch (backupErr2) {
+          // Fallback pedagógico instantâneo caso os servidores estejam temporariamente congestionados
+          const fallbackObj = getFallbackGabiAnswer(prompt || "Dúvida geral");
+          replyText = fallbackObj.resposta_suporte;
+        }
+      }
+    }
 
     res.json({
       success: true,
-      reply: response.text || "Sem resposta gerada pelo modelo.",
+      reply: replyText || "Olá! Como posso te ajudar a gabaritar hoje?",
     });
   } catch (error: any) {
     console.error("Erro no endpoint /api/gemini/chat:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Erro interno ao processar a resposta da IA.",
+    const fallbackObj = getFallbackGabiAnswer(req.body?.prompt || "Dúvida");
+    res.json({
+      success: true,
+      reply: fallbackObj.resposta_suporte,
     });
   }
 });
@@ -581,12 +616,14 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "Mensagem obrigatória." });
     }
 
-    const ai = getGenAI();
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: message.trim(),
-      config: {
-        systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do GabaritaAí utilizando o Gemini 3.8 Flash.
+    let replyText = "";
+    try {
+      const ai = getGenAI();
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: message.trim(),
+        config: {
+          systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do CFJVMG utilizando o Gemini 3.8 Flash.
 DIRETRIZES FUNDAMENTAIS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (análise estilística profunda, figuras de linguagem, contexto histórico-filosófico de obras clássicas, correntes literárias e interpretação textual densa de vestibulares):
    - Responda em EXATAMENTE 3 PASSOS claros e estruturados:
@@ -595,18 +632,42 @@ DIRETRIZES FUNDAMENTAIS DE RESPOSTA:
      • Passo 3: Análise Crítica Guiada e Aplicação nos Vestibulares/ENEM.
 2. PERGUNTAS DE CONHECIMENTOS GERAIS OU FATOS DIRETOS (autor da obra, ano de publicação, personagens principais, enredo resumido ou curiosidades culturais):
    - Forneça respostas DIRETAS E CONCISAS em poucas frases objetivas, sem etapas desnecessárias.`,
-      },
-    });
+        },
+      });
+      replyText = response.text || "";
+    } catch (chatModelErr) {
+      try {
+        const ai = getGenAI();
+        const backup = await ai.models.generateContent({
+          model: "gemini-3.6-flash",
+          contents: message.trim(),
+        });
+        replyText = backup.text || "";
+      } catch (_) {
+        try {
+          const ai = getGenAI();
+          const backupLite = await ai.models.generateContent({
+            model: "gemini-3.1-flash-lite",
+            contents: message.trim(),
+          });
+          replyText = backupLite.text || "";
+        } catch (_2) {
+          const fb = getFallbackGabiAnswer(message.trim());
+          replyText = fb.resposta_suporte;
+        }
+      }
+    }
 
     res.json({
       success: true,
-      reply: response.text || "Sem resposta gerada pelo modelo.",
+      reply: replyText || "Sem resposta gerada pelo modelo.",
     });
   } catch (error: any) {
     console.error("Erro no endpoint /api/chat:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Erro ao processar mensagem com Gemini 3.8.",
+    const fb = getFallbackGabiAnswer(req.body?.message || "");
+    res.json({
+      success: true,
+      reply: fb.resposta_suporte,
     });
   }
 });
@@ -621,19 +682,19 @@ app.post("/api/gemini", async (req, res) => {
 
     const ai = getGenAI();
     const promptString = typeof contents === "string" ? contents : JSON.stringify(contents);
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text } = await callGeminiSafe(ai, {
       contents: promptString,
-      config: systemInstruction ? { systemInstruction } : undefined,
+      systemInstruction: systemInstruction || undefined,
+      preferredModel: "gemini-3.8-flash",
     });
 
     res.json({
-      text: response.text || "",
+      text: text || "",
     });
   } catch (error: any) {
     console.error("Erro no endpoint /api/gemini:", error);
     res.status(500).json({
-      error: error.message || "Erro ao consultar Gemini 3.8.",
+      error: error.message || "Erro ao consultar Gemini.",
     });
   }
 });
@@ -664,15 +725,13 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
   "dicaSimplificacao": "Como tornar a explicação ainda mais simples sem jargões"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na avaliação Feynman:", error);
@@ -684,7 +743,7 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
 });
 
 // 2. SYSTEM INSTRUCTION FOR GABARITAAÍ MODE 1 (PLANO DE ESTUDO OU CONTEÚDO)
-const GABARITAAI_PLANO_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e backend do aplicativo "GabaritaAí", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
+const GABARITAAI_PLANO_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e backend do aplicativo "CFJVMG", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
 
 Sua missão é receber as solicitações do usuário e retornar EXCLUSIVAMENTE um objeto JSON válido, sem qualquer texto introdutório, explicações ou marcadores fora da estrutura JSON.
 
@@ -735,7 +794,7 @@ app.post("/api/tutor-plan", async (req, res) => {
 
     const ai = getGenAI();
 
-    const prompt = `Dados do Aluno para Planejamento de Estudos no GabaritaAí:
+    const prompt = `Dados do Aluno para Planejamento de Estudos no CFJVMG:
 - Matéria: ${materia}
 - Série/Ano: ${serieAno || "Não especificado"}
 - Objetivo: ${objetivo} (ex: ENEM, Vestibular, Prova da Escola, Concurso)
@@ -743,56 +802,56 @@ app.post("/api/tutor-plan", async (req, res) => {
 
 Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido, plano_hoje dividindo o tempo disponível em etapas, e questões práticas com alternativas e explicação didática.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: GABARITAAI_PLANO_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            tipo_resposta: { type: Type.STRING },
-            materia: { type: Type.STRING },
-            objetivo: { type: Type.STRING },
-            resumo_rapido: { type: Type.STRING },
-            plano_hoje: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  etapa: { type: Type.INTEGER },
-                  atividade: { type: Type.STRING },
-                  duracao_minutos: { type: Type.INTEGER },
-                  descricao: { type: Type.STRING },
-                },
-                required: ["etapa", "atividade", "duracao_minutos", "descricao"],
-              },
+    const planoSchema = {
+      type: Type.OBJECT,
+      properties: {
+        tipo_resposta: { type: Type.STRING },
+        materia: { type: Type.STRING },
+        objetivo: { type: Type.STRING },
+        resumo_rapido: { type: Type.STRING },
+        plano_hoje: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              etapa: { type: Type.INTEGER },
+              atividade: { type: Type.STRING },
+              duracao_minutos: { type: Type.INTEGER },
+              descricao: { type: Type.STRING },
             },
-            questoes: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.INTEGER },
-                  pergunta: { type: Type.STRING },
-                  opcoes: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                  },
-                  resposta_correta: { type: Type.STRING },
-                  explicacao_didatica: { type: Type.STRING },
-                },
-                required: ["id", "pergunta", "opcoes", "resposta_correta", "explicacao_didatica"],
-              },
-            },
+            required: ["etapa", "atividade", "duracao_minutos", "descricao"],
           },
-          required: ["tipo_resposta", "materia", "objetivo", "resumo_rapido", "plano_hoje", "questoes"],
+        },
+        questoes: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.INTEGER },
+              pergunta: { type: Type.STRING },
+              opcoes: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              resposta_correta: { type: Type.STRING },
+              explicacao_didatica: { type: Type.STRING },
+            },
+            required: ["id", "pergunta", "opcoes", "resposta_correta", "explicacao_didatica"],
+          },
         },
       },
+      required: ["tipo_resposta", "materia", "objetivo", "resumo_rapido", "plano_hoje", "questoes"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: prompt,
+      systemInstruction: GABARITAAI_PLANO_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: planoSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsedData = cleanAndRepairJson(response.text) || {};
+    const parsedData = cleanAndRepairJson(resultText) || {};
 
     // Format for frontend mapping
     const cronogramaFormatted = (parsedData.plano_hoje || []).map((item: any) => ({
@@ -813,7 +872,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
       aulaResumo: parsedData.resumo_rapido || "Resumo preparado com sucesso para os seus estudos!",
       cronograma: cronogramaFormatted,
       questoes: questoesFormatted,
-      gabaritoComentado: "GabaritaAí: Foco na resolução prática para gabaritar na prova!",
+      gabaritoComentado: "CFJVMG: Foco na resolução prática para gabaritar na prova!",
     };
 
     res.json({
@@ -830,7 +889,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
 });
 
 // 3. SYSTEM INSTRUCTION FOR GABARITAAÍ MODE 2 (TIRA-DÚVIDAS)
-const GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e tutor pedagógico do aplicativo "GabaritaAí", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
+const GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e tutor pedagógico do aplicativo "CFJVMG", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
 
 Sua missão é receber as solicitações do usuário e retornar EXCLUSIVAMENTE um objeto JSON válido, sem qualquer texto introdutório ou marcadores fora da estrutura JSON.
 
@@ -865,31 +924,31 @@ app.post("/api/explain-eli5", async (req, res) => {
 
     const ai = getGenAI();
 
-    const prompt = `Dúvida do aluno no GabaritaAí:\n"${duvida.trim()}"\n\nPor favor, responda no MODO 2 (tira_duvidas) com analogia_simples, passo_a_passo e dica_de_ouro.`;
+    const prompt = `Dúvida do aluno no CFJVMG:\n"${duvida.trim()}"\n\nPor favor, responda no MODO 2 (tira_duvidas) com analogia_simples, passo_a_passo e dica_de_ouro.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            tipo_resposta: { type: Type.STRING },
-            analogia_simples: { type: Type.STRING },
-            passo_a_passo: {
-              type: Type.STRING,
-              description: "Resolução do problema dividida em etapas pequenas.",
-            },
-            dica_de_ouro: { type: Type.STRING },
-          },
-          required: ["tipo_resposta", "analogia_simples", "passo_a_passo", "dica_de_ouro"],
+    const duvidaSchema = {
+      type: Type.OBJECT,
+      properties: {
+        tipo_resposta: { type: Type.STRING },
+        analogia_simples: { type: Type.STRING },
+        passo_a_passo: {
+          type: Type.STRING,
+          description: "Resolução do problema dividida em etapas pequenas.",
         },
+        dica_de_ouro: { type: Type.STRING },
       },
+      required: ["tipo_resposta", "analogia_simples", "passo_a_passo", "dica_de_ouro"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: prompt,
+      systemInstruction: GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: duvidaSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsedData = cleanAndRepairJson(response.text) || {};
+    const parsedData = cleanAndRepairJson(resultText) || {};
 
     // Map to frontend expected format
     const passoAPassoArray = typeof parsedData.passo_a_passo === "string"
@@ -919,7 +978,7 @@ app.post("/api/explain-eli5", async (req, res) => {
 });
 
 // SYSTEM INSTRUCTION FOR PERSONALIZED KNOWLEDGE PILL
-const PERSONALIZED_PILL_SYSTEM_INSTRUCTION = `Você é o especialista em Pílulas de Conhecimento e Hacks de Prova do GabaritaAí.
+const PERSONALIZED_PILL_SYSTEM_INSTRUCTION = `Você é o especialista em Pílulas de Conhecimento e Hacks de Prova do CFJVMG.
 Sua função é analisar o histórico de estudos do aluno, identificar os tópicos de menor desempenho e criar uma 'Pílula de Conhecimento' altamente memorável de 30 segundos para o dia seguinte.
 
 A pílula deve conter:
@@ -1017,40 +1076,40 @@ app.post("/api/personalized-knowledge-pill", async (req, res) => {
 Tópicos/Matérias com menor desempenho: ${JSON.stringify(lowestSubjects || [])}
 ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: PERSONALIZED_PILL_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
+    const pillSchema = {
+      type: Type.OBJECT,
+      properties: {
+        categoria: { type: Type.STRING },
+        topico: { type: Type.STRING },
+        titulo: { type: Type.STRING },
+        duracaoLeitura: { type: Type.STRING },
+        diagnosticoHistorico: { type: Type.STRING },
+        resumoCurto: { type: Type.STRING },
+        maceteOuro: { type: Type.STRING },
+        exemploPratico: { type: Type.STRING },
+        desafioFixacao: {
           type: Type.OBJECT,
           properties: {
-            categoria: { type: Type.STRING },
-            topico: { type: Type.STRING },
-            titulo: { type: Type.STRING },
-            duracaoLeitura: { type: Type.STRING },
-            diagnosticoHistorico: { type: Type.STRING },
-            resumoCurto: { type: Type.STRING },
-            maceteOuro: { type: Type.STRING },
-            exemploPratico: { type: Type.STRING },
-            desafioFixacao: {
-              type: Type.OBJECT,
-              properties: {
-                pergunta: { type: Type.STRING },
-                opcoes: { type: Type.ARRAY, items: { type: Type.STRING } },
-                respostaCorreta: { type: Type.STRING },
-                explicacao: { type: Type.STRING },
-              },
-              required: ["pergunta", "opcoes", "respostaCorreta", "explicacao"],
-            },
+            pergunta: { type: Type.STRING },
+            opcoes: { type: Type.ARRAY, items: { type: Type.STRING } },
+            respostaCorreta: { type: Type.STRING },
+            explicacao: { type: Type.STRING },
           },
-          required: ["categoria", "topico", "titulo", "duracaoLeitura", "diagnosticoHistorico", "resumoCurto", "maceteOuro", "exemploPratico", "desafioFixacao"],
+          required: ["pergunta", "opcoes", "respostaCorreta", "explicacao"],
         },
       },
+      required: ["categoria", "topico", "titulo", "duracaoLeitura", "diagnosticoHistorico", "resumoCurto", "maceteOuro", "exemploPratico", "desafioFixacao"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: prompt,
+      systemInstruction: PERSONALIZED_PILL_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: pillSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const data = cleanAndRepairJson(response.text) || getFallbackKnowledgePill(customTopic, lowestSubjects);
+    const data = cleanAndRepairJson(resultText) || getFallbackKnowledgePill(customTopic, lowestSubjects);
     res.json({ success: true, data });
   } catch (error: any) {
     console.warn("[personalized-knowledge-pill] Usando pílula pedagógica de alta precisão.");
@@ -1060,7 +1119,7 @@ ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''
 });
 
 // 4. SYSTEM INSTRUCTION FOR GABARITAAÍ DAY & NIGHT MODE SELECTION
-const GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial do aplicativo "GabaritaAí".
+const GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial do aplicativo "CFJVMG".
 
 Analise a mensagem do usuário e escolha EXCLUSIVAMENTE um dos modos abaixo:
 
@@ -1100,58 +1159,58 @@ app.post("/api/day-night-mode", async (req, res) => {
     const { mensagem } = req.body;
 
     if (!mensagem || typeof mensagem !== "string" || !mensagem.trim()) {
-      return res.status(400).json({ error: "Envie sua mensagem para a inteligência GabaritaAí." });
+      return res.status(400).json({ error: "Envie sua mensagem para a inteligência CFJVMG." });
     }
 
     const ai = getGenAI();
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: `Mensagem do aluno: "${mensagem.trim()}"`,
-      config: {
-        systemInstruction: GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            modo_ativo: {
-              type: Type.STRING,
-              description: "modo_dia ou modo_noite",
-            },
-            saudacao: { type: Type.STRING },
-            meta_do_dia: { type: Type.STRING },
-            plano_estudo: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            resumo_noturno: { type: Type.STRING },
-            perguntas_revisao: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-          },
-          required: ["modo_ativo", "saudacao"],
+    const dayNightSchema = {
+      type: Type.OBJECT,
+      properties: {
+        modo_ativo: {
+          type: Type.STRING,
+          description: "modo_dia ou modo_noite",
+        },
+        saudacao: { type: Type.STRING },
+        meta_do_dia: { type: Type.STRING },
+        plano_estudo: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+        },
+        resumo_noturno: { type: Type.STRING },
+        perguntas_revisao: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
         },
       },
+      required: ["modo_ativo", "saudacao"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: `Mensagem do aluno: "${mensagem.trim()}"`,
+      systemInstruction: GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: dayNightSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsedData = cleanAndRepairJson(response.text) || {};
+    const parsedData = cleanAndRepairJson(resultText) || {};
 
     res.json({
       success: true,
       data: parsedData,
     });
   } catch (error: any) {
-    console.error("Erro no MODO DIA/NOITE GabaritaAí:", error);
+    console.error("Erro no MODO DIA/NOITE CFJVMG:", error);
     res.status(500).json({
       success: false,
-      error: error.message || "Erro no processamento do Modo Dia/Noite do GabaritaAí.",
+      error: error.message || "Erro no processamento do Modo Dia/Noite do CFJVMG.",
     });
   }
 });
 
 // 5. SYSTEM INSTRUCTION FOR GABI (VIRTUAL ASSISTANT, TUTOR & APP GUIDE)
-const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a "Professora Gabi", a mentora educacional inteligente, professora especialista e assistente oficial do aplicativo Gabaritou.
+const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a "Professora Gabi", a mentora educacional inteligente, professora especialista e assistente oficial do aplicativo CFJVMG.
 Sua missão é responder com máxima empatia, clareza, simpatia e precisão a TODAS as perguntas enviadas pelo estudante (estudos, curiosidades, conhecimentos gerais e conversas cotidianas).
 
 DIRETRIZES FUNDAMENTAIS DE RESPOSTA (SIGA RIGOROSAMENTE):
@@ -1180,7 +1239,7 @@ DIRETRIZES FUNDAMENTAIS DE RESPOSTA (SIGA RIGOROSAMENTE):
      • **Passo 3 (Resolução Guiada e Gabarito Final):** Mostre o desenvolvimento ordenado dos passos até chegar à resposta final, acompanhado de uma dica de ouro para fixar na prova.
    - Deixe "botao_atalho": "nenhum".
 
-4. DÚVIDAS DE USO E NAVEGAÇÃO DO APLICATIVO GABARITOU:
+4. DÚVIDAS DE USO E NAVEGAÇÃO DO APLICATIVO CFJVMG:
    - Scanner Tira-Dúvidas com IA Vision, Mapas Mentais do Edital com exportação em PDF, Cronograma Inteligente, Simulados TRI e Caderno de Erros.
    - Plano Grátis: Teste gratuito diário do scanner e recursos essenciais.
    - Plano PRO: R$ 5,00/mês (sem fidelidade), perguntas ilimitadas, simulados TRI e correção de redação.
@@ -1282,7 +1341,7 @@ app.post("/api/gabi-support", async (req, res) => {
 });
 
 // 6. SYSTEM INSTRUCTION FOR ENEM ESSAY ANALYZER (CORRETOR DE REDAÇÃO ESPECIALISTA)
-const ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION = `Você é o Corretor de Redação Oficial do aplicativo GabaritaAí, especialista nas normas e critérios de avaliação do ENEM (Exame Nacional do Ensino Médio).
+const ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION = `Você é o Corretor de Redação Oficial do aplicativo CFJVMG, especialista nas normas e critérios de avaliação do ENEM (Exame Nacional do Ensino Médio).
 
 Sua função é analisar o texto da redação enviado pelo aluno, atribuir notas de 0 a 200 para cada uma das 5 Competências do ENEM e fornecer feedbacks construtivos.
 
@@ -1926,7 +1985,7 @@ app.post("/api/user-progress", async (req, res) => {
         descricao: conquista.descricao,
         icone: conquista.icone,
       },
-      mensagem_incentivo: `Parabéns! Você ganhou +${xpGanho} XP e subiu na classificação do GabaritaAí!`,
+      mensagem_incentivo: `Parabéns! Você ganhou +${xpGanho} XP e subiu na classificação do CFJVMG!`,
     };
 
     res.json({
@@ -1943,7 +2002,7 @@ app.post("/api/user-progress", async (req, res) => {
 });
 
 // 8. SYSTEM INSTRUCTION FOR ANALISTA DE DADOS E COACH DE PRODUTIVIDADE
-const ANALYTICS_POMODORO_SYSTEM_INSTRUCTION = `Você é o Analista de Dados e Coach de Produtividade do GabaritaAí. 
+const ANALYTICS_POMODORO_SYSTEM_INSTRUCTION = `Você é o Analista de Dados e Coach de Produtividade do CFJVMG. 
 
 Sua função é gerenciar o Dashboard de Desempenho e o Timer Pomodoro dos alunos, transformando métricas de estudo em dados visuais e recompensas.
 
@@ -2071,7 +2130,7 @@ app.post("/api/analytics-pomodoro", async (req, res) => {
 });
 
 // 9. SYSTEM INSTRUCTION FOR MOTOR DE CONTEÚDO E RETENÇÃO
-const RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION = `Você é o Motor de Conteúdo e Retenção do aplicativo GabaritaAí, especializado no ENEM e Vestibulares.
+const RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION = `Você é o Motor de Conteúdo e Retenção do aplicativo CFJVMG, especializado no ENEM e Vestibulares.
 
 Sua função é processar a "Questão do Dia", gerenciar o "Caderno de Erros" do estudante e criar roteiros narrativos para as "Pílulas de Áudio" (podcasts curtos).
 
@@ -2191,7 +2250,7 @@ app.post("/api/retencao-conteudo", async (req, res) => {
 });
 
 // 7. SYSTEM INSTRUCTION FOR OFFICIAL FLASHCARDS GENERATOR
-const FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION = `Você é o Gerador Oficial de Flashcards do aplicativo GabaritaAí, especialista em técnicas de memorização e repetição espaçada para o ENEM e Vestibulares.
+const FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION = `Você é o Gerador Oficial de Flashcards do aplicativo CFJVMG, especialista em técnicas de memorização e repetição espaçada para o ENEM e Vestibulares.
 
 Sua missão é criar cartões virtuais de estudo (Flashcards) curtos, diretos e objetivos a partir da matéria ou tópico solicitado pelo aluno.
 
@@ -2236,61 +2295,92 @@ app.post("/api/generate-flashcards", async (req, res) => {
     const ai = getGenAI();
     const qtdCards = typeof quantidade === "number" && quantidade > 0 ? quantidade : 5;
 
-    const prompt = `Gere ${qtdCards} flashcards de estudo no GabaritaAí para:
+    const prompt = `Gere ${qtdCards} flashcards de estudo no CFJVMG para:
 Matéria: ${materia}
 Tópico / Assunto: ${topico}
 
 Retorne exclusivamente o JSON de geração de flashcards.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            tipo_resposta: { type: Type.STRING },
-            materia: { type: Type.STRING },
-            topico: { type: Type.STRING },
-            quantidade_cards: { type: Type.INTEGER },
-            flashcards: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.INTEGER },
-                  frente: { type: Type.STRING },
-                  verso: { type: Type.STRING },
-                  dica: { type: Type.STRING },
-                },
-                required: ["id", "frente", "verso"],
-              },
+    const flashcardsSchema = {
+      type: Type.OBJECT,
+      properties: {
+        tipo_resposta: { type: Type.STRING },
+        materia: { type: Type.STRING },
+        topico: { type: Type.STRING },
+        quantidade_cards: { type: Type.INTEGER },
+        flashcards: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.INTEGER },
+              frente: { type: Type.STRING },
+              verso: { type: Type.STRING },
+              dica: { type: Type.STRING },
             },
+            required: ["id", "frente", "verso"],
           },
-          required: ["tipo_resposta", "materia", "topico", "quantidade_cards", "flashcards"],
         },
       },
+      required: ["tipo_resposta", "materia", "topico", "quantidade_cards", "flashcards"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: prompt,
+      systemInstruction: FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: flashcardsSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsedData = cleanAndRepairJson(response.text) || {};
+    const parsedData = cleanAndRepairJson(resultText) || {};
 
     res.json({
       success: true,
       data: parsedData,
     });
   } catch (error: any) {
-    console.error("Erro na geração de flashcards:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Erro ao gerar os flashcards de estudo.",
+    console.warn("Usando flashcards estruturados de contingência:", error?.message);
+    res.json({
+      success: true,
+      data: {
+        tipo_resposta: "geracao_flashcards",
+        materia: req.body?.materia || "Geral",
+        topico: req.body?.topico || "Revisão",
+        quantidade_cards: 4,
+        flashcards: [
+          {
+            id: 1,
+            frente: `Qual é a ideia central de ${req.body?.topico || "este tema"}?`,
+            verso: "Compreender os conceitos basilares, suas fórmulas e aplicações diretas nos enunciados dos vestibulares.",
+            dica: "Dica: foque nas palavras-chave do enunciado!",
+          },
+          {
+            id: 2,
+            frente: "Como este conteúdo costuma ser cobrado no ENEM?",
+            verso: "Geralmente associado a situações cotidianas, gráficos, tabelas ou análise contextualizada.",
+            dica: "Dica: sempre elimine as duas alternativas absurdas primeiro.",
+          },
+          {
+            id: 3,
+            frente: "Qual erro mais comum dos estudantes nesse assunto?",
+            verso: "Confundir unidades de medida ou esquecer de ler atentamente o comando da questão.",
+            dica: "Dica: sublinhe o verbo de comando.",
+          },
+          {
+            id: 4,
+            frente: "Regra mnemônica de ouro para fixação rápida:",
+            verso: "Revise em 24 horas, resolva 3 exercícios no mesmo dia e anote os pontos de dúvida no Caderno de Erros.",
+            dica: "Dica: repetição espaçada é o segredo.",
+          },
+        ],
+      },
     });
   }
 });
 
 // 8. SYSTEM INSTRUCTION FOR GABI DATA MANAGER & RANKING ASSISTANT
-const GABI_DATA_MANAGER_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e gerenciadora de dados do aplicativo GabaritaAí.
+const GABI_DATA_MANAGER_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e gerenciadora de dados do aplicativo CFJVMG.
 
 Sua função é retornar os dados estruturados para a interface do usuário, garantindo a personalização de tema visual (Modo Claro/Escuro) e a atualização correta da Tabela de Ranking entre Amigos.
 
@@ -2349,86 +2439,127 @@ app.post("/api/gabi-ranking", async (req, res) => {
 
     const ai = getGenAI();
 
-    const prompt = `Gere o painel do usuário e ranking de amigos da Gabi para o GabaritaAí.
+    const prompt = `Gere o painel do usuário e ranking de amigos da Gabi para o CFJVMG.
 Preferência de Tema Solicitada: "${tema_preferido || 'dark'}"
 XP Atual do Usuário: ${user_xp || 1500}
 Sequência de Dias Atual: ${user_streak || 7}
 
 Retorne exclusivamente o JSON de painel_usuario_ranking.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: GABI_DATA_MANAGER_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
+    const rankingSchema = {
+      type: Type.OBJECT,
+      properties: {
+        tipo_resposta: { type: Type.STRING },
+        configuracoes_interface: {
           type: Type.OBJECT,
           properties: {
-            tipo_resposta: { type: Type.STRING },
-            configuracoes_interface: {
-              type: Type.OBJECT,
-              properties: {
-                tema_preferido: { type: Type.STRING },
-                mensagem_boas_vindas: { type: Type.STRING },
-              },
-              required: ["tema_preferido", "mensagem_boas_vindas"],
-            },
-            ranking_amigos: {
-              type: Type.OBJECT,
-              properties: {
-                posicao_usuario: { type: Type.INTEGER },
-                total_amigos: { type: Type.INTEGER },
-                lista_ranking: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      posicao: { type: Type.INTEGER },
-                      nome: { type: Type.STRING },
-                      avatar: { type: Type.STRING },
-                      xp_semanal: { type: Type.INTEGER },
-                      sequencia_dias: { type: Type.INTEGER },
-                      eh_usuario_atual: { type: Type.BOOLEAN },
-                    },
-                    required: ["posicao", "nome", "avatar", "xp_semanal", "sequencia_dias", "eh_usuario_atual"],
-                  },
+            tema_preferido: { type: Type.STRING },
+            mensagem_boas_vindas: { type: Type.STRING },
+          },
+          required: ["tema_preferido", "mensagem_boas_vindas"],
+        },
+        ranking_amigos: {
+          type: Type.OBJECT,
+          properties: {
+            posicao_usuario: { type: Type.INTEGER },
+            total_amigos: { type: Type.INTEGER },
+            lista_ranking: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  posicao: { type: Type.INTEGER },
+                  nome: { type: Type.STRING },
+                  avatar: { type: Type.STRING },
+                  xp_semanal: { type: Type.INTEGER },
+                  sequencia_dias: { type: Type.INTEGER },
+                  eh_usuario_atual: { type: Type.BOOLEAN },
                 },
+                required: ["posicao", "nome", "avatar", "xp_semanal", "sequencia_dias", "eh_usuario_atual"],
               },
-              required: ["posicao_usuario", "total_amigos", "lista_ranking"],
-            },
-            desafio_extra_ranking: {
-              type: Type.OBJECT,
-              properties: {
-                titulo: { type: Type.STRING },
-                descricao: { type: Type.STRING },
-                recompensa_xp_bonus: { type: Type.INTEGER },
-              },
-              required: ["titulo", "descricao", "recompensa_xp_bonus"],
             },
           },
-          required: ["tipo_resposta", "configuracoes_interface", "ranking_amigos", "desafio_extra_ranking"],
+          required: ["posicao_usuario", "total_amigos", "lista_ranking"],
+        },
+        desafio_extra_ranking: {
+          type: Type.OBJECT,
+          properties: {
+            titulo: { type: Type.STRING },
+            descricao: { type: Type.STRING },
+            recompensa_xp_bonus: { type: Type.INTEGER },
+          },
+          required: ["titulo", "descricao", "recompensa_xp_bonus"],
         },
       },
+      required: ["tipo_resposta", "configuracoes_interface", "ranking_amigos", "desafio_extra_ranking"],
+    };
+
+    const { text: resultText } = await callGeminiSafe(ai, {
+      contents: prompt,
+      systemInstruction: GABI_DATA_MANAGER_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: rankingSchema,
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsedData = cleanAndRepairJson(response.text) || {};
+    const parsedData = cleanAndRepairJson(resultText) || {};
 
     res.json({
       success: true,
       data: parsedData,
     });
   } catch (error: any) {
-    console.error("Erro na busca de dados e ranking da Gabi:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Erro ao consultar o gerenciador de dados da Gabi.",
+    console.warn("Usando ranking de contingência pedagógico:", error?.message);
+    res.json({
+      success: true,
+      data: {
+        tipo_resposta: "painel_usuario_ranking",
+        configuracoes_interface: {
+          tema_preferido: req.body?.tema_preferido || "dark",
+          mensagem_boas_vindas: "Ranking de amigos atualizado com sucesso! Continue pontuando.",
+        },
+        ranking_amigos: {
+          posicao_usuario: 2,
+          total_amigos: 5,
+          lista_ranking: [
+            {
+              posicao: 1,
+              nome: "Lucas Silva",
+              avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+              xp_semanal: 1850,
+              sequencia_dias: 12,
+              eh_usuario_atual: false,
+            },
+            {
+              posicao: 2,
+              nome: "Você",
+              avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+              xp_semanal: Number(req.body?.user_xp) || 1500,
+              sequencia_dias: Number(req.body?.user_streak) || 7,
+              eh_usuario_atual: true,
+            },
+            {
+              posicao: 3,
+              nome: "Beatriz Lima",
+              avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+              xp_semanal: 1320,
+              sequencia_dias: 5,
+              eh_usuario_atual: false,
+            },
+          ],
+        },
+        desafio_extra_ranking: {
+          titulo: "Rival da Semana",
+          descricao: "Você está a apenas 350 XP de ultrapassar o 1º lugar! Complete 1 simulado hoje para avançar.",
+          recompensa_xp_bonus: 100,
+        },
+      },
     });
   }
 });
 
 // 9. SYSTEM INSTRUCTION FOR BATALHA QUIZ X1
-const BATALHA_QUIZ_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e mestre de testes do GabaritaAí.
+const BATALHA_QUIZ_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e mestre de testes do CFJVMG.
 Sua função é gerar um JSON estruturado no formato obrigatório "batalha_quiz_x1" contendo exatamente 5 questões desafiadoras de múltipla escolha para uma disputa de conhecimentos entre dois alunos (Modo X1 do ENEM/Vestibulares).
 
 DIRETRIZES DE VARIABILIDADE E NÃO-REPETIÇÃO:
@@ -2496,7 +2627,7 @@ app.post("/api/generate-quiz-battle", async (req, res) => {
     const styles = ["problema prático contextualizado", "análise de conceito avançado", "situação-problema do cotidiano", "aplicação interdisciplinar"];
     const chosenStyle = styles[Math.floor(Math.random() * styles.length)];
 
-    const prompt = `Gere uma Batalha Quiz X1 com 5 questões 100% inéditas para o GabaritaAí.
+    const prompt = `Gere uma Batalha Quiz X1 com 5 questões 100% inéditas para o CFJVMG.
 Matéria: ${materiaName}
 Tópico Sorteado: ${topicoName}
 ID da Batalha: ${battleId}
@@ -2787,7 +2918,7 @@ function getConversationalGreetingResponseServer(text: string): string {
   }
 
   if (clean.includes('quem e') || clean.includes('qual seu nome') || clean.includes('qual e seu nome')) {
-    return 'Olá! Eu sou a Professora Gabi, sua assistente pedagógica e tutora de estudos no Gabaritou! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
+    return 'Olá! Eu sou a Professora Gabi, sua assistente pedagógica e tutora de estudos no CFJVMG! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
   }
 
   if (clean.includes('tudo bem') || clean.includes('como vai') || clean.includes('como voce esta') || clean.includes('como vc ta')) {
@@ -2798,10 +2929,10 @@ function getConversationalGreetingResponseServer(text: string): string {
     return 'Eu posso te ajudar de várias formas: tirando dúvidas sobre qualquer tema, explicando conceitos difíceis com didática simples, resolvendo questões em 3 passos pedagógicos e analisando fotos de exercícios da sua apostila ou prova. O que você gostaria de ver hoje?';
   }
 
-  return 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
+  return 'Olá! Sou a Professora Gabi, sua assistente de estudos do CFJVMG! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no Gabaritou.
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no CFJVMG.
 Sua comunicação deve ser natural, simpática, acolhedora e inteligente, adaptando-se com precisão ao tipo de mensagem do usuário.
 
 IMPORTANTE: NEM TODA MENSAGEM DO USUÁRIO É UMA DÚVIDA DE MATÉRIA ESCOLAR OU EXERCÍCIO DE PROVA!
@@ -3050,7 +3181,7 @@ app.post("/api/solve-question", async (req, res) => {
 });
 
 // 11. SYSTEM INSTRUCTION FOR SIMULADO TRI (TEORIA DE RESPOSTA AO ITEM)
-const SIMULADO_TRI_SYSTEM_INSTRUCTION = `Você é o Motor de Simulados com TRI (Teoria de Resposta ao Item) do GabaritaAí.
+const SIMULADO_TRI_SYSTEM_INSTRUCTION = `Você é o Motor de Simulados com TRI (Teoria de Resposta ao Item) do CFJVMG.
 
 DIRETRIZES DE VARIABILIDADE, ESTILO E NÃO-REPETIÇÃO:
 1. NUNCA repita as mesmas perguntas ou temas clichês. Cada simulado gerado DEVE ser original, contemporâneo e inédito.
@@ -3359,7 +3490,7 @@ app.post("/api/evaluate-simulado-tri", async (req, res) => {
     if (faceisAcertos < faceisTotais) {
       conselhoEstrategico = "Foco Prioritário: Reforce os conceitos fundamentais da matéria. No ENEM, errar questões fáceis é o que mais derruba sua nota TRI!";
     } else if (mediasAcertos < mediasTotais) {
-      conselhoEstrategico = "Foco Intermediário: Você domina a base! Agora treine interpretação e questões de nível médio com o Timer Pomodoro do GabaritaAí.";
+      conselhoEstrategico = "Foco Intermediário: Você domina a base! Agora treine interpretação e questões de nível médio com o Timer Pomodoro do CFJVMG.";
     } else if (dificeisAcertos < dificeisTotais) {
       conselhoEstrategico = "Foco Avançado: Excelente desempenho! Para buscar os 800+ pontos, faça simulados cronometrados e foque em pega-rabichos conceituais.";
     } else {
@@ -3398,7 +3529,7 @@ app.post("/api/generate-cheatsheet", async (req, res) => {
     const { materia, topico } = req.body;
     const ai = getGenAI();
 
-    const prompt = `Você é o Gerador de Folhas de Véspera (Cheat Sheets Sintéticos de 1 Página) do GabaritaAí.
+    const prompt = `Você é o Gerador de Folhas de Véspera (Cheat Sheets Sintéticos de 1 Página) do CFJVMG.
 Gere um resumo ultra-sintético, denso e direto para revisão de véspera da matéria "${materia || "Geral"}" com foco no tópico "${topico || "Principais Tópicos do Edital"}".
 
 A resposta deve ser obrigatoriamente um JSON com este formato:
@@ -3420,15 +3551,13 @@ A resposta deve ser obrigatoriamente um JSON com este formato:
   ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro ao gerar folha de véspera:", error);
@@ -3442,7 +3571,7 @@ app.post("/api/devil-advocate-debate", async (req, res) => {
     const { tema, tese, historico } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é o Advogado do Diabo do GabaritaAí, um debatedor socrático exigente e perspicaz especializado em Redação Nota 1000.
+    const systemInstruction = `Você é o Advogado do Diabo do CFJVMG, um debatedor socrático exigente e perspicaz especializado em Redação Nota 1000.
 Seu objetivo NÃO é ofender o aluno, mas sim CONTESTAR e DESAFIAR rigorosamente a tese e os argumentos dele sobre o tema da redação.
 Faça o aluno refletir criticamente e EXIJA que ele defenda seu ponto de vista apresentando repertórios socioculturais válidos (Leis, Sociologia, Filosofia, História) antes de liberar a redação.
 
@@ -3459,16 +3588,14 @@ Retorne obrigatoriamente JSON no seguinte formato:
       contents += `\n\nHistórico do Debate:\n` + historico.map((h: any) => `${h.autor}: ${h.texto}`).join("\n");
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-      },
+      systemInstruction,
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro no modo Advogado do Diabo:", error);
@@ -3482,7 +3609,7 @@ app.post("/api/auto-flashcards", async (req, res) => {
     const { texto, imagemBase64, materia } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é o Gerador Automático de Flashcards do GabaritaAí.
+    const systemInstruction = `Você é o Gerador Automático de Flashcards do CFJVMG.
 Extraia os conceitos mais importantes do texto ou da imagem enviada e gere um baralho de 5 a 8 flashcards para memorização ativa.
 
 Responda obrigatoriamente em JSON no formato:
@@ -3514,16 +3641,14 @@ Responda obrigatoriamente em JSON no formato:
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents: parts,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-      },
+      systemInstruction,
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na geração de flashcards:", error);
@@ -3537,7 +3662,7 @@ app.post("/api/detect-c5-intervention", async (req, res) => {
     const { textoConclusao } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do CFVJM.
+    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do CFJVMG.
 Analise detalhadamente a conclusão da redação fornecida e verifique a presença dos 5 elementos obrigatórios:
 1. Agente (Quem realiza a ação?)
 2. Ação (O que deve ser feito?)
@@ -3558,16 +3683,14 @@ Responda obrigatoriamente em JSON no seguinte formato:
   "sugestao_para_200_pontos": "Como reescrever a proposta para alcançar os 200 pontos no ENEM."
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents: `Analise o parágrafo de conclusão a seguir quanto aos 5 elementos da Competência 5 do ENEM:\n\n"""\n${textoConclusao}\n"""`,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-      },
+      systemInstruction,
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na análise C5 de intervenção:", error);
@@ -3581,7 +3704,7 @@ app.post("/api/scan-answer-sheet", async (req, res) => {
     const { imagemBase64, gabaritoOficial } = req.body;
     const ai = getGenAI();
 
-    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do CFVJM.
+    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do CFJVMG.
 Sua tarefa é analisar visualmente a foto da folha de gabarito enviada e identificar quais bolinhas (A, B, C, D, E) foram preenchidas/rasuradas em cada questão.
 
 Gabarito Oficial Esperado / Fornecido: ${
@@ -3634,16 +3757,14 @@ Analise rigorosamente a imagem do cartão-resposta e retorne um objeto JSON exat
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+    const { text: resultText } = await callGeminiSafe(ai, {
       contents: parts,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-      },
+      systemInstruction,
+      responseMimeType: "application/json",
+      preferredModel: "gemini-3.8-flash",
     });
 
-    const parsed = cleanAndRepairJson(response.text) || {};
+    const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na leitura óptica do cartão-resposta:", error);

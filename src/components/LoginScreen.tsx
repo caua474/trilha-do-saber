@@ -106,7 +106,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
     const guestUser: AuthUser = {
       id: `guest-${Date.now()}`,
       name: 'Visitante ENEM',
-      email: 'visitante@gabaritou.app',
+      email: 'visitante@cfjvmg.app',
       provider: 'guest',
       isGuest: true,
       isPro: false,
@@ -142,7 +142,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           </div>
           <div className="flex items-center justify-center gap-1.5">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Gabaritou
+              CFJVMG
             </h1>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-400/30 text-purple-300">
               IA Oficial
@@ -306,7 +306,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                   : 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-purple-600/20'
               }`}
             >
-              <span>{tab === 'login' ? 'Entrar no Gabaritou' : 'Criar Minha Conta'}</span>
+              <span>{tab === 'login' ? 'Entrar no CFJVMG' : 'Criar Minha Conta'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -324,7 +324,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           </div>
         </div>
 
-        {/* Promo Banner: Gabaritou Pro (R$ 5,00/mês) */}
+        {/* Promo Banner: CFJVMG Pro (R$ 5,00/mês) */}
         <div
           onClick={() => onOpenProModal?.()}
           className="rounded-2xl p-4 bg-gradient-to-r from-indigo-950/60 via-purple-950/50 to-slate-900 border border-purple-500/30 shadow-lg relative overflow-hidden cursor-pointer hover:border-purple-400/50 transition-all group"
@@ -336,7 +336,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-black text-white">Gabaritou Pro</span>
+                  <span className="text-xs font-black text-white">CFJVMG Pro</span>
                   <span className="text-[10px] font-black uppercase px-2 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                     R$ 5,00 / mês
                   </span>

@@ -177,7 +177,7 @@ export const DigitalLibrarySection: React.FC<DigitalLibrarySectionProps> = ({ on
                 Estante de Leitura Obrigatória
               </span>
               <span className="bg-amber-500/20 text-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-500/40">
-                Biblioteca Digital • app inteligente
+                Biblioteca Digital • CFJVMG
               </span>
             </div>
             <h2 className="text-xl font-extrabold text-white">

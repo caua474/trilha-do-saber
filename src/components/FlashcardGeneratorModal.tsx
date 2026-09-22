@@ -201,7 +201,7 @@ export const FlashcardGeneratorModal: React.FC<FlashcardGeneratorModalProps> = (
 
   const handleCopyCard = () => {
     if (!currentCard) return;
-    const text = `🎴 Flashcard app inteligente [${currentCard.materia || materia} - ${currentCard.topico || topico}]\n\n❓ FRENTE: ${currentCard.frente}\n💡 RESPOSTA: ${currentCard.verso}\n📌 DICA: ${currentCard.dica || 'Sem dica'}`;
+    const text = `🎴 Flashcard CFJVMG [${currentCard.materia || materia} - ${currentCard.topico || topico}]\n\n❓ FRENTE: ${currentCard.frente}\n💡 RESPOSTA: ${currentCard.verso}\n📌 DICA: ${currentCard.dica || 'Sem dica'}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -219,7 +219,7 @@ export const FlashcardGeneratorModal: React.FC<FlashcardGeneratorModalProps> = (
             <div>
               <div className="flex items-center space-x-2">
                 <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full">
-                  app inteligente AI
+                  CFJVMG AI
                 </span>
                 <span className="text-xs font-bold text-amber-200">Repetição Espaçada</span>
               </div>

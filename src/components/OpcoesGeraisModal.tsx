@@ -23,6 +23,7 @@ import {
   Info,
   Smartphone,
   ExternalLink,
+  GraduationCap,
   Laptop
 } from 'lucide-react';
 import { playClickSound, getSoundEnabled, setSoundEnabled } from '../utils/audio';
@@ -46,6 +47,7 @@ interface OpcoesGeraisModalProps {
   onOpenHistory: () => void;
   onOpenHelp: () => void;
   onOpenOnboarding?: () => void;
+  onOpenTour?: () => void;
 }
 
 export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
@@ -58,7 +60,8 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
   onOpenProfile,
   onOpenHistory,
   onOpenHelp,
-  onOpenOnboarding
+  onOpenOnboarding,
+  onOpenTour
 }) => {
   const [soundActive, setSoundActive] = useState(() => getSoundEnabled());
   const [notifPermission, setNotifPermission] = useState(getNotificationPermission());
@@ -154,7 +157,7 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
                   <span>Central de Opções & Configurações</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Gerencie sua conta, preferências de exibição, som e notificações do app inteligente
+                  Gerencie sua conta, preferências de exibição, som e notificações do CFJVMG
                 </p>
               </div>
             </div>
@@ -403,7 +406,42 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
                   <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
                 </button>
 
-                {/* Tour do App */}
+                {/* Tour de Boas-Vindas 3 Passos */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    onClose();
+                    if (onOpenTour) {
+                      onOpenTour();
+                    } else if (onOpenOnboarding) {
+                      onOpenOnboarding();
+                    }
+                  }}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/90 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-slate-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50 text-left transition-all group cursor-pointer flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
+                          Tour de Boas-Vindas
+                        </h4>
+                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
+                          3 Passos
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400">
+                        Scanner, Corretor de Redação e Simulador TRI
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                {/* Configuração de Metas do Estudante */}
                 {onOpenOnboarding && (
                   <button
                     type="button"
@@ -412,22 +450,22 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
                       onClose();
                       onOpenOnboarding();
                     }}
-                    className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/90 hover:bg-violet-50 dark:hover:bg-violet-950/40 border border-slate-200 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/50 text-left transition-all group cursor-pointer flex items-center justify-between"
+                    className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/90 hover:bg-pink-50 dark:hover:bg-pink-950/40 border border-slate-200 dark:border-white/10 hover:border-pink-300 dark:hover:border-pink-500/50 text-left transition-all group cursor-pointer flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="w-11 h-11 rounded-2xl bg-pink-100 dark:bg-pink-900/60 text-pink-600 dark:text-pink-300 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
-                        <Sparkles className="w-5 h-5" />
+                        <GraduationCap className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300">
-                          Rever Tour do App
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-300">
+                          Metas & Curso Alvo
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-zinc-400">
-                          Apresentação guiada de todas as ferramentas
+                          Configure seu curso, faculdade dos sonhos e rotina
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
+                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" />
                   </button>
                 )}
               </div>
@@ -437,7 +475,7 @@ export const OpcoesGeraisModal: React.FC<OpcoesGeraisModalProps> = ({
             <div className="p-4 rounded-2xl bg-slate-100 dark:bg-zinc-950/70 border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-zinc-400">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>app inteligente • Plataforma de Estudos • v2.6 Pro</span>
+                <span>CFJVMG • Plataforma de Estudos • v2.6 Pro</span>
               </div>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1 text-slate-400">

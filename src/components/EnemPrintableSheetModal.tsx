@@ -20,7 +20,7 @@ export const EnemPrintableSheetModal: React.FC<EnemPrintableSheetModalProps> = (
   initialTheme = 'Desafios para a valorização de comunidades e povos tradicionais no Brasil',
   onClose
 }) => {
-  const [studentName, setStudentName] = useState<string>('Estudante GabaritaAí');
+  const [studentName, setStudentName] = useState<string>('Estudante CFJVMG');
   const [essayTitle, setEssayTitle] = useState<string>(initialTheme);
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
 
@@ -177,7 +177,7 @@ export const EnemPrintableSheetModal: React.FC<EnemPrintableSheetModalProps> = (
 
           {/* FOOTER OFICIAL */}
           <div className="mt-4 pt-2 border-t border-slate-300 text-[10px] text-slate-500 flex justify-between items-center">
-            <span>Inep / Ministério da Educação • Modelo de Treino app inteligente</span>
+            <span>Inep / Ministério da Educação • Modelo de Treino CFJVMG</span>
             <span>Uso exclusivo para simulação e treino de manuscrito</span>
           </div>
 

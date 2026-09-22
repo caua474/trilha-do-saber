@@ -50,7 +50,7 @@ export const PerformanceDailyTipSection: React.FC<PerformanceDailyTipSectionProp
 
   const handleShareTip = async () => {
     if (!diagnostic) return;
-    const shareTitle = `💡 Dica do Dia • CFVJM: ${diagnostic.recommendedMateria} - ${diagnostic.recommendedTopico.nome}`;
+    const shareTitle = `💡 Dica do Dia • Gabaritou: ${diagnostic.recommendedMateria} - ${diagnostic.recommendedTopico.nome}`;
     const shareText = `📌 *${diagnostic.recommendedMateria}* (${diagnostic.recommendedTopico.nome})\n\n✨ *Dica de Ouro TRI:* "${diagnostic.recommendedTopico.dicaChave}"\n\n💡 *Estratégia:* ${diagnostic.dicaEstrategica}`;
     const shareUrl = window.location.href;
 

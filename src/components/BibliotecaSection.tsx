@@ -26,10 +26,21 @@ import {
   Filter,
   Check,
   ListOrdered,
-  BookMarked
+  BookMarked,
+  FileDown,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { playClickSound } from '../utils/audio';
 import { BibliotecaAutocompleteSearch } from './BibliotecaAutocompleteSearch';
+import {
+  exportBibliotecaTopicToPdf,
+  exportBibliotecaCollectionToPdf,
+  exportBibliotecaPlanToPdf,
+  exportMindmapToPdf,
+  PdfVisualTheme
+} from '../utils/pdfExport';
+import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 
 export type BibliotecaCategory =
   | 'Tudo'
@@ -1128,14 +1139,23 @@ export type TipoConteudoFiltro = 'todos' | 'resumos' | 'planos' | 'mapas';
 interface BibliotecaSectionProps {
   onAskGabi?: (prompt: string) => void;
   onOpenMindmapTab?: () => void;
+  selectedDisciplina?: DisciplinaNome;
+  onSelectDisciplina?: (disciplina: DisciplinaNome) => void;
 }
 
 export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
   onAskGabi,
-  onOpenMindmapTab
+  onOpenMindmapTab,
+  selectedDisciplina: propSelectedDisciplina,
+  onSelectDisciplina: propOnSelectDisciplina,
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedDisciplina, setSelectedDisciplina] = useState<DisciplinaNome>('Todas');
+  const [internalDisciplina, setInternalDisciplina] = useState<DisciplinaNome>('Todas');
+  const selectedDisciplina = propSelectedDisciplina !== undefined ? propSelectedDisciplina : internalDisciplina;
+  const setSelectedDisciplina = (disciplina: DisciplinaNome) => {
+    setInternalDisciplina(disciplina);
+    propOnSelectDisciplina?.(disciplina);
+  };
   const [tipoFiltro, setTipoFiltro] = useState<TipoConteudoFiltro>('todos');
   const [viewMode, setViewMode] = useState<'agrupado' | 'grade'>('agrupado');
   const [collapsedDisciplinas, setCollapsedDisciplinas] = useState<Record<string, boolean>>({});
@@ -1143,6 +1163,130 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
   const [activeStudyModal, setActiveStudyModal] = useState<StudyCardItem | null>(null);
   const [activePlanModal, setActivePlanModal] = useState<StudyPlanItem | null>(null);
   const [activeMindmapModal, setActiveMindmapModal] = useState<MindMapItem | null>(null);
+
+  // PDF Export States
+  const [pdfThemeModalOpen, setPdfThemeModalOpen] = useState(false);
+  const [pdfTargetToExport, setPdfTargetToExport] = useState<{
+    type: 'topic' | 'collection' | 'plan' | 'mindmap';
+    title: string;
+    data: any;
+  } | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfSuccessToast, setPdfSuccessToast] = useState<string | null>(null);
+
+  // Handlers para abrir exportação em PDF
+  const handleOpenTopicPdfModal = (topic: StudyCardItem, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    playClickSound();
+    setPdfTargetToExport({
+      type: 'topic',
+      title: topic.titulo,
+      data: topic
+    });
+    setPdfThemeModalOpen(true);
+  };
+
+  const handleOpenCollectionPdfModal = (disciplina: DisciplinaNome = selectedDisciplina) => {
+    playClickSound();
+    const relevantMaterials =
+      disciplina === 'Todas'
+        ? filteredMaterials
+        : filteredMaterials.filter((m) => m.disciplina === disciplina);
+
+    if (relevantMaterials.length === 0) return;
+
+    setPdfTargetToExport({
+      type: 'collection',
+      title: `Caderno de Resumos (${disciplina})`,
+      data: {
+        topics: relevantMaterials,
+        disciplina
+      }
+    });
+    setPdfThemeModalOpen(true);
+  };
+
+  const handleConfirmPdfExport = (theme: PdfVisualTheme) => {
+    if (!pdfTargetToExport) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      if (pdfTargetToExport.type === 'topic') {
+        const t = pdfTargetToExport.data as StudyCardItem;
+        exportBibliotecaTopicToPdf(
+          {
+            titulo: t.titulo,
+            disciplina: t.disciplina,
+            materia: t.materia,
+            categoria: t.categoria,
+            incidencia: t.incidencia,
+            tempoLeitura: t.tempoLeitura,
+            resumoBreve: t.resumoBreve,
+            pontosChave: t.pontosChave,
+            dicaEnem: t.dicaEnem,
+          },
+          theme
+        );
+        setPdfSuccessToast(`PDF de "${t.titulo}" baixado com sucesso!`);
+      } else if (pdfTargetToExport.type === 'collection') {
+        const { topics, disciplina } = pdfTargetToExport.data;
+        const topicList = (topics as StudyCardItem[]).map((t) => ({
+          titulo: t.titulo,
+          disciplina: t.disciplina,
+          materia: t.materia,
+          categoria: t.categoria,
+          incidencia: t.incidencia,
+          tempoLeitura: t.tempoLeitura,
+          resumoBreve: t.resumoBreve,
+          pontosChave: t.pontosChave,
+          dicaEnem: t.dicaEnem,
+        }));
+        exportBibliotecaCollectionToPdf(topicList, disciplina, theme);
+        setPdfSuccessToast(`Caderno de Resumos (${disciplina}) baixado com sucesso!`);
+      } else if (pdfTargetToExport.type === 'plan') {
+        const p = pdfTargetToExport.data as StudyPlanItem;
+        exportBibliotecaPlanToPdf(
+          {
+            titulo: p.titulo,
+            disciplina: p.disciplina,
+            duracaoEstimada: p.duracaoEstimada,
+            nivel: p.nivel,
+            objetivoPrincipal: p.objetivoPrincipal,
+            passosSemanais: p.passosSemanais,
+            habilidadesEnem: p.habilidadesEnem,
+          },
+          theme
+        );
+        setPdfSuccessToast(`Plano "${p.titulo}" baixado em PDF com sucesso!`);
+      } else if (pdfTargetToExport.type === 'mindmap') {
+        const mm = pdfTargetToExport.data as MindMapItem;
+        exportMindmapToPdf(
+          {
+            topicoNome: mm.titulo,
+            materia: mm.disciplina,
+            conceitoCentral: mm.titulo,
+            ramificacoes: mm.conceitosPrincipais.map((c, i) => ({
+              id: `ramo-${i}`,
+              titulo: c,
+              corTheme: 'indigo',
+              bgGrad: 'from-indigo-500/20 to-indigo-900/20',
+              borderColor: 'border-indigo-500',
+              subtopicos: [
+                { conceito: c, detalhes: `Fixação e definições essenciais sobre ${c}.` }
+              ]
+            }))
+          },
+          theme
+        );
+        setPdfSuccessToast(`Mapa Mental "${mm.titulo}" exportado em PDF!`);
+      }
+    } catch (err) {
+      console.error('Erro na exportação de PDF da Biblioteca:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+      setTimeout(() => setPdfSuccessToast(null), 4000);
+    }
+  };
 
   // Toggle discipline collapse in grouped mode
   const toggleCollapse = (disciplina: string) => {
@@ -1241,20 +1385,33 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
             </p>
           </div>
 
-          {/* Quick Metrics Badges */}
-          <div className="flex flex-wrap items-center gap-2 text-xs font-bold shrink-0">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-xs">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>{totalResumos} Resumos</span>
+          {/* Quick Metrics Badges & Export Action */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-xs">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>{totalResumos} Resumos</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-xs">
+                <Compass className="w-3.5 h-3.5" />
+                <span>{totalPlanos} Planos Guiados</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs">
+                <Brain className="w-3.5 h-3.5" />
+                <span>{totalMapas} Mapas Mentais</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-xs">
-              <Compass className="w-3.5 h-3.5" />
-              <span>{totalPlanos} Planos Guiados</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs">
-              <Brain className="w-3.5 h-3.5" />
-              <span>{totalMapas} Mapas Mentais</span>
-            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleOpenCollectionPdfModal(selectedDisciplina)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-xs font-black shadow-sm shadow-indigo-600/20 transition-all cursor-pointer border border-indigo-500/40"
+              title="Baixar resumos e pontos principais selecionados em formato PDF para impressão ou estudo offline"
+            >
+              <FileDown className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Baixar Caderno PDF</span>
+            </motion.button>
           </div>
         </div>
 
@@ -1603,9 +1760,19 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                                   <Clock className="w-3 h-3" />
                                   <span>{item.tempoLeitura}</span>
                                 </div>
-                                <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                                  Ler Resumo <ChevronRight className="w-3 h-3" />
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    title="Exportar este resumo para PDF"
+                                    onClick={(e) => handleOpenTopicPdfModal(item, e)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                                  >
+                                    <FileDown className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                                    Ler Resumo <ChevronRight className="w-3 h-3" />
+                                  </span>
+                                </div>
                               </div>
                             </motion.div>
                           ))}
@@ -1727,9 +1894,19 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
 
                     <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
                       <span>{item.tempoLeitura}</span>
-                      <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                        Ler <ChevronRight className="w-3 h-3" />
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          title="Exportar este resumo para PDF"
+                          onClick={(e) => handleOpenTopicPdfModal(item, e)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        >
+                          <FileDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                          Ler <ChevronRight className="w-3 h-3" />
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -1912,6 +2089,15 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
 
               {/* Action Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenTopicPdfModal(activeStudyModal)}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                >
+                  <FileDown className="w-4 h-4 text-emerald-100" />
+                  <span>Baixar Resumo em PDF</span>
+                </button>
+
                 {onAskGabi && (
                   <button
                     onClick={() => {
@@ -2039,6 +2225,24 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
 
               {/* Action Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activePlanModal) {
+                      setPdfTargetToExport({
+                        type: 'plan',
+                        title: activePlanModal.titulo,
+                        data: activePlanModal,
+                      });
+                      setPdfThemeModalOpen(true);
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                >
+                  <FileDown className="w-4 h-4 text-emerald-100" />
+                  <span>Baixar Plano em PDF</span>
+                </button>
+
                 {onAskGabi && (
                   <button
                     onClick={() => {
@@ -2116,7 +2320,25 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeMindmapModal) {
+                      setPdfTargetToExport({
+                        type: 'mindmap',
+                        title: activeMindmapModal.titulo,
+                        data: activeMindmapModal,
+                      });
+                      setPdfThemeModalOpen(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700"
+                >
+                  <FileDown className="w-4 h-4 text-indigo-300" />
+                  <span>Baixar Mapa em PDF</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setActiveMindmapModal(null);
@@ -2124,14 +2346,49 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                       onOpenMindmapTab();
                     }
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-600/30"
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-600/30"
                 >
                   <Brain className="w-4 h-4" />
-                  <span>Abrir no Estúdio de Mapas Mentais</span>
+                  <span>Abrir no Estúdio</span>
                 </button>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. MODAL DE SELEÇÃO DE TEMA VISUAL DO PDF */}
+      <PdfThemeSelectorModal
+        isOpen={pdfThemeModalOpen}
+        onClose={() => setPdfThemeModalOpen(false)}
+        onConfirmExport={handleConfirmPdfExport}
+        documentTitle={pdfTargetToExport?.title}
+        documentType={
+          pdfTargetToExport?.type === 'plan'
+            ? 'plano'
+            : pdfTargetToExport?.type === 'mindmap'
+            ? 'mindmap'
+            : 'material'
+        }
+      />
+
+      {/* 10. TOAST NOTIFICATION DE SUCESSO DO DOWNLOAD PDF */}
+      <AnimatePresence>
+        {pdfSuccessToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-[100002] bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-black border border-emerald-400 max-w-md"
+          >
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="font-black text-white">Download Concluído!</p>
+              <p className="text-[11px] font-medium text-emerald-100">{pdfSuccessToast}</p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

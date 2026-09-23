@@ -44,6 +44,7 @@ import { HomeHubCategories } from './components/HomeHubCategories';
 import { AiStudioPlayground } from './components/AiStudioPlayground';
 import { LoginScreen } from './components/LoginScreen';
 import { WelcomeTourModal, hasSeenWelcomeTour } from './components/WelcomeTourModal';
+import { DisciplineFilterBar, GlobalDisciplina } from './components/DisciplineFilterBar';
 
 // Modals
 import { ProfileSettingsModal, getSavedUserProfile } from './components/ProfileSettingsModal';
@@ -203,7 +204,7 @@ async function clearEntireIndexedDB(): Promise<void> {
   ]);
 }
 
-function CFJVMGApp() {
+function MenteUpApp() {
   // Authentication State
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
@@ -228,6 +229,7 @@ function CFJVMGApp() {
   // Navigation States
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('home');
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('flashcards');
+  const [selectedDisciplina, setSelectedDisciplina] = useState<GlobalDisciplina>('Todas');
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -520,6 +522,9 @@ function CFJVMGApp() {
           <DashboardPrincipal
             onOpenGabi={() => setActiveModal('gabi')}
             onSelectDisciplina={(materia) => {
+              if (materia) {
+                setSelectedDisciplina(materia as any);
+              }
               setPrimaryTab('conteudos');
               setAbaAtiva('biblioteca');
             }}
@@ -566,9 +571,17 @@ function CFJVMGApp() {
         {/* 3. CONTEÚDOS TAB */}
         {primaryTab === 'conteudos' && (
           <main className="max-w-7xl mx-auto px-4 pb-28 pt-2">
+            {/* Quick Discipline Filter Bar across content tabs */}
+            <DisciplineFilterBar
+              selectedDisciplina={selectedDisciplina}
+              onSelectDisciplina={(d) => setSelectedDisciplina(d)}
+            />
+
             {abaAtiva === 'flashcards' && <ConteudosBentoIA />}
             {abaAtiva === 'biblioteca' && (
               <BibliotecaSection
+                selectedDisciplina={selectedDisciplina as any}
+                onSelectDisciplina={(d) => setSelectedDisciplina(d as any)}
                 onAskGabi={(prompt) => {
                   setGabiInitialPrompt(prompt);
                   setActiveModal('gabi');
@@ -1060,7 +1073,7 @@ function CFJVMGApp() {
 export default function App() {
   return (
     <GeminiErrorProvider>
-      <CFJVMGApp />
+      <MenteUpApp />
     </GeminiErrorProvider>
   );
 }

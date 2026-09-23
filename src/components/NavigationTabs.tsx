@@ -90,7 +90,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     { id: 'audio_podcasts', label: 'Modo Áudio & Podcasts', icon: '🎧', category: 'conteudos' },
     { id: 'auto_flashcards', label: 'Auto-Flashcards (Foto/Texto)', icon: '🎴', category: 'conteudos' },
     { id: 'duvidas', label: 'Scanner Tira-Dúvidas', icon: '💡', category: 'conteudos' },
-    { id: 'ai_playground', label: 'Tira-Dúvidas CFJVMG AI', icon: '🤖', category: 'conteudos' },
+    { id: 'ai_playground', label: 'Tira-Dúvidas MenteUp AI', icon: '🤖', category: 'conteudos' },
 
     // REDAÇÃO & IA
     { id: 'redacao', label: 'Corretor de Redação', icon: '✍️', category: 'redacao_ia' },

@@ -63,7 +63,7 @@ export const MicrophonePermissionModal: React.FC<MicrophonePermissionModalProps>
             id="mic-permission-body"
             className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed"
           >
-            O <strong>CFJVMG</strong> precisa de autorização para usar o seu microfone em português brasileiro. Assim, você pode ditar dúvidas para a Professora Gabi, gravar suas explicações no Método Feynman e praticar respostas orais.
+            O <strong>MenteUp</strong> precisa de autorização para usar o seu microfone em português brasileiro. Assim, você pode ditar dúvidas para a Professora Gabi, gravar suas explicações no Método Feynman e praticar respostas orais.
           </p>
 
           {/* Privacy Note */}

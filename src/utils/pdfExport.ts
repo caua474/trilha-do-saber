@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { StudyMaterial, TutorPlan, QuestionSolution3Passos, MindmapData } from '../types';
 
 export type PdfVisualTheme = 'minimalista' | 'colorido' | 'foco_leitura';
@@ -154,104 +155,136 @@ export function exportMaterialToPdf(material: StudyMaterial, theme: PdfVisualThe
   doc.roundedRect(margin, y, contentWidth, 24, 3, 3, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`Gabaritou • Resumo Sintetizado (${pal.name})`, margin + 5, y + 9);
+  doc.text(`MenteUp • Resumo Sintetizado (${pal.name})`, margin + 5, y + 8.5);
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(pal.subText[0], pal.subText[1], pal.subText[2]);
   const dateStr = new Date(material.createdAt || Date.now()).toLocaleDateString('pt-BR');
   const topicStr = material.focusTopic ? `  |  Foco: ${material.focusTopic}` : '';
-  doc.text(`Título: ${material.title}  |  Data: ${dateStr}${topicStr}`, margin + 5, y + 17);
+  doc.text(`Título: ${material.title}  |  Data: ${dateStr}${topicStr}`, margin + 5, y + 16.5);
 
-  y += 30;
+  y += 28;
 
-  // --- SECTION 1: Resumo Direto ---
-  checkPageBreak(30);
-  doc.setFillColor(pal.sec1Bg[0], pal.sec1Bg[1], pal.sec1Bg[2]);
-  doc.setDrawColor(pal.sec1Border[0], pal.sec1Border[1], pal.sec1Border[2]);
-  doc.roundedRect(margin, y, contentWidth, 8, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
-  doc.setTextColor(pal.sec1Text[0], pal.sec1Text[1], pal.sec1Text[2]);
-  doc.text('RESUMO DIRETO', margin + 4, y + 5.5);
-
-  y += 12;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(pal.bodyText[0], pal.bodyText[1], pal.bodyText[2]);
-
-  const resumoLines = doc.splitTextToSize(material.resumoDireto, contentWidth);
-  checkPageBreak(resumoLines.length * pal.lineSpacing + 6);
-  doc.text(resumoLines, margin, y);
-  y += resumoLines.length * pal.lineSpacing + 8;
-
-  // --- SECTION 2: Pontos Principais ---
-  checkPageBreak(30);
-  doc.setFillColor(pal.sec2Bg[0], pal.sec2Bg[1], pal.sec2Bg[2]);
-  doc.setDrawColor(pal.sec2Border[0], pal.sec2Border[1], pal.sec2Border[2]);
-  doc.roundedRect(margin, y, contentWidth, 8, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
-  doc.setTextColor(pal.sec2Text[0], pal.sec2Text[1], pal.sec2Text[2]);
-  doc.text('PONTOS PRINCIPAIS (PARA MEMORIZAR)', margin + 4, y + 5.5);
-
-  y += 12;
-
-  material.pontosPrincipais.forEach((ponto, idx) => {
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(pal.bodyText[0], pal.bodyText[1], pal.bodyText[2]);
-    const itemLines = doc.splitTextToSize(`[0${idx + 1}] ${ponto}`, contentWidth);
-
-    checkPageBreak(itemLines.length * pal.lineSpacing + 4);
-    doc.text(itemLines, margin, y);
-    y += itemLines.length * pal.lineSpacing + 3;
+  // 1. Tabela: Resumo Direto (autoTable)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'plain',
+    head: [['1. RESUMO DIRETO & SÍNTESE']],
+    body: [[material.resumoDireto]],
+    headStyles: {
+      fillColor: pal.sec1Bg,
+      textColor: pal.sec1Text,
+      fontStyle: 'bold',
+      fontSize: 10,
+      cellPadding: 3
+    },
+    bodyStyles: {
+      fillColor: pal.cardBg,
+      textColor: pal.bodyText,
+      fontSize: 9,
+      cellPadding: 4,
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    },
+    styles: {
+      font: 'helvetica',
+      overflow: 'linebreak',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    }
   });
 
-  y += 5;
+  y = ((doc as any).lastAutoTable?.finalY || y + 30) + 6;
 
-  // --- SECTION 3: Perguntas de Teste ---
+  // 2. Tabela: Pontos Principais (autoTable)
+  if (material.pontosPrincipais && material.pontosPrincipais.length > 0) {
+    const pontosRows = material.pontosPrincipais.map((p, idx) => [
+      `#${String(idx + 1).padStart(2, '0')}`,
+      p,
+      '[  ] Revisado'
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      head: [['#', '2. PONTOS PRINCIPAIS PARA MEMORIZAR', 'CHECKLIST']],
+      body: pontosRows,
+      headStyles: {
+        fillColor: pal.sec2Bg,
+        textColor: pal.sec2Text,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: pal.sec2Text, fontSize: 8.5 },
+        1: { cellWidth: 'auto', fontSize: 8.5 },
+        2: { cellWidth: 26, halign: 'center', fontSize: 8, fontStyle: 'bold', textColor: pal.subText }
+      },
+      bodyStyles: {
+        textColor: pal.bodyText,
+        cellPadding: 3.2,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.15
+      },
+      alternateRowStyles: {
+        fillColor: pal.cardBg
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak'
+      }
+    });
+
+    y = ((doc as any).lastAutoTable?.finalY || y + 30) + 6;
+  }
+
+  // 3. Tabela: Perguntas de Teste & Gabarito (autoTable)
   if (material.perguntas && material.perguntas.length > 0) {
-    checkPageBreak(30);
-    doc.setFillColor(pal.sec3Bg[0], pal.sec3Bg[1], pal.sec3Bg[2]);
-    doc.setDrawColor(pal.sec3Border[0], pal.sec3Border[1], pal.sec3Border[2]);
-    doc.roundedRect(margin, y, contentWidth, 8, 2, 2, 'FD');
+    const qRows = material.perguntas.map((q, idx) => [
+      `Q${idx + 1}`,
+      q.pergunta,
+      q.resposta
+    ]);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.setTextColor(pal.sec3Text[0], pal.sec3Text[1], pal.sec3Text[2]);
-    doc.text('PERGUNTAS DE TESTE & GABARITO', margin + 4, y + 5.5);
-
-    y += 12;
-
-    material.perguntas.forEach((q, idx) => {
-      checkPageBreak(20);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.5);
-      doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-
-      const qTitle = `Pergunta ${idx + 1}: ${q.pergunta}`;
-      const qLines = doc.splitTextToSize(qTitle, contentWidth);
-      doc.text(qLines, margin, y);
-      y += qLines.length * (pal.lineSpacing * 0.95) + 2;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(pal.bodyText[0], pal.bodyText[1], pal.bodyText[2]);
-
-      const aTitle = `Gabarito: ${q.resposta}`;
-      const aLines = doc.splitTextToSize(aTitle, contentWidth - 6);
-      checkPageBreak(aLines.length * pal.lineSpacing + 4);
-
-      doc.setFillColor(pal.cardBg[0], pal.cardBg[1], pal.cardBg[2]);
-      doc.setDrawColor(pal.cardBorder[0], pal.cardBorder[1], pal.cardBorder[2]);
-      doc.roundedRect(margin, y - 1, contentWidth, aLines.length * pal.lineSpacing + 3, 1, 1, 'FD');
-      doc.text(aLines, margin + 3, y + 3.5);
-      y += aLines.length * pal.lineSpacing + 7;
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      head: [['#', '3. PERGUNTA DE TESTE', 'GABARITO & RESOLUÇÃO']],
+      body: qRows,
+      headStyles: {
+        fillColor: pal.sec3Bg,
+        textColor: pal.sec3Text,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+        lineColor: pal.sec3Border,
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: pal.sec3Text, fontSize: 8.5 },
+        1: { cellWidth: 'auto', fontSize: 8.5 },
+        2: { cellWidth: 60, fontSize: 8.5, textColor: pal.sec3Text, fontStyle: 'bold' }
+      },
+      bodyStyles: {
+        textColor: pal.bodyText,
+        cellPadding: 3.2,
+        lineColor: pal.sec3Border,
+        lineWidth: 0.15
+      },
+      alternateRowStyles: {
+        fillColor: pal.cardBg
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak'
+      }
     });
   }
 
@@ -263,14 +296,14 @@ export function exportMaterialToPdf(material: StudyMaterial, theme: PdfVisualThe
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Gabaritou • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `MenteUp • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`Gabaritou_Resumo_${material.title.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
+  doc.save(`MenteUp_Resumo_${material.title.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
 }
 
 // 2. EXPORTAÇÃO DE PLANO DO TUTOR
@@ -311,7 +344,7 @@ export function exportTutorPlanToPdf(plan: TutorPlan, theme: PdfVisualTheme = 'c
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`Gabaritou • Plano do Tutor (${pal.name})`, margin + 5, y + 9);
+  doc.text(`MenteUp • Plano do Tutor (${pal.name})`, margin + 5, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -366,14 +399,14 @@ export function exportTutorPlanToPdf(plan: TutorPlan, theme: PdfVisualTheme = 'c
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Gabaritou • Página ${i} de ${totalPages}`,
+      `MenteUp • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`Gabaritou_Plano_${plan.materia.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
+  doc.save(`MenteUp_Plano_${plan.materia.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
 }
 
 // 3. EXPORTAÇÃO DE RESOLUÇÃO DO SCANNER (TIRA-DÚVIDAS 3 PASSOS)
@@ -426,7 +459,7 @@ export function exportQuestionSolutionToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`Gabaritou • Scanner Tira-Dúvidas (${pal.name})`, margin + 5, y + 9);
+  doc.text(`MenteUp • Scanner Tira-Dúvidas (${pal.name})`, margin + 5, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -583,7 +616,7 @@ export function exportQuestionSolutionToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Gabaritou • Resolução Tira-Dúvidas • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `MenteUp • Resolução Tira-Dúvidas • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -591,7 +624,7 @@ export function exportQuestionSolutionToPdf(
   }
 
   const cleanMateria = (solution.materia || 'Questao').replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`Gabaritou_Scanner_${cleanMateria}_${theme}.pdf`);
+  doc.save(`MenteUp_Scanner_${cleanMateria}_${theme}.pdf`);
 }
 
 // 4. EXPORTAÇÃO DE MAPA MENTAL
@@ -640,7 +673,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`Gabaritou • Mapa Mental do Edital (${pal.name})`, margin + 6, y + 10);
+  doc.text(`MenteUp • Mapa Mental do Edital (${pal.name})`, margin + 6, y + 10);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -744,7 +777,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Gabaritou • Mapa Mental • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `MenteUp • Mapa Mental • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -752,7 +785,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
   }
 
   const cleanTopico = (mindmap.topicoNome || 'Topico').replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`Gabaritou_MapaMental_${cleanTopico}_${theme}.pdf`);
+  doc.save(`MenteUp_MapaMental_${cleanTopico}_${theme}.pdf`);
 }
 
 // 5. EXPORTAÇÃO DE CORREÇÃO DE REDAÇÃO ENEM (0 A 1000 PONTOS + C1-C5)
@@ -817,7 +850,7 @@ export function exportEssayCorrectionToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`Gabaritou • Relatório Oficial de Redação ENEM (${pal.name})`, margin + 6, y + 9);
+  doc.text(`MenteUp • Relatório Oficial de Redação ENEM (${pal.name})`, margin + 6, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -1005,12 +1038,680 @@ export function exportEssayCorrectionToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Gabaritou • Correção Oficial de Redação ENEM • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `MenteUp • Correção Oficial de Redação ENEM • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`Gabaritou_Redacao_ENEM_${notaTotal}pts_${theme}.pdf`);
+  doc.save(`MenteUp_Redacao_ENEM_${notaTotal}pts_${theme}.pdf`);
+}
+
+// ============================================================================
+// 6. EXPORTAÇÃO DE RESUMO INDIVIDUAL DA BIBLIOTECA (IA & PONTOS PRINCIPAIS)
+// ============================================================================
+export interface BibliotecaTopicPdfData {
+  titulo: string;
+  disciplina: string;
+  materia?: string;
+  categoria?: string;
+  incidencia?: string;
+  tempoLeitura?: string;
+  resumoBreve: string;
+  pontosChave: string[];
+  dicaEnem: string;
+}
+
+export function exportBibliotecaTopicToPdf(
+  topic: BibliotecaTopicPdfData,
+  theme: PdfVisualTheme = 'colorido'
+) {
+  const pal = getThemePalette(theme);
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  // Header Box
+  doc.setFillColor(pal.headerBg[0], pal.headerBg[1], pal.headerBg[2]);
+  doc.setDrawColor(pal.headerBorder[0], pal.headerBorder[1], pal.headerBorder[2]);
+  doc.roundedRect(margin, y, contentWidth, 25, 3, 3, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
+  doc.text(`MenteUp • Resumo & Pontos Principais (${pal.name})`, margin + 6, y + 8);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(pal.sec1Text[0], pal.sec1Text[1], pal.sec1Text[2]);
+  const titleDisplay = topic.titulo.length > 52 ? topic.titulo.substring(0, 49) + '...' : topic.titulo;
+  doc.text(`Material: ${titleDisplay}`, margin + 6, y + 15.5);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(pal.subText[0], pal.subText[1], pal.subText[2]);
+  const dateStr = new Date().toLocaleDateString('pt-BR');
+  doc.text(`Material gerado com IA e autoTable para estudo ativo e revisão ENEM • ${dateStr}`, margin + 6, y + 21);
+
+  y += 29;
+
+  // 1. Tabela de Metadados do Material (autoTable)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    head: [['Disciplina', 'Área / Matéria', 'Incidência no ENEM', 'Tempo de Leitura', 'Modo']],
+    body: [[
+      topic.disciplina || 'Geral',
+      topic.materia || topic.categoria || 'Geral',
+      topic.incidencia ? `${topic.incidencia} Incidência` : 'Alta Incidência',
+      topic.tempoLeitura || '8 min',
+      'Fixação Ativa'
+    ]],
+    headStyles: {
+      fillColor: pal.sec1Bg,
+      textColor: pal.sec1Text,
+      fontStyle: 'bold',
+      fontSize: 8.5,
+      halign: 'center',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    },
+    bodyStyles: {
+      textColor: pal.bodyText,
+      fontSize: 8.5,
+      halign: 'center',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.15,
+      cellPadding: 2.8
+    },
+    styles: {
+      font: 'helvetica'
+    }
+  });
+
+  y = ((doc as any).lastAutoTable?.finalY || y + 16) + 6;
+
+  // 2. Tabela: 1. Resumo Conceitual & Síntese (autoTable)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'plain',
+    head: [['1. RESUMO CONCEITUAL & VISÃO GERAL']],
+    body: [[topic.resumoBreve]],
+    headStyles: {
+      fillColor: pal.sec1Bg,
+      textColor: pal.sec1Text,
+      fontStyle: 'bold',
+      fontSize: 10,
+      halign: 'left',
+      cellPadding: 3
+    },
+    bodyStyles: {
+      fillColor: pal.cardBg,
+      textColor: pal.bodyText,
+      fontSize: 9,
+      cellPadding: 4,
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    },
+    styles: {
+      font: 'helvetica',
+      overflow: 'linebreak',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    }
+  });
+
+  y = ((doc as any).lastAutoTable?.finalY || y + 30) + 6;
+
+  // 3. Tabela: 2. Pontos Fundamentais & Conceitos-Chave (autoTable)
+  if (topic.pontosChave && topic.pontosChave.length > 0) {
+    const pontosBody = topic.pontosChave.map((p, idx) => [
+      `#${String(idx + 1).padStart(2, '0')}`,
+      p,
+      '[  ] Revisado'
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      head: [['#', '2. PONTOS FUNDAMENTAIS & CONCEITOS-CHAVE (PARA MEMORIZAR)', 'CHECKLIST']],
+      body: pontosBody,
+      headStyles: {
+        fillColor: pal.sec2Bg,
+        textColor: pal.sec2Text,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: pal.sec2Text, fontSize: 8.5 },
+        1: { cellWidth: 'auto', fontSize: 8.5 },
+        2: { cellWidth: 26, halign: 'center', fontSize: 8, fontStyle: 'bold', textColor: pal.subText }
+      },
+      bodyStyles: {
+        textColor: pal.bodyText,
+        cellPadding: 3.2,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.15
+      },
+      alternateRowStyles: {
+        fillColor: pal.cardBg
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak'
+      }
+    });
+
+    y = ((doc as any).lastAutoTable?.finalY || y + 30) + 6;
+  }
+
+  // 4. Tabela: 3. Dica de Ouro no ENEM & Vestibulares (autoTable)
+  if (topic.dicaEnem) {
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'plain',
+      head: [['3. DICA DE OURO & HACK DE PROVA (ENEM & VESTIBULARES)']],
+      body: [[`💡 Dica Estratégica: ${topic.dicaEnem}`]],
+      headStyles: {
+        fillColor: pal.sec3Bg,
+        textColor: pal.sec3Text,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+        cellPadding: 3
+      },
+      bodyStyles: {
+        fillColor: pal.cardBg,
+        textColor: pal.bodyText,
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: pal.sec3Border,
+        lineWidth: 0.2
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak',
+        lineColor: pal.sec3Border,
+        lineWidth: 0.2
+      }
+    });
+
+    y = ((doc as any).lastAutoTable?.finalY || y + 25) + 6;
+  }
+
+  // 5. Tabela: 4. Matriz de Autoavaliação e Revisão Ativa (autoTable)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    head: [['4. MATRIZ DE REVISÃO ATIVA & CONTROLE DE ESTUDOS', 'NÍVEL DE DOMÍNIO', 'REGISTRO DE QUESTÕES']],
+    body: [
+      ['Compreensão Teórica e Fórmulas Essenciais', '[ 1 ]  [ 2 ]  [ 3 ]  [ 4 ]  [ 5 ]', 'Acertos: ___ / ___'],
+      ['Aplicação em Questões ENEM e Interpretação', '[ 1 ]  [ 2 ]  [ 3 ]  [ 4 ]  [ 5 ]', 'Data Revisão 1: ___/___'],
+      ['Pontos de Dificuldade / Erros Cometidos', '[ 1 ]  [ 2 ]  [ 3 ]  [ 4 ]  [ 5 ]', 'Data Revisão 2: ___/___']
+    ],
+    headStyles: {
+      fillColor: pal.highlightBg,
+      textColor: pal.highlightText,
+      fontStyle: 'bold',
+      fontSize: 8.5,
+      lineColor: pal.cardBorder,
+      lineWidth: 0.15
+    },
+    columnStyles: {
+      0: { cellWidth: 'auto', fontSize: 8 },
+      1: { cellWidth: 54, halign: 'center', fontSize: 7.5, fontStyle: 'bold' },
+      2: { cellWidth: 44, halign: 'center', fontSize: 7.5 }
+    },
+    bodyStyles: {
+      textColor: pal.bodyText,
+      cellPadding: 2.8,
+      lineColor: pal.cardBorder,
+      lineWidth: 0.15
+    },
+    styles: {
+      font: 'helvetica',
+      overflow: 'linebreak'
+    }
+  });
+
+  // Top banners and Footers on ALL pages
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+
+    // Banner no topo
+    if (pal.bannerColors.length === 1) {
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, pageWidth, pal.bannerHeight, 'F');
+    } else {
+      const half = pageWidth / 2;
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, half, pal.bannerHeight, 'F');
+      doc.setFillColor(pal.bannerColors[1][0], pal.bannerColors[1][1], pal.bannerColors[1][2]);
+      doc.rect(half, 0, half, pal.bannerHeight, 'F');
+    }
+
+    // Rodapé
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `MenteUp • Resumos da Biblioteca com jsPDF & autoTable • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - 7,
+      { align: 'center' }
+    );
+  }
+
+  const cleanTitle = topic.titulo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+  doc.save(`MenteUp_Resumo_${cleanTitle}_${theme}.pdf`);
+}
+
+// ============================================================================
+// 7. EXPORTAÇÃO DE CADERNO COMPLETO DE RESUMOS DA BIBLIOTECA (COLETÂNEA PDF)
+// ============================================================================
+export function exportBibliotecaCollectionToPdf(
+  topics: BibliotecaTopicPdfData[],
+  disciplinaFiltro: string = 'Todas',
+  theme: PdfVisualTheme = 'colorido'
+) {
+  if (!topics || topics.length === 0) return;
+
+  const pal = getThemePalette(theme);
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const addHeaderFooter = () => {
+    if (pal.bannerColors.length === 1) {
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, pageWidth, pal.bannerHeight, 'F');
+    } else {
+      const half = pageWidth / 2;
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, half, pal.bannerHeight, 'F');
+      doc.setFillColor(pal.bannerColors[1][0], pal.bannerColors[1][1], pal.bannerColors[1][2]);
+      doc.rect(half, 0, half, pal.bannerHeight, 'F');
+    }
+  };
+
+  const checkPageBreak = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - margin - 10) {
+      doc.addPage();
+      y = margin + 5;
+      addHeaderFooter();
+    }
+  };
+
+  addHeaderFooter();
+
+  // Capa / Bloco Inicial
+  doc.setFillColor(pal.headerBg[0], pal.headerBg[1], pal.headerBg[2]);
+  doc.setDrawColor(pal.headerBorder[0], pal.headerBorder[1], pal.headerBorder[2]);
+  doc.roundedRect(margin, y, contentWidth, 30, 3, 3, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
+  doc.text(`MenteUp • Caderno de Resumos & Pontos Principais`, margin + 6, y + 10);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(pal.subText[0], pal.subText[1], pal.subText[2]);
+  const dateStr = new Date().toLocaleDateString('pt-BR');
+  doc.text(`Filtro: ${disciplinaFiltro}   |   Total de Tópicos: ${topics.length}   |   Data: ${dateStr}`, margin + 6, y + 18);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(pal.sec1Text[0], pal.sec1Text[1], pal.sec1Text[2]);
+  doc.text(`Material sintetizado com IA para revisão ativa de alto rendimento no ENEM.`, margin + 6, y + 25);
+
+  y += 37;
+
+  // Sumário Rápido de Tópicos (autoTable)
+  const indexBody = topics.map((t, i) => [
+    `#${(i + 1).toString().padStart(2, '0')}`,
+    t.titulo,
+    t.disciplina,
+    t.incidencia || 'Alta',
+    t.tempoLeitura || '8 min'
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    head: [['#', 'Tópico de Estudo', 'Disciplina', 'Incidência ENEM', 'Tempo']],
+    body: indexBody,
+    headStyles: {
+      fillColor: pal.sec1Bg,
+      textColor: pal.sec1Text,
+      fontStyle: 'bold',
+      fontSize: 8.5,
+      halign: 'center',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    },
+    columnStyles: {
+      0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: pal.sec1Text },
+      1: { cellWidth: 'auto', fontSize: 8.5, fontStyle: 'bold' },
+      2: { cellWidth: 32, fontSize: 8 },
+      3: { cellWidth: 26, halign: 'center', fontSize: 7.5 },
+      4: { cellWidth: 20, halign: 'center', fontSize: 7.5 }
+    },
+    bodyStyles: {
+      textColor: pal.bodyText,
+      cellPadding: 2.5,
+      lineColor: pal.sec1Border,
+      lineWidth: 0.15
+    },
+    styles: {
+      font: 'helvetica'
+    }
+  });
+
+  y = ((doc as any).lastAutoTable?.finalY || y + 40) + 10;
+
+  // Itera sobre cada tópico do caderno com autoTable estruturado
+  topics.forEach((topic, idx) => {
+    checkPageBreak(50);
+
+    const tNum = (idx + 1).toString().padStart(2, '0');
+    const pontosText = (topic.pontosChave && topic.pontosChave.length > 0)
+      ? topic.pontosChave.map((p, i) => `[${i + 1}] ${p}`).join('\n')
+      : 'Revisão ativa recomendada.';
+
+    const rows = [
+      ['Síntese', topic.resumoBreve],
+      ['Pontos-Chave', pontosText]
+    ];
+
+    if (topic.dicaEnem) {
+      rows.push(['Dica ENEM', `💡 ${topic.dicaEnem}`]);
+    }
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      head: [[`Tópico ${tNum}: ${topic.titulo} [${topic.disciplina}]`, 'Conteúdo do Tópico']],
+      body: rows,
+      headStyles: {
+        fillColor: pal.sec2Bg,
+        textColor: pal.sec2Text,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 30, fontStyle: 'bold', textColor: pal.sec2Text, fontSize: 8.5 },
+        1: { cellWidth: 'auto', fontSize: 8.5 }
+      },
+      bodyStyles: {
+        textColor: pal.bodyText,
+        cellPadding: 3.2,
+        lineColor: pal.sec2Border,
+        lineWidth: 0.15
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak'
+      }
+    });
+
+    y = ((doc as any).lastAutoTable?.finalY || y + 40) + 8;
+  });
+
+  // Footer em todas as páginas
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `MenteUp • Caderno de Resumos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - 8,
+      { align: 'center' }
+    );
+  }
+
+  const cleanFiltro = disciplinaFiltro.replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`MenteUp_Caderno_Resumos_${cleanFiltro}_${theme}.pdf`);
+}
+
+// ============================================================================
+// 8. EXPORTAÇÃO DE PLANO DE ESTUDOS DA BIBLIOTECA PARA PDF
+// ============================================================================
+export function exportBibliotecaPlanToPdf(
+  plan: {
+    titulo: string;
+    disciplina: string;
+    duracaoEstimada?: string;
+    nivel?: string;
+    objetivoPrincipal: string;
+    passosSemanais: { etapa: string; descricao: string; metaExercicios?: number }[];
+    habilidadesEnem?: string[];
+  },
+  theme: PdfVisualTheme = 'colorido'
+) {
+  const pal = getThemePalette(theme);
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const addHeaderFooter = () => {
+    if (pal.bannerColors.length === 1) {
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, pageWidth, pal.bannerHeight, 'F');
+    } else {
+      const half = pageWidth / 2;
+      doc.setFillColor(pal.bannerColors[0][0], pal.bannerColors[0][1], pal.bannerColors[0][2]);
+      doc.rect(0, 0, half, pal.bannerHeight, 'F');
+      doc.setFillColor(pal.bannerColors[1][0], pal.bannerColors[1][1], pal.bannerColors[1][2]);
+      doc.rect(half, 0, half, pal.bannerHeight, 'F');
+    }
+  };
+
+  const checkPageBreak = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - margin - 10) {
+      doc.addPage();
+      y = margin + 5;
+      addHeaderFooter();
+    }
+  };
+
+  addHeaderFooter();
+
+  // Header Box
+  doc.setFillColor(pal.headerBg[0], pal.headerBg[1], pal.headerBg[2]);
+  doc.setDrawColor(pal.headerBorder[0], pal.headerBorder[1], pal.headerBorder[2]);
+  doc.roundedRect(margin, y, contentWidth, 26, 3, 3, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
+  doc.text(`MenteUp • Plano de Estudos Estruturado (${pal.name})`, margin + 6, y + 8);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(pal.subText[0], pal.subText[1], pal.subText[2]);
+  const dateStr = new Date().toLocaleDateString('pt-BR');
+  const durStr = plan.duracaoEstimada ? `  |  Duração: ${plan.duracaoEstimada}` : '';
+  const nivStr = plan.nivel ? `  |  Nível: ${plan.nivel}` : '';
+  doc.text(`Disciplina: ${plan.disciplina}${durStr}${nivStr}  |  Data: ${dateStr}`, margin + 6, y + 16);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(pal.sec1Text[0], pal.sec1Text[1], pal.sec1Text[2]);
+  const safeTitle = plan.titulo.length > 55 ? plan.titulo.substring(0, 52) + '...' : plan.titulo;
+  doc.text(`Plano: ${safeTitle}`, margin + 6, y + 22.5);
+
+  y += 33;
+
+  // Objetivo Principal (autoTable)
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'plain',
+    head: [['OBJETIVO DE APRENDIZAGEM & META ENEM']],
+    body: [[plan.objetivoPrincipal]],
+    headStyles: {
+      fillColor: pal.sec1Bg,
+      textColor: pal.sec1Text,
+      fontStyle: 'bold',
+      fontSize: 10,
+      cellPadding: 3
+    },
+    bodyStyles: {
+      fillColor: pal.cardBg,
+      textColor: pal.bodyText,
+      fontSize: 9,
+      cellPadding: 4,
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    },
+    styles: {
+      font: 'helvetica',
+      overflow: 'linebreak',
+      lineColor: pal.sec1Border,
+      lineWidth: 0.2
+    }
+  });
+
+  y = ((doc as any).lastAutoTable?.finalY || y + 25) + 6;
+
+  // Cronograma Passo a Passo (autoTable)
+  const stepsRows = plan.passosSemanais.map((step, idx) => [
+    `Etapa ${idx + 1}`,
+    `${step.etapa}\n${step.descricao}`,
+    step.metaExercicios ? `${step.metaExercicios} questões` : 'Fixação teórica',
+    '[  ] Concluída'
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    head: [['Etapa', 'Plano de Atividades & Conteúdo Prático', 'Meta', 'Status']],
+    body: stepsRows,
+    headStyles: {
+      fillColor: pal.sec2Bg,
+      textColor: pal.sec2Text,
+      fontStyle: 'bold',
+      fontSize: 9.5,
+      lineColor: pal.sec2Border,
+      lineWidth: 0.2
+    },
+    columnStyles: {
+      0: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: pal.sec2Text, fontSize: 8.5 },
+      1: { cellWidth: 'auto', fontSize: 8.5 },
+      2: { cellWidth: 26, halign: 'center', fontSize: 8 },
+      3: { cellWidth: 24, halign: 'center', fontSize: 8, fontStyle: 'bold', textColor: pal.subText }
+    },
+    bodyStyles: {
+      textColor: pal.bodyText,
+      cellPadding: 3,
+      lineColor: pal.sec2Border,
+      lineWidth: 0.15
+    },
+    alternateRowStyles: {
+      fillColor: pal.cardBg
+    },
+    styles: {
+      font: 'helvetica',
+      overflow: 'linebreak'
+    }
+  });
+
+  y = ((doc as any).lastAutoTable?.finalY || y + 35) + 6;
+
+  // Habilidades ENEM (autoTable)
+  if (plan.habilidadesEnem && plan.habilidadesEnem.length > 0) {
+    const habRows = plan.habilidadesEnem.map((hab, idx) => [
+      `H${idx + 1}`,
+      hab
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      head: [['Hab.', 'Habilidade Desenvolvida da Matriz ENEM']],
+      body: habRows,
+      headStyles: {
+        fillColor: pal.sec3Bg,
+        textColor: pal.sec3Text,
+        fontStyle: 'bold',
+        fontSize: 9,
+        lineColor: pal.sec3Border,
+        lineWidth: 0.2
+      },
+      columnStyles: {
+        0: { cellWidth: 16, halign: 'center', fontStyle: 'bold', textColor: pal.sec3Text, fontSize: 8.5 },
+        1: { cellWidth: 'auto', fontSize: 8.5 }
+      },
+      bodyStyles: {
+        textColor: pal.bodyText,
+        cellPadding: 2.8,
+        lineColor: pal.sec3Border,
+        lineWidth: 0.15
+      },
+      styles: {
+        font: 'helvetica',
+        overflow: 'linebreak'
+      }
+    });
+  }
+
+  // Footer em todas as páginas
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `MenteUp • Plano de Estudos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - 8,
+      { align: 'center' }
+    );
+  }
+
+  const cleanTitle = plan.titulo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+  doc.save(`MenteUp_Plano_${cleanTitle}_${theme}.pdf`);
 }

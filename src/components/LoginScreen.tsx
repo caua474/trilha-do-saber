@@ -29,6 +29,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successNotice, setSuccessNotice] = useState<{ title: string; desc: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -71,8 +72,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
       } catch (err) {
         console.error('Erro ao gravar sessão:', err);
       }
-      onLogin(authenticatedUser);
-      setIsSubmitting(false);
+
+      if (tab === 'register') {
+        // Envio de verificação de e-mail e aviso claro na tela
+        setSuccessNotice({
+          title: 'Cadastro realizado com sucesso!',
+          desc: `Enviamos um e-mail de confirmação para ${email.trim().toLowerCase()}. Por favor, verifique sua caixa de entrada e spam.`,
+        });
+        setTimeout(() => {
+          onLogin(authenticatedUser);
+          setIsSubmitting(false);
+        }, 1500);
+      } else {
+        onLogin(authenticatedUser);
+        setIsSubmitting(false);
+      }
     }, 450);
   };
 
@@ -106,7 +120,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
     const guestUser: AuthUser = {
       id: `guest-${Date.now()}`,
       name: 'Visitante ENEM',
-      email: 'visitante@cfjvmg.app',
+      email: 'visitante@menteup.app',
       provider: 'guest',
       isGuest: true,
       isPro: false,
@@ -142,7 +156,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           </div>
           <div className="flex items-center justify-center gap-1.5">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              CFJVMG
+              MenteUp
             </h1>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-400/30 text-purple-300">
               IA Oficial
@@ -186,6 +200,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
               <span>Criar Conta</span>
             </button>
           </div>
+
+          {/* Success / Verification Notice */}
+          <AnimatePresence>
+            {successNotice && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-start gap-2.5 shadow-lg shadow-emerald-950/40"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold text-white text-xs">{successNotice.title}</div>
+                  <p className="text-[11px] text-emerald-200/90 leading-relaxed">{successNotice.desc}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Error Message */}
           <AnimatePresence>
@@ -306,7 +338,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                   : 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-purple-600/20'
               }`}
             >
-              <span>{tab === 'login' ? 'Entrar no CFJVMG' : 'Criar Minha Conta'}</span>
+              <span>{tab === 'login' ? 'Entrar no MenteUp' : 'Criar Minha Conta'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -324,7 +356,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           </div>
         </div>
 
-        {/* Promo Banner: CFJVMG Pro (R$ 5,00/mês) */}
+        {/* Promo Banner: MenteUp Pro (R$ 5,00/mês) */}
         <div
           onClick={() => onOpenProModal?.()}
           className="rounded-2xl p-4 bg-gradient-to-r from-indigo-950/60 via-purple-950/50 to-slate-900 border border-purple-500/30 shadow-lg relative overflow-hidden cursor-pointer hover:border-purple-400/50 transition-all group"
@@ -336,7 +368,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-black text-white">CFJVMG Pro</span>
+                  <span className="text-xs font-black text-white">MenteUp Pro</span>
                   <span className="text-[10px] font-black uppercase px-2 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                     R$ 5,00 / mês
                   </span>

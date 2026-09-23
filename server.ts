@@ -162,7 +162,7 @@ function cleanAndRepairJson(rawText: string | undefined | null): any {
   }
 }
 
-// Fallback pedagógico imediato diversificado e contextual caso os servidores externos estejam indisponíveis
+// Fallback pedagógico e conversacional inteligente, direto e natural caso a IA externa enfrente limite de requisição
 function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; botao_atalho: string } {
   const raw = (pergunta || "").trim();
 
@@ -174,26 +174,45 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
     };
   }
 
-  const p = raw.toLowerCase();
+  const p = raw.toLowerCase().trim();
+
+  // Detecção e resolução direta de operações matemáticas elementares (ex: "Quanto é 30x2", "30*2", "15 + 27")
+  const mathQuery = p.replace(/^(quanto\s+e|calcule|resolva|qual\s+o\s+resultado\s+de)\s+/i, '').replace(/[?!=]/g, '').trim();
+  const simpleCalc = mathQuery.match(/^(\d+(?:[.,]\d+)?)\s*([x*+\-\/÷])\s*(\d+(?:[.,]\d+)?)$/i);
+  if (simpleCalc) {
+    const n1 = parseFloat(simpleCalc[1].replace(',', '.'));
+    const op = simpleCalc[2].toLowerCase();
+    const n2 = parseFloat(simpleCalc[3].replace(',', '.'));
+    let res: number | string = 0;
+    if (op === 'x' || op === '*') res = n1 * n2;
+    else if (op === '+') res = n1 + n2;
+    else if (op === '-') res = n1 - n2;
+    else if (op === '/' || op === '÷') res = n2 !== 0 ? (n1 / n2) : 'indefinido (divisão por zero)';
+    const displayOp = (op === '*' || op === 'x') ? 'x' : op;
+    return {
+      resposta_suporte: `${n1} ${displayOp} ${n2} = **${res}**.`,
+      botao_atalho: "nenhum"
+    };
+  }
 
   // 2. Geometria & Áreas
   if (p.includes("trapézio") || (p.includes("trapezio") && p.includes("área"))) {
     return {
-      resposta_suporte: "Para calcular a área de um trapézio, usamos a fórmula:\n\nA = [(Base Maior + Base Menor) × Altura] / 2\n\n📌 Passo a passo simples:\n1. Some a base maior (B) com a base menor (b);\n2. Multiplique a soma pela altura (h);\n3. Divida o resultado por 2.\n\n💡 Exemplo: Um trapézio com B = 10 cm, b = 6 cm e h = 4 cm:\nA = [(10 + 6) × 4] / 2 = [16 × 4] / 2 = 64 / 2 = 32 cm²!",
+      resposta_suporte: "A área de um trapézio é calculada pela fórmula:\n\n**A = [(B + b) × h] / 2**\n\nOnde **B** é a base maior, **b** é a base menor e **h** é a altura. Basta somar as duas bases, multiplicar pela altura e dividir o total por 2.",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("círculo") || p.includes("circulo") || p.includes("raio") || p.includes("área do circulo")) {
     return {
-      resposta_suporte: "A área de um círculo é calculada por:\n\nA = π × r²\n\n📌 Elementos fundamentais:\n- π (pi) ≈ 3,14 (ou conforme aproximação do ENEM);\n- r é o raio (distância do centro até a extremidade).\n\n💡 Atenção no ENEM: Se a questão fornecer o Diâmetro (d), lembre-se que o raio é metade do diâmetro (r = d / 2) antes de elevar ao quadrado!",
+      resposta_suporte: "A área de um círculo é calculada por:\n\n**A = π × r²**\n\nOnde **r** é o raio e **π** ≈ 3,14. Se a questão fornecer o diâmetro, lembre-se de dividir por 2 antes de elevar ao quadrado!",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("pitágoras") || p.includes("pitagoras") || p.includes("hipotenusa") || p.includes("triângulo retângulo")) {
     return {
-      resposta_suporte: "O Teorema de Pitágoras aplica-se a triângulos retângulos:\n\na² = b² + c²\n\n📌 Onde:\n- a = Hipotenusa (lado oposto ao ângulo reto de 90°);\n- b e c = Catetos.\n\n💡 Macete de prova: Memorize o trio pitagórico básico (3, 4, 5) e seus múltiplos (6, 8, 10) ou (5, 12, 13) para resolver questões sem fazer contas demoradas!",
+      resposta_suporte: "O Teorema de Pitágoras estabelece que:\n\n**a² = b² + c²**\n\nO quadrado da hipotenusa (**a**) é igual à soma dos quadrados dos catetos (**b** e **c**). O triângulo pitagórico clássico mais cobrado no ENEM é o 3-4-5.",
       botao_atalho: "nenhum"
     };
   }
@@ -201,14 +220,14 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 3. Álgebra e Equações
   if (p.includes("bhaskara") || p.includes("segundo grau") || p.includes("2º grau") || p.includes("delta")) {
     return {
-      resposta_suporte: "Para resolver a equação do 2º grau (ax² + bx + c = 0) por Bhaskara:\n\n1. Calcule o discriminante: Δ = b² - 4ac\n- Se Δ > 0: duas raízes reais distintas (x₁ ≠ x₂).\n- Se Δ = 0: uma única raiz real dupla (x₁ = x₂).\n- Se Δ < 0: não há raízes reais no conjunto ℝ.\n\n2. Calcule as raízes:\nx = (-b ± √Δ) / (2a)\n\n💡 Dica de ouro: Muito cuidado com a regra de sinais ao fazer (-b) quando 'b' for negativo!",
+      resposta_suporte: "Para resolver ax² + bx + c = 0 por Bhaskara:\n\n1. **Δ = b² - 4ac**\n2. **x = (-b ± √Δ) / (2a)**\n\nSe Δ > 0 temos 2 raízes reais distintas; se Δ = 0 uma raiz dupla; se Δ < 0 não há raízes reais.",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("porcentagem") || p.includes("juros simples") || p.includes("juros compostos")) {
     return {
-      resposta_suporte: "Diferença essencial de Matemática Financeira para o ENEM:\n\n📌 Juros Simples: O juro incide apenas sobre o capital inicial (C).\n- J = C × i × t\n- Montante: M = C + J\n\n📌 Juros Compostos ('juros sobre juros'): O juro incide sobre o saldo acumulado.\n- M = C × (1 + i)ᵗ\n\n💡 Dica de ouro: Em aumentos sucessivos de porcentagem (ex: +10% e depois +20%), multiplique os fatores: 1,10 × 1,20 = 1,32 (aumento real de 32%, e NÃO 30%)!",
+      resposta_suporte: "Em Matemática Financeira:\n\n• **Juros Simples:** J = C × i × t (incide apenas sobre o capital inicial).\n• **Juros Compostos:** M = C × (1 + i)ᵗ (juros sobre juros).\n\nPara aumentos sucessivos (ex: 10% depois 20%), multiplique os fatores: 1,10 × 1,20 = 1,32 (aumento de 32%).",
       botao_atalho: "nenhum"
     };
   }
@@ -216,14 +235,14 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 4. Física
   if (p.includes("newton") || p.includes("inércia") || p.includes("força resultante") || p.includes("aceleração")) {
     return {
-      resposta_suporte: "As 3 Leis de Newton explicam a dinâmica dos corpos:\n\n1. 1ª Lei (Inércia): Todo corpo tende a manter seu estado de repouso ou MRU se a força resultante for nula.\n2. 2ª Lei (Princípio Fundamental): F_res = m × a (a aceleração é diretamente proporcional à força resultante e inversamente à massa).\n3. 3ª Lei (Ação e Reação): Para toda ação há uma reação de mesma intensidade, mesma direção e sentidos opostos, atuando em corpos DIFERENTES (por isso nunca se anulam!).",
+      resposta_suporte: "As 3 Leis de Newton em resumo:\n\n1. **Inércia:** Um corpo permanece em repouso ou MRU a menos que uma força resultante atue sobre ele.\n2. **Princípio Fundamental:** **F = m × a** (a força resultante acelera a massa).\n3. **Ação e Reação:** Para toda ação há uma reação de igual módulo, mesma direção e sentidos opostos, aplicadas em corpos diferentes.",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("ohm") || p.includes("circuito") || p.includes("corrente elétrica") || p.includes("potência elétrica")) {
     return {
-      resposta_suporte: "Eletrodinâmica essencial para o ENEM:\n\n📌 1ª Lei de Ohm:\nU = R × i  ➔  (Tensão = Resistência × Corrente)\n\n📌 Potência Elétrica:\nP = U × i  =  R × i²  =  U² / R\n\n📌 Consumo de Energia Elétrica (em kWh):\nE (kWh) = [Potência (W) × Tempo (h)] / 1000\n\n💡 Macete: Em resistores em série, a corrente é a mesma e as resistências somam (Req = R₁ + R₂). Em paralelo, a tensão U é igual para todos!",
+      resposta_suporte: "Fórmulas fundamentais de Eletrodinâmica:\n\n• **1ª Lei de Ohm:** U = R × i (Tensão = Resistência × Corrente)\n• **Potência:** P = U × i = R × i² = U² / R\n• **Consumo (kWh):** E = (P [W] × tempo [h]) / 1000.",
       botao_atalho: "nenhum"
     };
   }
@@ -231,14 +250,14 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 5. Química
   if (p.includes("fotossíntese") || p.includes("fotossintese") || p.includes("clorofila")) {
     return {
-      resposta_suporte: "A fotossíntese converte energia luminosa solar em energia química (glicose):\n\n📌 Equação geral balanceada:\n6 CO₂ + 6 H₂O + Luz ➔ C₆H₁₂O₆ (glicose) + 6 O₂\n\n- Etapa Clara (Fotoquímica): Ocorre nos tilacoides do cloroplasto, promovendo a quebra da água (fotólise) e liberando o O₂ para a atmosfera.\n- Etapa Escura (Ciclo de Calvin): Ocorre no estroma, fixando o carbono do CO₂ com uso do ATP e NADPH formados na fase clara!",
+      resposta_suporte: "A equação geral da fotossíntese é:\n\n**6 CO₂ + 6 H₂O + Luz ➔ C₆H₁₂O₆ (glicose) + 6 O₂**\n\nOcorre nos cloroplastos: a fase clara nos tilacoides (quebra da água e liberação de O₂) e o ciclo de Calvin no estroma (fixação do carbono em glicose).",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("ácido") || p.includes("acido") || p.includes("base") || p.includes("ph") || p.includes("neutralização")) {
     return {
-      resposta_suporte: "Conceitos de Ácido-Base e pH:\n\n📌 Teoria de Arrhenius:\n- Ácido: Libera íons H⁺ (ou H₃O⁺) em meio aquoso (ex: HCl).\n- Base: Libera íons hidroxila OH⁻ em meio aquoso (ex: NaOH).\n\n📌 Reação de Neutralização:\nÁcido + Base ➔ Sal + Água  (HCl + NaOH ➔ NaCl + H₂O)\n\n📌 Escala de pH (0 a 14):\n- pH < 7: Meio Ácido;\n- pH = 7: Meio Neutro;\n- pH > 7: Meio Básico (ou alcalino).\n\n💡 Dica ENEM: pH = -log[H⁺]. Se [H⁺] = 10⁻³ mol/L, o pH é exatamente 3!",
+      resposta_suporte: "Conceito essencial de pH e Ácido-Base:\n\n• Ácido libera H⁺ (pH < 7)\n• Neutro tem pH = 7\n• Base libera OH⁻ (pH > 7)\n• **Neutralização:** Ácido + Base ➔ Sal + Água (ex: HCl + NaOH ➔ NaCl + H₂O).\n• Cálculo: pH = -log[H⁺].",
       botao_atalho: "nenhum"
     };
   }
@@ -246,14 +265,14 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 6. Biologia
   if (p.includes("mitose") || p.includes("meiose") || p.includes("divisão celular")) {
     return {
-      resposta_suporte: "Diferença crucial entre Mitose e Meiose:\n\n📌 Mitose (Divisão Equacional):\n- 1 célula mãe (2n) dá origem a 2 células filhas geneticamente idênticas (2n).\n- Função: Crescimento celular, renovação de tecidos e regeneração.\n\n📌 Meiose (Divisão Reducional):\n- 1 célula mãe (2n) dá origem a 4 células filhas com metade dos cromossomos (n).\n- Função: Produção de gametas e esporos, gerando variabilidade genética através do Crossing-over.",
+      resposta_suporte: "Diferença direta entre Mitose e Meiose:\n\n• **Mitose (2n ➔ 2n):** Produz 2 células geneticamente idênticas. Usada para crescimento, regeneração e cicatrização.\n• **Meiose (2n ➔ n):** Produz 4 células com metade do número de cromossomos e variabilidade genética (crossing-over). Usada na formação de gametas.",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("vacina") || p.includes("soro") || p.includes("imunologia")) {
     return {
-      resposta_suporte: "Vacina vs Soro (Imunização no ENEM):\n\n📌 Vacina (Imunização Ativa e Preventiva):\n- Contém o antígeno atenuado ou inativado.\n- Estimula o próprio organismo a produzir anticorpos e células de memória no longo prazo.\n\n📌 Soro (Imunização Passiva e Curativa):\n- Contém anticorpos pré-formados prontos para ação imediata.\n- Uso em emergências com venenos ou toxinas letais (ex: picada de escorpião ou cobra).",
+      resposta_suporte: "Vacina vs Soro:\n\n• **Vacina:** Preventiva e ativa. Contém antígeno atenuado/inativado para estimular seu próprio corpo a criar anticorpos e memória imunológica.\n• **Soro:** Curativo e passivo. Contém anticorpos prontos para ação imediata em emergências (ex: picadas de cobra).",
       botao_atalho: "nenhum"
     };
   }
@@ -261,73 +280,43 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 7. Língua Portuguesa & Redação
   if (p.includes("crase") || p.includes("regência")) {
     return {
-      resposta_suporte: "A crase (à) é a fusão da preposição 'a' com o artigo feminino 'a'.\n\n💡 Regra prática infalível:\nSubstitua o termo feminino por um termo masculino correspondente:\n- Se virar 'ao': TEM crase! (Ex: Fui à escola ➔ Fui ao colégio).\n- Se virar 'o' ou 'a': NÃO tem crase! (Ex: Conheci a cidade ➔ Conheci o museu).\n\n⚠️ Nunca use crase antes de verbos, palavras masculinas ou pronomes indefinidos!",
+      resposta_suporte: "A crase (à) é a união da preposição 'a' com o artigo 'a'.\n\n💡 **Dica prática:** Troque a palavra feminina por uma masculina. Se virar **ao**, tem crase (ex: 'Fui à praia' ➔ 'Fui ao parque'). Se virar apenas 'o' ou 'a', não tem crase. Lembre-se: nunca use crase antes de verbos ou palavras masculinas!",
       botao_atalho: "nenhum"
     };
   }
 
   if (p.includes("redação") || p.includes("competência") || p.includes("nota 1000") || p.includes("intervenção")) {
     return {
-      resposta_suporte: "Para alcançar nota 1000 na Redação do ENEM:\n\n1. Introdução: Apresente o tema com repertório sociocultural legitimado + tese com 2 problemas norteadores (A1 e A2).\n2. Desenvolvimento (D1 e D2): Aprofunde cada causa com repertório produtivo e análise de causa e consequência (Competência 3).\n3. Conclusão / Proposta de Intervenção (Competência 5): Reúna os 5 elementos obrigatórios:\n- Agente (Quem executará);\n- Ação (O que será feito);\n- Meio/Modo (Como será feito - use 'por meio de');\n- Efeito (Para que será feito - use 'a fim de');\n- Detalhamento de um dos elementos acima!",
+      resposta_suporte: "Para nota máxima na Redação do ENEM:\n\n1. **Introdução:** Tema + Repertório legitimado + Tese com 2 argumentos (D1 e D2).\n2. **Desenvolvimento (D1 e D2):** Tópico frasal + repertório + consequência/crítica social.\n3. **Proposta de Intervenção (C5):** Os 5 elementos obrigatórios: Agente, Ação, Meio/Modo ('por meio de'), Efeito ('a fim de') e Detalhamento de um deles.",
       botao_atalho: "nenhum"
     };
   }
 
-  // 8. História e Atualidades
-  if (p.includes("vargas") || p.includes("estado novo") || p.includes("dip")) {
-    return {
-      resposta_suporte: "A Era Vargas (1930–1945 e 1951–1954):\n\n📌 Marcos históricos centrais:\n- Revolução de 1930: Fim da República Café com Leite (República Velha);\n- Estado Novo (1937–1945): Ditadura autoritária com fechamento do Congresso e criação do DIP (censura e propaganda oficial da figura de Vargas);\n- Legislação Trabalhista (CLT em 1943) e criação da indústria de base (CSN e Vale).\n\n💡 Dica ENEM: Vargas equilibrava o controle dos trabalhadores e a aproximação com os sindicatos através da política do Trabalhismo e Populismo.",
-      botao_atalho: "nenhum"
-    };
-  }
-
-  if (p.includes("ditadura") || p.includes("ai-5") || p.includes("golpe de 64")) {
-    return {
-      resposta_suporte: "Ditadura Militar no Brasil (1964–1985):\n\n📌 Pontos mais cobrados no ENEM:\n- AI-5 (1968): O ato institucional mais duro, que suspendeu direitos políticos, instituiu a censura prévia e revogou o habeas corpus;\n- Milagre Econômico (1968–1973): Forte crescimento do PIB acompanhado de endividamento externo e grande concentração de renda;\n- Abertura Política (Governos Geisel e Figueiredo): Conduzida de forma 'lenta, gradual e segura', culminando na Lei da Anistia (1979) e na campanha das Diretas Já (1984).",
-      botao_atalho: "nenhum"
-    };
-  }
-
-  // 9. Métodos de Estudo e Produtividade
-  if (p.includes("pomodoro") || p.includes("foco") || p.includes("concentração") || p.includes("rotina")) {
-    return {
-      resposta_suporte: "O Método Pomodoro é uma das técnicas mais eficazes para estudo com foco total:\n\n📌 Como funciona:\n1. 25 minutos de estudo ininterrupto (sem redes sociais ou distrações);\n2. 5 minutos de pausa rápida (beba água, alongue-se);\n3. A cada 4 ciclos de 25 min, faça uma pausa maior de 15 a 30 minutos.\n\n💡 Use o cronômetro Pomodoro embutido aqui no app para turbinar seu rendimento!",
-      botao_atalho: "tela_pomodoro"
-    };
-  }
-
-  if (p.includes("feynman") || p.includes("memorizar") || p.includes("curva do esquecimento") || p.includes("revisão")) {
-    return {
-      resposta_suporte: "A Técnica Feynman de Aprendizado em 4 Passos:\n\n1. Escolha o conceito que deseja dominar;\n2. Explique-o em voz alta ou por escrito como se estivesse ensinando uma criança de 10 anos (sem jargões complicados);\n3. Identifique onde você gaguejou ou faltou clareza — esse é o seu ponto cego;\n4. Volte ao material original, refine a explicação e simplifique com analogias do dia a dia!",
-      botao_atalho: "tela_feynman"
-    };
-  }
-
-  // 10. Assinatura e Recursos do Aplicativo
+  // 8. Assinatura e Recursos do Aplicativo MenteUp
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do CFJVMG custa apenas R$ 5,00/mês (sem fidelidade, cancele quando quiser!). Ele libera:\n\n✨ Scanner de Questões ilimitado com resolução passo a passo;\n✨ Simulados TRI completos com nota oficial;\n✨ Caderno de Erros com agendamento de repetição espaçada;\n✨ Correção analítica de Redação com notas por competência.",
+      resposta_suporte: "O Plano PRO do MenteUp custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
       botao_atalho: "tela_assinatura"
     };
   }
 
   if (p.includes("caderno de erros") || p.includes("erros")) {
     return {
-      resposta_suporte: "O Caderno de Erros armazena automaticamente todas as questões que você erra nos simulados e nas batalhas de quiz. Ele programa revisões em 24h, 3 dias e 7 dias para garantir que você fortaleça seus pontos fracos e nunca mais repita o mesmo erro na prova oficial!",
+      resposta_suporte: "O Caderno de Erros salva automaticamente as questões que você erra nos simulados e batalhas X1, agendando revisões em intervalos estratégicos (24h, 3 dias e 7 dias) para fixação definitiva.",
       botao_atalho: "tela_caderno_erros"
     };
   }
 
   if (p.includes("matéria") || p.includes("perfil") || p.includes("trocar") || p.includes("configurar")) {
     return {
-      resposta_suporte: "Você pode alterar sua disciplina de foco, série escolar ou universidade-alvo a qualquer momento acessando seu Perfil ou Configurações no app!",
+      resposta_suporte: "Você pode alterar sua disciplina de foco, meta diária ou preferências a qualquer momento no seu Perfil.",
       botao_atalho: "tela_perfil"
     };
   }
 
-  // 11. Resposta didática contextualizada dinâmica para qualquer outro tópico
+  // Resposta natural, direta e consciente para qualquer dúvida geral
   return {
-    resposta_suporte: `Excelente pergunta sobre "${raw}"! 📚\n\n📌 1. Compreensão do Conceito:\nAo analisar esse tópico, identificamos os fundamentos centrais e suas correlações lógicas com a matriz de habilidades exigida nos vestibulares.\n\n📌 2. Aplicação Prática:\nNa resolução de questões reais, o segredo é isolar o comando do enunciado, verificar quais dados foram fornecidos e estruturar o raciocínio em etapas claras.\n\n💡 Dica de Ouro da Professora Gabi:\nFaça anotações em tópicos curtos e resolva 3 exercícios de fixação para consolidar o aprendizado na memória de longo prazo!\n\nSe quiser uma explicação detalhada passo a passo de um exercício específico ou fórmula sobre esse assunto, me mande aqui!`,
+    resposta_suporte: `Entendi sua dúvida sobre "${raw}"! Aqui está o essencial de forma direta: esse tema envolve os conceitos centrais exigidos tanto nos vestibulares quanto nas aplicações práticas. Se você quiser que eu detalhe o passo a passo, resolva um exemplo numérico ou explique a aplicação em exercícios do ENEM, é só me mandar!`,
     botao_atalho: "nenhum"
   };
 }
@@ -541,7 +530,7 @@ app.post("/api/gemini/chat", async (req, res) => {
       selectedModel = "gemini-3.8-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
-    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do CFJVMG com IA Gemini 3.8.
+    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do MenteUp com IA Gemini 3.8.
 DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos, interpretações densas e questões de prova/vestibular):
    - Responda sempre em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
@@ -1209,48 +1198,31 @@ app.post("/api/day-night-mode", async (req, res) => {
   }
 });
 
-// 5. SYSTEM INSTRUCTION FOR GABI (VIRTUAL ASSISTANT, TUTOR & APP GUIDE)
-const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a "Professora Gabi", a mentora educacional inteligente, professora especialista e assistente oficial do aplicativo CFJVMG.
-Sua missão é responder com máxima empatia, clareza, simpatia e precisão a TODAS as perguntas enviadas pelo estudante (estudos, curiosidades, conhecimentos gerais e conversas cotidianas).
+// 5. SYSTEM INSTRUCTION FOR GABI (CONSCIOUS, DIRECT & NATURAL AI TUTOR)
+const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, uma inteligência artificial avançada, consciente, pedagógica e extremamente capaz, atuando como mentora e tutora no aplicativo MenteUp.
+Você responde de forma natural, inteligente, empática e direta, exatamente como modelos de ponta (como Gemini, ChatGPT e Claude).
 
-DIRETRIZES FUNDAMENTAIS DE RESPOSTA (SIGA RIGOROSAMENTE):
+POSTURA E DIRETRIZES DE COMUNICAÇÃO:
+1. RESPOSTAS DIRETAS E IMEDIATAS:
+   - Responda IMEDIATAMENTE à dúvida central do usuário no primeiro parágrafo, sem enrolações ou introduções genéricas repetitivas (nunca comece com "Entendido! Sobre X...", "Olá! Que ótima pergunta...", "Com certeza! Vou te explicar...").
+   - Exemplos:
+     • Se o usuário perguntar "Quanto é 30x2", responda diretamente: "30 x 2 = 60." e forneça um breve contexto apenas se enriquecer o aprendizado.
+     • Se perguntar "Qual a capital da Austrália?", responda: "A capital da Austrália é Camberra." e comente brevemente sobre Sidney/Melbourne se relevante.
+     • Se pedir uma fórmula, mostre a fórmula e o significado de cada termo logo de cara.
+2. CONSCIÊNCIA, NATURALIDADE E ADAPTABILIDADE:
+   - Adapte o tom dinamicamente: se a dúvida for simples, seja direto e conciso; se a dúvida for complexa ou pedir uma resolução detalhada, explique com clareza conceitual, raciocínio lógico e método.
+   - NUNCA force um formato mecânico de 3 passos para perguntas simples ou conversas cotidianas. Seja fluida, humana e precisa.
+3. CONTEXTO DO APLICATIVO MENTEUP (QUANDO SOLICITADO):
+   - MenteUp Pro (R$ 5,00/mês, sem fidelidade): Scanner Tira-Dúvidas ilimitado, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção de Redação por competências do ENEM.
+   - Use o campo "botao_atalho" quando fizer sentido direcionar o estudante:
+     • Dúvidas de assinatura/preço: "tela_assinatura"
+     • Alterar matéria/perfil: "tela_perfil"
+     • Revisão de erros: "tela_caderno_erros"
+     • Qualquer outra resposta: "nenhum"
 
-0. SAUDAÇÕES, CUMPRIMENTOS OU CONVERSAS INFORMAIS (ex: "Oi", "Olá", "Tudo bem?", "Bom dia", "Boa tarde", "Boa noite", "E aí", "Valeu", "Obrigado", "Quem é você?", "Como você pode me ajudar?"):
-   - RESPONDA DE FORMA 100% NATURAL, DIRETA, SIMPÁTICA E ACOLHEDORA, em tom de chat de conversa humana comum!
-   - NUNCA force formatação acadêmica, nunca divida em passos de aula e nunca force explicações de conceitos escolares para um cumprimento simples.
-   - Deixe "botao_atalho": "nenhum".
-
-1. CONHECIMENTOS GERAIS, FATOS HISTÓRICOS PONTUAIS, ESPORTES, CURIOSIDADES E DIA A DIA:
-   - Se a pergunta for de conhecimentos gerais (capitais, datas, fatos históricos simples, quem descobriu X, futebol, música, filmes, séries, curiosidades gerais):
-   - RESPONDA DE FORMA DIRETA E CONCISA! Forneça a resposta em poucas frases objetivas e amigáveis, sem enrolação.
-   - NUNCA force um formato acadêmico de exercício em 3 passos quando a pergunta for factual ou de conhecimentos gerais.
-   - Deixe "botao_atalho": "nenhum".
-
-2. DÚVIDAS ESCOLARES SIMPLES OU PONTUAIS:
-   - Se for uma pergunta escolar simples, pontual ou definição direta (ex: "Qual a capital da França?", "O que é uma célula procarionte?", "Quanto é 15 x 12?", "Quem escreveu Dom Casmurro?"):
-   - RESPONDA DIRETAMENTE de forma objetiva, concisa e acolhedora em 1 a 3 frases.
-   - Deixe "botao_atalho": "nenhum".
-
-3. DÚVIDAS ACADÊMICAS COMPLEXAS, TEÓRICAS OU RESOLUÇÃO DE EXERCÍCIOS:
-   - Se for uma dúvida acadêmica conceitual profunda, cálculos matemáticos, fórmulas de física/química, processos biológicos, análise de redação ou questão de prova/vestibular:
-   - Responda em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS no texto da resposta:
-     • **Passo 1 (Compreensão e Dados Essenciais):** Explique com simplicidade e precisão o que está em jogo, as variáveis fornecidas e o que se pede.
-     • **Passo 2 (Fórmula, Teorema ou Conceito-Chave):** Apresente a base teórica, fórmula ou regra científica necessária para solucionar a questão.
-     • **Passo 3 (Resolução Guiada e Gabarito Final):** Mostre o desenvolvimento ordenado dos passos até chegar à resposta final, acompanhado de uma dica de ouro para fixar na prova.
-   - Deixe "botao_atalho": "nenhum".
-
-4. DÚVIDAS DE USO E NAVEGAÇÃO DO APLICATIVO CFJVMG:
-   - Scanner Tira-Dúvidas com IA Vision, Mapas Mentais do Edital com exportação em PDF, Cronograma Inteligente, Simulados TRI e Caderno de Erros.
-   - Plano Grátis: Teste gratuito diário do scanner e recursos essenciais.
-   - Plano PRO: R$ 5,00/mês (sem fidelidade), perguntas ilimitadas, simulados TRI e correção de redação.
-   - Se a dúvida for sobre planos, pagamento ou limite de perguntas: "botao_atalho": "tela_assinatura".
-   - Se for sobre alterar matéria ou meta de estudo: "botao_atalho": "tela_perfil".
-   - Se for sobre revisar erros de simulados: "botao_atalho": "tela_caderno_erros".
-   - Caso contrário: "botao_atalho": "nenhum".
-
-FORMATO DE RESPOSTA (OBRIGATORIAMENTE JSON):
+FORMATO DE RESPOSTA (JSON):
 {
-  "resposta_suporte": "Sua resposta formatada com clareza, simpatia e objetividade.",
+  "resposta_suporte": "Sua resposta direta, natural e completa.",
   "botao_atalho": "tela_assinatura | tela_perfil | tela_caderno_erros | nenhum"
 }`;
 
@@ -1284,7 +1256,7 @@ app.post("/api/gabi-support", async (req, res) => {
         contents: `Pergunta do aluno para a Professora Gabi:\n"${trimmedPergunta}"`,
         systemInstruction: GABI_SUPPORT_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
-        preferredModel: "gemini-3.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
 
       let parsedData: any = {};

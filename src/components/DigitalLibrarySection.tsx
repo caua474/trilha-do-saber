@@ -34,6 +34,7 @@ import {
   HelpCircle,
   Eye
 } from 'lucide-react';
+import { askGeminiChat } from '../services/geminiService';
 
 interface DigitalLibrarySectionProps {
   onQuoteToEssay?: (quote: string) => void;
@@ -103,28 +104,11 @@ export const DigitalLibrarySection: React.FC<DigitalLibrarySectionProps> = ({ on
     setIsChatLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Contexto do livro/fichamento "${activeBook.titulo}" por ${activeBook.autor}: ${activeBook.faqIAContexto}. Pergunta do aluno: ${userText}`,
-          history: []
-        })
+      const reply = await askGeminiChat({
+        message: `Contexto do livro/fichamento "${activeBook.titulo}" por ${activeBook.autor}: ${activeBook.faqIAContexto}. Pergunta do aluno: ${userText}`,
+        history: [],
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setChatMessages((prev) => [...prev, { sender: 'ia', text: data.reply || 'Desculpe, tente reformular sua dúvida.' }]);
-      } else {
-        // Fallback response if offline
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            sender: 'ia',
-            text: `Excelente pergunta! Na obra "${activeBook.titulo}", esse ponto demonstra a visão do autor (${activeBook.autor}) sobre a sociedade de sua época. Recomendo analisar este conceito no resumo e nos capítulos chave.`
-          }
-        ]);
-      }
+      setChatMessages((prev) => [...prev, { sender: 'ia', text: reply || 'Desculpe, tente reformular sua dúvida.' }]);
     } catch (e) {
       setChatMessages((prev) => [
         ...prev,
@@ -177,7 +161,7 @@ export const DigitalLibrarySection: React.FC<DigitalLibrarySectionProps> = ({ on
                 Estante de Leitura Obrigatória
               </span>
               <span className="bg-amber-500/20 text-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-500/40">
-                Biblioteca Digital • MenteUp
+                Biblioteca Digital • Gabaritou
               </span>
             </div>
             <h2 className="text-xl font-extrabold text-white">

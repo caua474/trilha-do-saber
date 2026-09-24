@@ -133,7 +133,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-white">Configuração Inicial • MenteUp</h3>
+              <h3 className="text-base font-black text-white">Configuração Inicial • Gabaritou</h3>
               <p className="text-[11px] text-slate-400 font-semibold">
                 Passo {currentStep} de 3 • Personalize seu painel de estudos
               </p>

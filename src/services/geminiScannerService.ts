@@ -2,6 +2,7 @@
 // Reads API key from: import.meta.env.VITE_GEMINI_API_KEY, process.env.VITE_GEMINI_API_KEY, or process.env.GEMINI_API_KEY.
 import { GoogleGenAI } from '@google/genai';
 import { dispatchGeminiError, classifyGeminiError } from '../utils/geminiErrorHandler';
+import { solveQuestion, FORCED_GEMINI_MODEL } from './geminiService';
 
 export interface QuestionSolution3Passos {
   tipo_resposta?: string;
@@ -227,24 +228,14 @@ async function tryServerEndpoint(
   imagemBase64?: string | null
 ): Promise<QuestionSolution3Passos | null> {
   try {
-    const res = await fetch('/api/solve-question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        duvida: duvida.trim(),
-        imagemBase64: imagemBase64 || undefined,
-      }),
+    const key = getGeminiApiKey();
+    const data = await solveQuestion({
+      duvida,
+      imagemBase64,
+      apiKey: key,
     });
-
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const text = await res.text();
-      if (text && text.trim()) {
-        const json = JSON.parse(text);
-        if (res.ok && json.success && json.data) {
-          return json.data;
-        }
-      }
+    if (data && (data.passo1_compreensao || data.resposta_direta || data.materia)) {
+      return data;
     }
   } catch {
     // Rota local indisponível no ambiente cliente
@@ -427,7 +418,7 @@ export async function solveQuestionWithClientGemini(
       }
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: FORCED_GEMINI_MODEL,
         contents,
         config: {
           systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,

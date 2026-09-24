@@ -57,7 +57,7 @@ const STUDY_TECHNIQUES: StudyTechnique[] = [
       '4. Faça a 3ª revisão em 30 dias.'
     ],
     beneficio: 'Garante que você lembre da matéria até a data do ENEM ou Vestibular sem precisar "decorar de véspera".',
-    exemploPratico: 'Use os Flashcards do MenteUp para revisar termos errados 1 dia depois, 3 dias depois e 1 semana depois.'
+    exemploPratico: 'Use os Flashcards do Gabaritou para revisar termos errados 1 dia depois, 3 dias depois e 1 semana depois.'
   },
   {
     id: 'active_recall',
@@ -158,7 +158,7 @@ export const DailyStudyTipModal: React.FC = () => {
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
-                    💡 Dica do Dia • MenteUp
+                    💡 Dica do Dia • Gabaritou
                   </span>
                   <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
                     {selectedTip.categoria}

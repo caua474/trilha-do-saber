@@ -128,6 +128,24 @@ const INITIAL_AREA_PERFORMANCE: AreaPerformance[] = [
   { area: 'Ciências da Natureza', acertos: 65, total: 80, percentual: 81.2, cor: '#10b981' },
   { area: 'Ciências Humanas', acertos: 58, total: 65, percentual: 89.2, cor: '#f59e0b' },
   { area: 'Linguagens & Códigos', acertos: 57, total: 65, percentual: 87.6, cor: '#ec4899' },
+  { area: 'Redação Nota 1000', acertos: 92, total: 100, percentual: 92.0, cor: '#8b5cf6' },
+];
+
+export interface TriEvolutionPoint {
+  simulado: string;
+  data: string;
+  notaTri: number;
+  metaSISU: number;
+  corteMedicina: number;
+}
+
+const INITIAL_TRI_EVOLUTION: TriEvolutionPoint[] = [
+  { simulado: 'Simulado 1', data: '02/Jul', notaTri: 585, metaSISU: 650, corteMedicina: 790 },
+  { simulado: 'Simulado 2', data: '16/Jul', notaTri: 640, metaSISU: 680, corteMedicina: 790 },
+  { simulado: 'Simulado 3', data: '30/Jul', notaTri: 695, metaSISU: 710, corteMedicina: 790 },
+  { simulado: 'Simulado 4', data: '13/Ago', notaTri: 730, metaSISU: 730, corteMedicina: 790 },
+  { simulado: 'Simulado 5', data: '27/Ago', notaTri: 760, metaSISU: 750, corteMedicina: 790 },
+  { simulado: 'Simulado 6 (Atual)', data: 'Hoje', notaTri: 785, metaSISU: 770, corteMedicina: 790 },
 ];
 
 export const StudyStatisticsSection: React.FC = () => {
@@ -850,6 +868,205 @@ export const StudyStatisticsSection: React.FC = () => {
         </div>
       </div>
 
+      {/* SECTION: EVOLUÇÃO DA NOTA TRI OFICIAL NOS SIMULADOS */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                Modelo Estatístico Oficial ENEM
+              </span>
+              <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                Escala 400 a 1000
+              </span>
+            </div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5 text-amber-500" />
+              <span>Evolução Histórica da Nota TRI & Projeção SISU</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Acompanhamento da sua nota ponderada nos simulados contra as notas de corte de referência
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-right">
+              <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 block">Nota TRI Atual</span>
+              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">785 pts</span>
+            </div>
+            <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-right">
+              <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">Evolução Geral</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">+200 pts</span>
+            </div>
+          </div>
+        </div>
+
+        {/* TRI Chart Container */}
+        <div className="h-72 w-full pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={INITIAL_TRI_EVOLUTION} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTri" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.15} />
+              <XAxis
+                dataKey="simulado"
+                tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[500, 850]}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload as TriEvolutionPoint;
+                    return (
+                      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white text-xs space-y-2 shadow-2xl">
+                        <p className="font-bold text-amber-400 text-sm border-b border-slate-800 pb-1">
+                          {data.simulado} ({data.data})
+                        </p>
+                        <p className="flex justify-between gap-4">
+                          <span className="text-slate-300">Sua Nota TRI:</span>
+                          <strong className="text-amber-400 font-black text-sm">{data.notaTri} pts</strong>
+                        </p>
+                        <p className="flex justify-between gap-4">
+                          <span className="text-emerald-400">Corte Ampla/Engenharia:</span>
+                          <strong>720 pts</strong>
+                        </p>
+                        <p className="flex justify-between gap-4">
+                          <span className="text-purple-400">Corte Medicina Top:</span>
+                          <strong>790 pts</strong>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="notaTri"
+                name="Sua Nota TRI"
+                stroke="#f59e0b"
+                strokeWidth={3.5}
+                fillOpacity={1}
+                fill="url(#colorTri)"
+                dot={{ r: 5, fill: '#f59e0b', stroke: '#78350f', strokeWidth: 2 }}
+                activeDot={{ r: 8, stroke: '#ffffff', strokeWidth: 2 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="corteMedicina"
+                name="Corte Medicina (790)"
+                stroke="#a855f7"
+                strokeWidth={2}
+                strokeDasharray="4 4"
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Benchmarks explanation row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs">
+            <span className="font-bold text-slate-700 dark:text-slate-300 block">🎯 Faixa 600 - 700</span>
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">Ampla Concorrência, Pedagogia, História, Letras</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs">
+            <span className="font-bold text-indigo-600 dark:text-indigo-400 block">🚀 Faixa 700 - 760</span>
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">Direito, Engenharias (USP/UFRJ/UFMG), Psicologia</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs">
+            <span className="font-bold text-amber-600 dark:text-amber-400 block">🏆 Faixa 780+</span>
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">Medicina ampla, Odontologia e Carreiras de Alta Demanda</span>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION: CONSISTÊNCIA DOS ÚLTIMOS 7 DIAS */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
+              <Flame className="w-5 h-5 text-amber-500" />
+              <span>Consistência dos Últimos 7 Dias & Sequência de Metas</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Taxa diária de cumprimento de horas líquidas e aproveitamento por sessão
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-black border border-emerald-300 dark:border-emerald-800">
+              🔥 Ofensiva de 7 Dias Ativa
+            </span>
+          </div>
+        </div>
+
+        {/* 7 Days Grid Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {studyLogs.slice(0, 7).map((log) => {
+            const atingiuMeta = log.horasEstudadas >= 3.0;
+            const taxa = log.questoesResolvidas > 0 ? Math.round((log.acertos / log.questoesResolvidas) * 100) : 0;
+
+            return (
+              <div
+                key={log.id}
+                className={`p-4 rounded-2xl border transition flex flex-col justify-between space-y-3 ${
+                  atingiuMeta
+                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                    : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900 dark:text-white">
+                    {log.diaSemana.slice(0, 3)}
+                  </span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                    atingiuMeta
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {atingiuMeta ? 'Meta ✓' : 'Parcial'}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-xl font-black text-slate-900 dark:text-white block font-mono">
+                    {log.horasEstudadas}h
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                    {log.acertos}/{log.questoesResolvidas} acertos
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold">
+                    <span className="text-slate-400">Precisão</span>
+                    <span className="text-indigo-600 dark:text-indigo-400">{taxa}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-full rounded-full"
+                      style={{ width: `${taxa}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* SECONDARY SECTION: DESEMPENHO POR ÁREA DO CONHECIMENTO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* BAR CHART: ACERTOS POR ÁREA ENEM */}
@@ -858,10 +1075,10 @@ export const StudyStatisticsSection: React.FC = () => {
             <div>
               <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2">
                 <PieChart className="w-5 h-5 text-indigo-500" />
-                <span>Rendimento por Área do Conhecimento ENEM</span>
+                <span>Porcentagem de Acertos por Matéria (ENEM)</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Aproveitamento percentual de acertos por grandes áreas do edital
+                Aproveitamento percentual de acertos por disciplina com linha de meta de aprovação (80%)
               </p>
             </div>
           </div>

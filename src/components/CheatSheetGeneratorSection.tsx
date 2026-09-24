@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Printer, Sparkles, AlertTriangle, BookOpen, Copy, Check, Download, Zap } from 'lucide-react';
+import { generateCheatSheet } from '../services/geminiService';
 
 interface CheatSheetData {
   materia: string;
@@ -46,15 +47,11 @@ export const CheatSheetGeneratorSection: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/generate-cheatsheet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materia, topico }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.data) {
+      const data = await generateCheatSheet({ materia, topico });
+      if (data?.data) {
         setSheet(data.data);
+      } else if (data?.resumo_executivo) {
+        setSheet(data);
       }
     } catch (e) {
       console.error('Erro ao gerar folha de véspera:', e);

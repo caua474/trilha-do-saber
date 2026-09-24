@@ -16,11 +16,69 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
+// Prevenção de erros 405 (Method Not Allowed) e configuração completa de CORS
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-gemini-api-key, x-gemini-model");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-function getGeminiApiKey(): string {
+// Respostas amigáveis em GET para evitar 405 Method Not Allowed em testes ou verificações
+app.get("/api/gemini", (_req, res) => {
+  res.json({ success: true, message: "Endpoint /api/gemini online. Utilize POST para enviar { contents }." });
+});
+
+app.get("/api/gabi-support", (_req, res) => {
+  res.json({ success: true, message: "Endpoint /api/gabi-support online. Utilize POST para enviar { pergunta }." });
+});
+
+app.get("/api/gemini/chat", (_req, res) => {
+  res.json({ success: true, message: "Endpoint /api/gemini/chat online. Utilize POST para enviar { prompt }." });
+});
+
+app.get("/api/solve-question", (_req, res) => {
+  res.json({ success: true, message: "Endpoint /api/solve-question online. Utilize POST para enviar { duvida, imagemBase64 }." });
+});
+
+// Fallback amigável para qualquer rota GET em /api/*
+app.get("/api/*", (req, res) => {
+  res.json({
+    success: true,
+    message: `Endpoint ${req.path} ativo. Para processar requisições de IA utilize o método POST.`,
+  });
+});
+
+function sendGeminiErrorResponse(res: express.Response, error: any, defaultMsg: string) {
+  const errMsg = String(error?.message || error || "");
+  const isAuthError =
+    errMsg.includes("API key not valid") ||
+    errMsg.includes("API_KEY_INVALID") ||
+    errMsg.includes("GEMINI_API_KEY não configurada") ||
+    errMsg.includes("Chave de API inválida") ||
+    errMsg.includes("não autorizada") ||
+    errMsg.includes("401");
+
+  const status = isAuthError ? 401 : 500;
+  return res.status(status).json({
+    success: false,
+    error: isAuthError
+      ? "Chave de API do Gemini não configurada ou inválida. Por favor, forneça uma chave válida nas Configurações da IA."
+      : (error?.message || defaultMsg),
+  });
+}
+
+function getGeminiApiKey(customApiKey?: string): string {
+  if (customApiKey && typeof customApiKey === "string" && customApiKey.trim().length > 15 && customApiKey.trim() !== "5,00") {
+    return customApiKey.trim();
+  }
   // Always prioritize the official server-side GEMINI_API_KEY
   const serverKey = (process.env.GEMINI_API_KEY || "").trim();
   if (serverKey && serverKey !== "MY_GEMINI_API_KEY" && serverKey.length > 15) {
@@ -33,11 +91,11 @@ function getGeminiApiKey(): string {
   if (serverKey && serverKey !== "MY_GEMINI_API_KEY") {
     return serverKey;
   }
-  throw new Error("GEMINI_API_KEY não configurada no servidor.");
+  throw new Error("GEMINI_API_KEY não configurada no servidor. Forneça uma chave válida nas Configurações.");
 }
 
-function getGenAI() {
-  const apiKey = getGeminiApiKey();
+function getGenAI(customApiKey?: string) {
+  const apiKey = getGeminiApiKey(customApiKey);
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -46,6 +104,19 @@ function getGenAI() {
       },
     },
   });
+}
+
+function extractClientApiKey(req: express.Request): string | undefined {
+  const headerKey = req.headers["x-gemini-api-key"];
+  const clientKey = req.body?.apiKey || (typeof headerKey === "string" ? headerKey : undefined);
+  if (clientKey && typeof clientKey === "string" && clientKey.trim().length > 15 && clientKey.trim() !== "5,00") {
+    return clientKey.trim();
+  }
+  return undefined;
+}
+
+function getGenAIFromRequest(req: express.Request) {
+  return getGenAI(extractClientApiKey(req));
 }
 
 /**
@@ -176,8 +247,8 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
 
   const p = raw.toLowerCase().trim();
 
-  // Detecção e resolução direta de operações matemáticas elementares (ex: "Quanto é 30x2", "30*2", "15 + 27")
-  const mathQuery = p.replace(/^(quanto\s+e|calcule|resolva|qual\s+o\s+resultado\s+de)\s+/i, '').replace(/[?!=]/g, '').trim();
+  // Detecção e resolução direta de operações matemáticas elementares (ex: "Quanto é 2x3", "2x8", "30*2", "15 + 27")
+  const mathQuery = p.replace(/^(quanto\s+[eé]|quanto\s+fica|calcule|resolva|qual\s+(é|e)\s+o\s+resultado\s+de|qual\s+(o\s+)?valor\s+de)\s+/i, '').replace(/[?!=]/g, '').trim();
   const simpleCalc = mathQuery.match(/^(\d+(?:[.,]\d+)?)\s*([x*+\-\/÷])\s*(\d+(?:[.,]\d+)?)$/i);
   if (simpleCalc) {
     const n1 = parseFloat(simpleCalc[1].replace(',', '.'));
@@ -292,10 +363,10 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
     };
   }
 
-  // 8. Assinatura e Recursos do Aplicativo MenteUp
+  // 8. Assinatura e Recursos do Aplicativo Gabaritou
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do MenteUp custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
+      resposta_suporte: "O Plano PRO do Gabaritou custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
       botao_atalho: "tela_assinatura"
     };
   }
@@ -314,10 +385,10 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
     };
   }
 
-  // Resposta natural, direta e consciente para qualquer dúvida geral
+  // Resposta amigável e transparente caso o modelo não retorne
   return {
-    resposta_suporte: `Entendi sua dúvida sobre "${raw}"! Aqui está o essencial de forma direta: esse tema envolve os conceitos centrais exigidos tanto nos vestibulares quanto nas aplicações práticas. Se você quiser que eu detalhe o passo a passo, resolva um exemplo numérico ou explique a aplicação em exercícios do ENEM, é só me mandar!`,
-    botao_atalho: "nenhum"
+    resposta_suporte: `⚠️ No momento não foi possível obter uma resposta em tempo real dos servidores da IA. Por favor, verifique sua conexão ou configure a sua chave de API nas Configurações.`,
+    botao_atalho: "tela_perfil"
   };
 }
 
@@ -332,9 +403,10 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
   timeoutMs?: number;
 }) {
   const modelsToTry = [
-    options.preferredModel || "gemini-3.8-flash",
-    "gemini-3.6-flash",
-    "gemini-3.1-flash-lite",
+    options.preferredModel || "gemini-1.5-flash",
+    "gemini-1.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
 
@@ -398,7 +470,7 @@ app.post("/api/summarize", async (req, res) => {
       return res.status(400).json({ error: "O texto fornecido está vazio ou é inválido." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     let userPrompt = `Por favor, analise e transforme o seguinte texto em um material prático de estudo e flashcards:\n\n"""\n${text.trim()}\n"""`;
     if (focusTopic) {
@@ -454,7 +526,7 @@ app.post("/api/summarize", async (req, res) => {
       systemInstruction: SUMMARIZE_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: summarizeSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-1.5-flash",
     });
 
     const data = cleanAndRepairJson(resultText) || {};
@@ -525,12 +597,12 @@ app.post("/api/gemini/chat", async (req, res) => {
       contentParts.push({ text: prompt });
     }
 
-    let selectedModel = customModel || "gemini-3.8-flash";
-    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-1.5-flash" || selectedModel === "gemini-2.5-flash") {
-      selectedModel = "gemini-3.8-flash";
+    let selectedModel = customModel || "gemini-1.5-flash";
+    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-3.6-flash") {
+      selectedModel = "gemini-1.5-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
-    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do MenteUp com IA Gemini 3.8.
+    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do Gabaritou com IA Gemini.
 DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos, interpretações densas e questões de prova/vestibular):
    - Responda sempre em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
@@ -553,10 +625,10 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
       });
       replyText = response.text || "";
     } catch (modelErr) {
-      // Fallback para gemini-3.6-flash e modelos adicionais em alta demanda
+      // Fallback para gemini-flash-latest e modelos adicionais em alta demanda
       try {
         const backupResponse = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
+          model: "gemini-flash-latest",
           contents: contentParts,
           config: {
             systemInstruction: selectedInstruction,
@@ -567,7 +639,7 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
       } catch (backupErr1) {
         try {
           const liteResponse = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite",
+            model: "gemini-1.5-flash",
             contents: contentParts,
             config: {
               systemInstruction: selectedInstruction,
@@ -607,9 +679,9 @@ app.post("/api/chat", async (req, res) => {
 
     let replyText = "";
     try {
-      const ai = getGenAI();
+      const ai = getGenAIFromRequest(req);
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-1.5-flash",
         contents: message.trim(),
         config: {
           systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do CFJVMG utilizando o Gemini 3.8 Flash.
@@ -626,17 +698,17 @@ DIRETRIZES FUNDAMENTAIS DE RESPOSTA:
       replyText = response.text || "";
     } catch (chatModelErr) {
       try {
-        const ai = getGenAI();
+        const ai = getGenAIFromRequest(req);
         const backup = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
+          model: "gemini-flash-latest",
           contents: message.trim(),
         });
         replyText = backup.text || "";
       } catch (_) {
         try {
-          const ai = getGenAI();
+          const ai = getGenAIFromRequest(req);
           const backupLite = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite",
+            model: "gemini-1.5-flash",
             contents: message.trim(),
           });
           replyText = backupLite.text || "";
@@ -669,12 +741,12 @@ app.post("/api/gemini", async (req, res) => {
       return res.status(400).json({ error: "Conteúdo obrigatório." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
     const promptString = typeof contents === "string" ? contents : JSON.stringify(contents);
     const { text } = await callGeminiSafe(ai, {
       contents: promptString,
       systemInstruction: systemInstruction || undefined,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-1.5-flash",
     });
 
     res.json({
@@ -682,9 +754,7 @@ app.post("/api/gemini", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erro no endpoint /api/gemini:", error);
-    res.status(500).json({
-      error: error.message || "Erro ao consultar Gemini.",
-    });
+    return sendGeminiErrorResponse(res, error, "Erro ao consultar Gemini.");
   }
 });
 
@@ -696,7 +766,7 @@ app.post("/api/feynman-evaluate", async (req, res) => {
       return res.status(400).json({ error: "Transcrição vazia." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
     const prompt = `Atue como um mentor e especialista no Método Feynman de Aprendizagem usando o Gemini 3.8 Flash.
 O aluno tentou explicar o seguinte conceito verbalmente:
 PERGUNTA: "${pergunta || "Conceito de estudo"}"
@@ -717,17 +787,14 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
     const { text: resultText } = await callGeminiSafe(ai, {
       contents: prompt,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-1.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
     res.json({ success: true, data: parsed });
   } catch (error: any) {
     console.error("Erro na avaliação Feynman:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Erro ao avaliar com Método Feynman.",
-    });
+    return sendGeminiErrorResponse(res, error, "Erro ao avaliar com Método Feynman.");
   }
 });
 
@@ -781,7 +848,7 @@ app.post("/api/tutor-plan", async (req, res) => {
       return res.status(400).json({ error: "Preencha a matéria, objetivo e tempo disponível." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const prompt = `Dados do Aluno para Planejamento de Estudos no CFJVMG:
 - Matéria: ${materia}
@@ -837,7 +904,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
       systemInstruction: GABARITAAI_PLANO_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: planoSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -911,7 +978,7 @@ app.post("/api/explain-eli5", async (req, res) => {
       return res.status(400).json({ error: "Envie sua dúvida ou conceito para explicação." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const prompt = `Dúvida do aluno no CFJVMG:\n"${duvida.trim()}"\n\nPor favor, responda no MODO 2 (tira_duvidas) com analogia_simples, passo_a_passo e dica_de_ouro.`;
 
@@ -934,7 +1001,7 @@ app.post("/api/explain-eli5", async (req, res) => {
       systemInstruction: GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: duvidaSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -1059,7 +1126,7 @@ function getFallbackKnowledgePill(topic: string, lowestSubjects?: any[]) {
 app.post("/api/personalized-knowledge-pill", async (req, res) => {
   const { lowestSubjects, customTopic } = req.body;
   try {
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const prompt = `Analise os tópicos com menor desempenho do aluno e crie a Pílula de Conhecimento ideal para amanhã:
 Tópicos/Matérias com menor desempenho: ${JSON.stringify(lowestSubjects || [])}
@@ -1095,7 +1162,7 @@ ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''
       systemInstruction: PERSONALIZED_PILL_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: pillSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const data = cleanAndRepairJson(resultText) || getFallbackKnowledgePill(customTopic, lowestSubjects);
@@ -1151,7 +1218,7 @@ app.post("/api/day-night-mode", async (req, res) => {
       return res.status(400).json({ error: "Envie sua mensagem para a inteligência CFJVMG." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const dayNightSchema = {
       type: Type.OBJECT,
@@ -1180,7 +1247,7 @@ app.post("/api/day-night-mode", async (req, res) => {
       systemInstruction: GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: dayNightSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -1199,21 +1266,22 @@ app.post("/api/day-night-mode", async (req, res) => {
 });
 
 // 5. SYSTEM INSTRUCTION FOR GABI (CONSCIOUS, DIRECT & NATURAL AI TUTOR)
-const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, uma inteligência artificial avançada, consciente, pedagógica e extremamente capaz, atuando como mentora e tutora no aplicativo MenteUp.
+const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, uma inteligência artificial avançada, consciente, pedagógica e extremamente capaz, atuando como mentora e tutora no aplicativo Gabaritou.
 Você responde de forma natural, inteligente, empática e direta, exatamente como modelos de ponta (como Gemini, ChatGPT e Claude).
 
 POSTURA E DIRETRIZES DE COMUNICAÇÃO:
 1. RESPOSTAS DIRETAS E IMEDIATAS:
-   - Responda IMEDIATAMENTE à dúvida central do usuário no primeiro parágrafo, sem enrolações ou introduções genéricas repetitivas (nunca comece com "Entendido! Sobre X...", "Olá! Que ótima pergunta...", "Com certeza! Vou te explicar...").
+   - Responda IMEDIATAMENTE à dúvida central do usuário no primeiro parágrafo, sem enrolações ou introduções genéricas repetitivas (NUNCA comece com "Entendido! Sobre X...", "Olá! Que ótima pergunta...", "Com certeza! Vou te explicar...").
+   - OBRIGATÓRIO PARA CÁLCULOS MATEMÁTICOS: Se o usuário perguntar qualquer operação aritmética ou cálculo (ex: "Quanto é 2x3", "Quanto é 2x8", "30*2", "15 + 27"), responda OBRIGATORIAMENTE e de imediato o cálculo com o resultado exato (ex: "2 x 3 = 6." ou "2 x 8 = 16.").
    - Exemplos:
-     • Se o usuário perguntar "Quanto é 30x2", responda diretamente: "30 x 2 = 60." e forneça um breve contexto apenas se enriquecer o aprendizado.
-     • Se perguntar "Qual a capital da Austrália?", responda: "A capital da Austrália é Camberra." e comente brevemente sobre Sidney/Melbourne se relevante.
-     • Se pedir uma fórmula, mostre a fórmula e o significado de cada termo logo de cara.
+     • Se o usuário perguntar "Quanto é 2x3", responda diretamente: "2 x 3 = 6."
+     • Se perguntar "Qual a capital da Austrália?", responda: "A capital da Austrália é Camberra."
+     • Se pedir uma fórmula, mostre a fórmula e o significado de cada termo logo no início.
 2. CONSCIÊNCIA, NATURALIDADE E ADAPTABILIDADE:
-   - Adapte o tom dinamicamente: se a dúvida for simples, seja direto e conciso; se a dúvida for complexa ou pedir uma resolução detalhada, explique com clareza conceitual, raciocínio lógico e método.
+   - Adapte o tom dinamicamente: se a dúvida for simples, seja direto e conciso; se for complexa ou pedir resolução detalhada, explique com clareza conceitual, raciocínio lógico e método.
    - NUNCA force um formato mecânico de 3 passos para perguntas simples ou conversas cotidianas. Seja fluida, humana e precisa.
-3. CONTEXTO DO APLICATIVO MENTEUP (QUANDO SOLICITADO):
-   - MenteUp Pro (R$ 5,00/mês, sem fidelidade): Scanner Tira-Dúvidas ilimitado, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção de Redação por competências do ENEM.
+3. CONTEXTO DO APLICATIVO (QUANDO SOLICITADO):
+   - Gabaritou Pro (R$ 5,00/mês, sem fidelidade): Scanner Tira-Dúvidas ilimitado, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção de Redação por competências do ENEM.
    - Use o campo "botao_atalho" quando fizer sentido direcionar o estudante:
      • Dúvidas de assinatura/preço: "tela_assinatura"
      • Alterar matéria/perfil: "tela_perfil"
@@ -1229,6 +1297,7 @@ FORMATO DE RESPOSTA (JSON):
 app.post("/api/gabi-support", async (req, res) => {
   try {
     const pergunta = req.body.pergunta || req.body.message || req.body.prompt || req.body.question;
+    const clientApiKey = req.body.apiKey || (typeof req.headers["x-gemini-api-key"] === "string" ? req.headers["x-gemini-api-key"] : undefined);
 
     if (!pergunta || typeof pergunta !== "string" || !pergunta.trim()) {
       return res.status(400).json({ error: "Envie sua dúvida para a Professora Gabi." });
@@ -1249,14 +1318,25 @@ app.post("/api/gabi-support", async (req, res) => {
       });
     }
 
-    const ai = getGenAI();
+    let ai;
+    try {
+      ai = getGenAI(clientApiKey);
+    } catch (keyErr: any) {
+      // Se não houver chave no servidor nem no cliente, tentar fallback pedagógico direto
+      const fallbackResposta = getFallbackGabiAnswer(trimmedPergunta);
+      return res.json({
+        success: true,
+        modelUsed: "gabi-instant-engine",
+        data: fallbackResposta,
+      });
+    }
 
     try {
       const { text, modelUsed } = await callGeminiSafe(ai, {
         contents: `Pergunta do aluno para a Professora Gabi:\n"${trimmedPergunta}"`,
         systemInstruction: GABI_SUPPORT_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: req.body.model || req.body.preferredModel || "gemini-1.5-flash",
       });
 
       let parsedData: any = {};
@@ -1265,13 +1345,13 @@ app.post("/api/gabi-support", async (req, res) => {
         parsedData = JSON.parse(clean);
       } catch (e) {
         parsedData = {
-          resposta_suporte: text || "Aqui está a explicação sobre a sua dúvida.",
+          resposta_suporte: text || "Aqui está a resposta para a sua dúvida.",
           botao_atalho: "nenhum"
         };
       }
 
       if (!parsedData.resposta_suporte) {
-        parsedData.resposta_suporte = text || "Aqui está a explicação sobre a sua dúvida.";
+        parsedData.resposta_suporte = text || "Aqui está a resposta para a sua dúvida.";
       }
       if (typeof parsedData.resposta_suporte === "string" && parsedData.resposta_suporte.trim().startsWith("{")) {
         try {
@@ -1293,7 +1373,7 @@ app.post("/api/gabi-support", async (req, res) => {
       });
     } catch (modelErr: any) {
       console.log("[Professora Gabi] Utilizando motor pedagógico de resposta rápida.");
-      const fallbackResposta = getFallbackGabiAnswer(pergunta.trim());
+      const fallbackResposta = getFallbackGabiAnswer(trimmedPergunta);
       return res.json({
         success: true,
         modelUsed: "gabi-instant-engine",
@@ -1302,7 +1382,6 @@ app.post("/api/gabi-support", async (req, res) => {
     }
   } catch (error: any) {
     console.error("Erro na assistente Professora Gabi:", error);
-    // Mesmo em erro inesperado de infraestrutura, responde amigavelmente
     const fallbackResposta = getFallbackGabiAnswer(req.body?.pergunta || "");
     return res.json({
       success: true,
@@ -1663,7 +1742,7 @@ app.post("/api/analyze-essay", async (req, res) => {
     let parsedData: any = null;
 
     try {
-      const ai = getGenAI();
+      const ai = getGenAIFromRequest(req);
       const prompt = `Analise a seguinte redação do aluno no modelo ENEM.
 Tema Informado: "${temaInformado}"
 Texto da Redação:
@@ -1672,7 +1751,7 @@ ${sanitizedTexto}
 """`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           systemInstruction: ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION,
@@ -1820,7 +1899,7 @@ app.post("/api/analyze-single-competency", async (req, res) => {
     let parsedData: any = null;
 
     try {
-      const ai = getGenAI();
+      const ai = getGenAIFromRequest(req);
       const prompt = `Você é um avaliador oficial da banca de correção da redação do ENEM, especialista na ${compNome}.
 Tema da Redação: "${sanitizedTema || 'Tema Geral do ENEM'}"
 Texto/Trecho submetido pelo estudante:
@@ -1860,7 +1939,7 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido sem markdown ou texto fora do JSON
 }`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -2013,12 +2092,12 @@ ESTRUTURA OBRIGATÓRIA DO JSON:
 app.post("/api/analytics-pomodoro", async (req, res) => {
   try {
     const { historicoEstudos, statusPomodoro } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const promptText = `Análise do histórico do aluno: ${JSON.stringify(historicoEstudos || {})}. Status do pomodoro: ${statusPomodoro || "foco_ativo"}. Gerar relatório de análise de produtividade e foco.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-2.5-flash",
       contents: promptText,
       config: {
         systemInstruction: ANALYTICS_POMODORO_SYSTEM_INSTRUCTION,
@@ -2126,12 +2205,12 @@ Sua resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, sem qualquer texto 
 app.post("/api/retencao-conteudo", async (req, res) => {
   try {
     const { materia, topico, erroAluno } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const promptText = `Matéria solicitada: ${materia || "História"}. Tópico: ${topico || "Geral ENEM"}. Contexto/Erro anterior: ${erroAluno || "Nenhum erro registrado"}. Gerar questão do dia, análise para caderno de erros e roteiro para pílula de áudio.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-2.5-flash",
       contents: promptText,
       config: {
         systemInstruction: RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION,
@@ -2264,7 +2343,7 @@ app.post("/api/generate-flashcards", async (req, res) => {
       return res.status(400).json({ error: "Por favor, informe a matéria e o tópico solicitado." });
     }
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
     const qtdCards = typeof quantidade === "number" && quantidade > 0 ? quantidade : 5;
 
     const prompt = `Gere ${qtdCards} flashcards de estudo no CFJVMG para:
@@ -2302,7 +2381,7 @@ Retorne exclusivamente o JSON de geração de flashcards.`;
       systemInstruction: FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: flashcardsSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -2409,7 +2488,7 @@ app.post("/api/gabi-ranking", async (req, res) => {
   try {
     const { tema_preferido, user_xp, user_streak } = req.body;
 
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const prompt = `Gere o painel do usuário e ranking de amigos da Gabi para o CFJVMG.
 Preferência de Tema Solicitada: "${tema_preferido || 'dark'}"
@@ -2471,7 +2550,7 @@ Retorne exclusivamente o JSON de painel_usuario_ranking.`;
       systemInstruction: GABI_DATA_MANAGER_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: rankingSchema,
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -3015,33 +3094,33 @@ app.post("/api/solve-question", async (req, res) => {
       });
     }
 
-    const ai = getGenAI();
-    let contents: any[] = [];
-
-    if (hasImage) {
-      // Clean data url prefix if present
-      const cleanBase64 = imagemBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-      contents = [
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: cleanBase64,
-          },
-        },
-        {
-          text: sanitizedDuvida
-            ? `Analise a foto enviada. Texto complementar ou dúvida do usuário: "${sanitizedDuvida}". Responda de forma aberta, clara e sem restrições no formato JSON solicitado.`
-            : "Analise a imagem enviada. Extraia texto, gráficos ou fórmulas e responda com clareza e sem restrições no formato JSON solicitado.",
-        },
-      ];
-    } else {
-      contents = [`Mensagem do Usuário:\n"${sanitizedDuvida}"`];
-    }
-
     let parsedData: any = null;
     try {
+      const ai = getGenAIFromRequest(req);
+      let contents: any[] = [];
+
+      if (hasImage) {
+        // Clean data url prefix if present
+        const cleanBase64 = imagemBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+        contents = [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: cleanBase64,
+            },
+          },
+          {
+            text: sanitizedDuvida
+              ? `Analise a foto enviada. Texto complementar ou dúvida do usuário: "${sanitizedDuvida}". Responda de forma aberta, clara e sem restrições no formato JSON solicitado.`
+              : "Analise a imagem enviada. Extraia texto, gráficos ou fórmulas e responda com clareza e sem restrições no formato JSON solicitado.",
+          },
+        ];
+      } else {
+        contents = [`Mensagem do Usuário:\n"${sanitizedDuvida}"`];
+      }
+
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents,
         config: {
           systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
@@ -3217,7 +3296,6 @@ const ENUNCIADO_STYLES = [
 app.post("/api/generate-simulado-tri", async (req, res) => {
   try {
     const { area, materiaFocus } = req.body;
-    const ai = getGenAI();
     const areaName = area || materiaFocus || "Matemática e suas Tecnologias";
 
     // Encontrar o pool temático mais adequado
@@ -3282,6 +3360,7 @@ INSTRUÇÕES CRÍTICAS DE NÃO-REPETIÇÃO:
     let simuladoData: any = null;
 
     try {
+      const ai = getGenAIFromRequest(req);
       const safeResult = await callGeminiSafe(ai, {
         contents: prompt,
         systemInstruction: SIMULADO_TRI_SYSTEM_INSTRUCTION,
@@ -3499,7 +3578,7 @@ app.post("/api/evaluate-simulado-tri", async (req, res) => {
 app.post("/api/generate-cheatsheet", async (req, res) => {
   try {
     const { materia, topico } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const prompt = `Você é o Gerador de Folhas de Véspera (Cheat Sheets Sintéticos de 1 Página) do CFJVMG.
 Gere um resumo ultra-sintético, denso e direto para revisão de véspera da matéria "${materia || "Geral"}" com foco no tópico "${topico || "Principais Tópicos do Edital"}".
@@ -3526,7 +3605,7 @@ A resposta deve ser obrigatoriamente um JSON com este formato:
     const { text: resultText } = await callGeminiSafe(ai, {
       contents: prompt,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
@@ -3541,7 +3620,7 @@ A resposta deve ser obrigatoriamente um JSON com este formato:
 app.post("/api/devil-advocate-debate", async (req, res) => {
   try {
     const { tema, tese, historico } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const systemInstruction = `Você é o Advogado do Diabo do CFJVMG, um debatedor socrático exigente e perspicaz especializado em Redação Nota 1000.
 Seu objetivo NÃO é ofender o aluno, mas sim CONTESTAR e DESAFIAR rigorosamente a tese e os argumentos dele sobre o tema da redação.
@@ -3564,7 +3643,7 @@ Retorne obrigatoriamente JSON no seguinte formato:
       contents,
       systemInstruction,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
@@ -3579,7 +3658,7 @@ Retorne obrigatoriamente JSON no seguinte formato:
 app.post("/api/auto-flashcards", async (req, res) => {
   try {
     const { texto, imagemBase64, materia } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const systemInstruction = `Você é o Gerador Automático de Flashcards do CFJVMG.
 Extraia os conceitos mais importantes do texto ou da imagem enviada e gere um baralho de 5 a 8 flashcards para memorização ativa.
@@ -3617,7 +3696,7 @@ Responda obrigatoriamente em JSON no formato:
       contents: parts,
       systemInstruction,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
@@ -3632,7 +3711,7 @@ Responda obrigatoriamente em JSON no formato:
 app.post("/api/detect-c5-intervention", async (req, res) => {
   try {
     const { textoConclusao } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do CFJVMG.
 Analise detalhadamente a conclusão da redação fornecida e verifique a presença dos 5 elementos obrigatórios:
@@ -3659,7 +3738,7 @@ Responda obrigatoriamente em JSON no seguinte formato:
       contents: `Analise o parágrafo de conclusão a seguir quanto aos 5 elementos da Competência 5 do ENEM:\n\n"""\n${textoConclusao}\n"""`,
       systemInstruction,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
@@ -3674,7 +3753,7 @@ Responda obrigatoriamente em JSON no seguinte formato:
 app.post("/api/scan-answer-sheet", async (req, res) => {
   try {
     const { imagemBase64, gabaritoOficial } = req.body;
-    const ai = getGenAI();
+    const ai = getGenAIFromRequest(req);
 
     const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do CFJVMG.
 Sua tarefa é analisar visualmente a foto da folha de gabarito enviada e identificar quais bolinhas (A, B, C, D, E) foram preenchidas/rasuradas em cada questão.
@@ -3733,7 +3812,7 @@ Analise rigorosamente a imagem do cartão-resposta e retorne um objeto JSON exat
       contents: parts,
       systemInstruction,
       responseMimeType: "application/json",
-      preferredModel: "gemini-3.8-flash",
+      preferredModel: "gemini-2.5-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};

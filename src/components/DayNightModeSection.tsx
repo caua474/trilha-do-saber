@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sun, Moon, Sparkles, Send, CheckCircle2, HelpCircle, Code, Clock, Zap } from 'lucide-react';
+import { getDayNightMode } from '../services/geminiService';
 
 export interface DayNightResponse {
   modo_ativo: 'modo_dia' | 'modo_noite';
@@ -31,19 +32,10 @@ export const DayNightModeSection: React.FC<DayNightModeSectionProps> = ({ theme,
     setError(null);
 
     try {
-      const response = await fetch('/api/day-night-mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensagem: inputMessage }),
-      });
+      const resData = await getDayNightMode({ mensagem: inputMessage });
 
-      const resData = await response.json();
-
-      if (!response.ok || !resData.success) {
-        throw new Error(resData.error || 'Erro ao comunicar com o motor MenteUp.');
-      }
-
-      setResult(resData.data);
+      const finalData = resData?.data || resData;
+      setResult(finalData);
       if (!textToSend) {
         setMensagem('');
       }
@@ -66,7 +58,7 @@ export const DayNightModeSection: React.FC<DayNightModeSectionProps> = ({ theme,
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                MenteUp AI Engine
+                Gabaritou AI Engine
               </span>
               <span className="bg-indigo-500/30 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                 Modo Dia & Noite

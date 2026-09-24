@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Zap,
 } from 'lucide-react';
+import { scanAnswerSheet } from '../services/geminiService';
 
 interface QuestionResult {
   numero: number;
@@ -64,30 +65,16 @@ export const OpticalAnswerSheetScannerSection: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/scan-answer-sheet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imagemBase64: imagePreview,
-          gabaritoOficial: customKey,
-        }),
+      const data = await scanAnswerSheet({
+        imagemBase64: imagePreview,
+        gabaritoOficial: customKey,
       });
 
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Serviço de leitura óptica indisponível no momento. Tente novamente mais tarde.');
-      }
-
-      const text = await res.text();
-      if (!text || !text.trim()) {
-        throw new Error('Resposta vazia do serviço de visão computacional.');
-      }
-
-      const json = JSON.parse(text);
-      if (json.success && json.data) {
-        setScanResult(json.data);
+      const result = data?.data || data;
+      if (result && result.total_questoes) {
+        setScanResult(result);
       } else {
-        setErrorMessage(json.error || 'Não foi possível ler o cartão-resposta.');
+        setErrorMessage(data?.error || 'Não foi possível ler o cartão-resposta.');
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Erro de conexão com o servidor de visão computacional.');

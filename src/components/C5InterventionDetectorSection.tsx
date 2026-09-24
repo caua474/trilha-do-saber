@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, CheckCircle2, XCircle, Sparkles, AlertCircle, Award, BookOpen, ChevronRight } from 'lucide-react';
+import { detectC5Intervention } from '../services/geminiService';
 
 interface ElementoAnalysis {
   presente: boolean;
@@ -41,14 +42,10 @@ export const C5InterventionDetectorSection: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/detect-c5-intervention', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textoConclusao: textoConclusao.trim() }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.data) {
+      const data = await detectC5Intervention({ textoConclusao: textoConclusao.trim() });
+      if (data?.elementos) {
+        setResultado(data);
+      } else if (data?.data?.elementos) {
         setResultado(data.data);
       }
     } catch (e) {

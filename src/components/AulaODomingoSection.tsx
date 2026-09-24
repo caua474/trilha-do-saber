@@ -79,7 +79,7 @@ const CANDIDATOS_RANKING = [
   { posicao: 1, nome: 'Lucas Mendonça (SP)', pontuacao: 980.5, acertos: '5/5', estado: '🟢 São Paulo' },
   { posicao: 2, nome: 'Beatriz Vasconcelos (RJ)', pontuacao: 965.0, acertos: '5/5', estado: '🔵 Rio de Janeiro' },
   { posicao: 3, nome: 'Matheus Oliveira (MG)', pontuacao: 942.0, acertos: '5/5', estado: '🔴 Minas Gerais' },
-  { posicao: 4, nome: 'Você (MenteUp Aluno)', pontuacao: 0, acertos: '0/5', estado: '⚡ Seu Desempenho' },
+  { posicao: 4, nome: 'Você (Gabaritou Aluno)', pontuacao: 0, acertos: '0/5', estado: '⚡ Seu Desempenho' },
   { posicao: 5, nome: 'Camila Ferreira (CE)', pontuacao: 880.0, acertos: '4/5', estado: '🟡 Ceará' },
   { posicao: 6, nome: 'Gabriel Santos (PR)', pontuacao: 855.5, acertos: '4/5', estado: '🟢 Paraná' },
 ];
@@ -215,7 +215,7 @@ export const AulaODomingoSection: React.FC = () => {
 
           <div className="max-w-xl mx-auto space-y-2">
             <h3 className="text-2xl font-black text-white">
-              Pronto para encarar o Aulão Nacional do MenteUp?
+              Pronto para encarar o Aulão Nacional do Gabaritou?
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed font-medium">
               Todos os domingos, às 13h, milhares de estudantes do Brasil inteiro realizam o mesmo simulado cronometrado. Ao terminar, você visualiza sua posição no <strong>Ranking Nacional em Tempo Real</strong>.

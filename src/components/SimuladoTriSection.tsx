@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as db from '../utils/db';
 import { shuffleQuestionOptions, prepareQuestionsWithFullShuffle } from '../utils/questionShuffle';
+import { generateSimuladoTri, evaluateSimuladoTri } from '../services/geminiService';
 import {
   Award,
   CheckCircle2,
@@ -18,7 +19,12 @@ import {
   Check,
   Zap,
   BookOpen,
-  Shuffle
+  Shuffle,
+  Clock,
+  Play,
+  Pause,
+  Timer,
+  Volume2
 } from 'lucide-react';
 
 interface QuestionTRI {
@@ -157,10 +163,45 @@ export const SimuladoTriSection: React.FC = () => {
   const [resultadoTRI, setResultadoTRI] = useState<EvaluationTRI | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Cronômetro Oficial ENEM (3 minutos por questão = ritmo oficial do exame)
+  const SECONDS_PER_QUESTION = 180;
+  const [totalTimerDuration, setTotalTimerDuration] = useState<number>(PRESET_SIMULADO.length * SECONDS_PER_QUESTION);
+  const [timeLeft, setTimeLeft] = useState<number>(PRESET_SIMULADO.length * SECONDS_PER_QUESTION);
+  const [isTimerActive, setIsTimerActive] = useState<boolean>(true);
+
+  // Efeito do Cronômetro Oficial
+  React.useEffect(() => {
+    let interval: any = null;
+    if (isTimerActive && timeLeft > 0 && !resultadoTRI && !isLoading) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerActive, timeLeft, resultadoTRI, isLoading]);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleReshuffleQuestions = () => {
     setQuestoes((prev) => prepareQuestionsWithShuffle(prev));
     setRespostasAluno({});
     setResultadoTRI(null);
+    const dur = questoes.length * SECONDS_PER_QUESTION;
+    setTotalTimerDuration(dur);
+    setTimeLeft(dur);
+    setIsTimerActive(true);
   };
 
   const handleGenerateSimulado = async (areaName: string) => {
@@ -171,23 +212,30 @@ export const SimuladoTriSection: React.FC = () => {
     setRespostasAluno({});
 
     try {
-      const res = await fetch('/api/generate-simulado-tri', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area: areaName }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Falha ao gerar simulado no servidor.');
-      }
-      if (data.data && Array.isArray(data.data.questoes) && data.data.questoes.length > 0) {
-        setQuestoes(prepareQuestionsWithShuffle(data.data.questoes));
+      const data = await generateSimuladoTri({ area: areaName });
+      const questoesArray = data?.questoes || data?.data?.questoes;
+      if (Array.isArray(questoesArray) && questoesArray.length > 0) {
+        const qList = prepareQuestionsWithShuffle(questoesArray);
+        setQuestoes(qList);
+        const dur = qList.length * SECONDS_PER_QUESTION;
+        setTotalTimerDuration(dur);
+        setTimeLeft(dur);
       } else {
-        setQuestoes(prepareQuestionsWithShuffle(PRESET_SIMULADO));
+        const qList = prepareQuestionsWithShuffle(PRESET_SIMULADO);
+        setQuestoes(qList);
+        const dur = qList.length * SECONDS_PER_QUESTION;
+        setTotalTimerDuration(dur);
+        setTimeLeft(dur);
       }
+      setIsTimerActive(true);
     } catch (err: any) {
       console.error('Erro ao gerar simulado TRI:', err);
-      setQuestoes(prepareQuestionsWithShuffle(PRESET_SIMULADO));
+      const qList = prepareQuestionsWithShuffle(PRESET_SIMULADO);
+      setQuestoes(qList);
+      const dur = qList.length * SECONDS_PER_QUESTION;
+      setTotalTimerDuration(dur);
+      setTimeLeft(dur);
+      setIsTimerActive(true);
     } finally {
       setIsLoading(false);
     }
@@ -210,6 +258,7 @@ export const SimuladoTriSection: React.FC = () => {
     }
 
     setIsEvaluating(true);
+    setIsTimerActive(false); // Pausa cronômetro na entrega
     setError(null);
 
     // Prepare payload for TRI evaluation
@@ -224,30 +273,22 @@ export const SimuladoTriSection: React.FC = () => {
     });
 
     try {
-      const res = await fetch('/api/evaluate-simulado-tri', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          area: selectedArea,
-          respostas: arrayRespostas,
-        }),
+      const data = await evaluateSimuladoTri({
+        area: selectedArea,
+        respostas: arrayRespostas,
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Não foi possível calcular a nota TRI.');
-      }
-
-      setResultadoTRI(data.data);
+      const triResult = data?.data || data;
+      setResultadoTRI(triResult);
 
       // Save to IndexedDB for performance tracking
       db.saveQuizResult({
         id: 'simulado_' + Date.now(),
         materia: selectedArea,
         topico: 'Simulado TRI de ' + selectedArea,
-        acertos: data.data.total_acertos,
-        totalQuestoes: data.data.total_questoes,
-        porcentagem: Math.round((data.data.total_acertos / (data.data.total_questoes || 1)) * 100),
+        acertos: triResult.total_acertos,
+        totalQuestoes: triResult.total_questoes,
+        porcentagem: Math.round((triResult.total_acertos / (triResult.total_questoes || 1)) * 100),
         createdAt: new Date().toISOString()
       }).catch(err => console.error('Erro ao salvar no IndexedDB:', err));
     } catch (err: any) {
@@ -261,7 +302,12 @@ export const SimuladoTriSection: React.FC = () => {
   const handleRestart = () => {
     setResultadoTRI(null);
     setRespostasAluno({});
-    setQuestoes((prev) => prepareQuestionsWithShuffle(prev));
+    const qList = prepareQuestionsWithShuffle(questoes);
+    setQuestoes(qList);
+    const dur = qList.length * SECONDS_PER_QUESTION;
+    setTotalTimerDuration(dur);
+    setTimeLeft(dur);
+    setIsTimerActive(true);
   };
 
   const getDifficultyBadge = (dif: string) => {
@@ -342,6 +388,111 @@ export const SimuladoTriSection: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 8 Columns: Questions List */}
         <div className="lg:col-span-8 space-y-6">
+          {/* Cronômetro Oficial ENEM Bar */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm ${
+                  timeLeft <= 180 ? 'bg-rose-500 animate-pulse' : timeLeft <= 420 ? 'bg-amber-500' : 'bg-indigo-600'
+                }`}>
+                  <Timer className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                      Cronômetro Oficial ENEM
+                    </span>
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                      3 min / questão
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-2xl font-black font-mono tracking-tight ${
+                      timeLeft <= 180 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+                    }`}>
+                      {formatTimer(timeLeft)}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      ({Object.keys(respostasAluno).length} de {questoes.length} preenchidas)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Controles do Cronômetro */}
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsTimerActive(!isTimerActive)}
+                  disabled={!!resultadoTRI}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                    isTimerActive
+                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100'
+                      : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                  }`}
+                  title={isTimerActive ? 'Pausar Cronômetro' : 'Continuar Cronômetro'}
+                >
+                  {isTimerActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span>{isTimerActive ? 'Pausar' : 'Iniciar'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTimeLeft((prev) => prev + 300);
+                    setTotalTimerDuration((prev) => prev + 300);
+                  }}
+                  disabled={!!resultadoTRI}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-200 dark:border-slate-700"
+                  title="Adicionar 5 minutos ao tempo"
+                >
+                  +5m
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const dur = questoes.length * SECONDS_PER_QUESTION;
+                    setTimeLeft(dur);
+                    setTotalTimerDuration(dur);
+                    setIsTimerActive(true);
+                  }}
+                  disabled={!!resultadoTRI}
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer border border-slate-200 dark:border-slate-700"
+                  title="Reiniciar Cronômetro"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Barra de Progresso do Tempo Restante */}
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  timeLeft <= 180 ? 'bg-rose-500' : timeLeft <= 420 ? 'bg-amber-500' : 'bg-indigo-600'
+                }`}
+                style={{ width: `${Math.min(100, (timeLeft / (totalTimerDuration || 1)) * 100)}%` }}
+              />
+            </div>
+
+            {timeLeft === 0 && !resultadoTRI && (
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs font-bold flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-500" />
+                  Tempo oficial expirado! Conclua o preenchimento para receber sua nota.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCalculateTRI}
+                  className="px-3 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-xs font-black transition cursor-pointer"
+                >
+                  Finalizar Agora
+                </button>
+              </div>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
               <Sparkles className="w-8 h-8 animate-spin text-amber-500 mx-auto" />
@@ -553,6 +704,60 @@ export const SimuladoTriSection: React.FC = () => {
                       {resultadoTRI.desempenho_dificuldade?.dificeis?.acertos} /{' '}
                       {resultadoTRI.desempenho_dificuldade?.dificeis?.total}
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Projeção de Cortes SISU */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  <span>Projeção de Cortes SISU (Estimativa TRI)</span>
+                </h4>
+                <div className="space-y-2.5 text-xs">
+                  <div>
+                    <div className="flex justify-between font-bold mb-1">
+                      <span className="text-slate-600 dark:text-slate-300">Ampla Concorrência (600 pts)</span>
+                      <span className={resultadoTRI.nota_oficial_estimada >= 600 ? 'text-emerald-500' : 'text-slate-400'}>
+                        {resultadoTRI.nota_oficial_estimada >= 600 ? '✓ Aprovado' : 'Atingir'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full"
+                        style={{ width: `${Math.min(100, (resultadoTRI.nota_oficial_estimada / 600) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between font-bold mb-1">
+                      <span className="text-slate-600 dark:text-slate-300">Direito / Engenharias (720 pts)</span>
+                      <span className={resultadoTRI.nota_oficial_estimada >= 720 ? 'text-emerald-500' : 'text-amber-500'}>
+                        {resultadoTRI.nota_oficial_estimada >= 720 ? '✓ Competitivo' : 'Faltam ' + Math.max(0, 720 - resultadoTRI.nota_oficial_estimada) + ' pts'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-indigo-500 h-full rounded-full"
+                        style={{ width: `${Math.min(100, (resultadoTRI.nota_oficial_estimada / 720) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between font-bold mb-1">
+                      <span className="text-slate-600 dark:text-slate-300">Medicina / Top Federais (790 pts)</span>
+                      <span className={resultadoTRI.nota_oficial_estimada >= 790 ? 'text-emerald-500' : 'text-rose-500'}>
+                        {resultadoTRI.nota_oficial_estimada >= 790 ? '✓ Excelência Top 1%' : 'Faltam ' + Math.max(0, 790 - resultadoTRI.nota_oficial_estimada) + ' pts'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-amber-500 h-full rounded-full"
+                        style={{ width: `${Math.min(100, (resultadoTRI.nota_oficial_estimada / 790) * 100)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

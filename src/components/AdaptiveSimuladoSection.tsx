@@ -3,6 +3,7 @@ import { Target, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, Brain, Rotat
 import { getCadernoErros, WrongQuestion } from '../utils/cadernoErros';
 import { shuffleQuestionOptions, prepareQuestionsWithFullShuffle } from '../utils/questionShuffle';
 import { getRandomOfflineQuestions } from '../data/offlineQuestionBank';
+import { generateSimuladoTri } from '../services/geminiService';
 
 interface AdaptiveSimuladoSectionProps {
   onAddXp?: (xp: number) => void;
@@ -65,18 +66,15 @@ export const AdaptiveSimuladoSection: React.FC<AdaptiveSimuladoSectionProps> = (
     const topSubjects = weakSubjects.slice(0, 3).map((s) => s.materia);
 
     try {
-      // Call endpoint to generate custom simulation
-      const res = await fetch('/api/generate-simulado-tri', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          materiaFocus: topSubjects.join(', '),
-          quantidade: 5,
-        }),
+      // Call centralized service to generate custom simulation
+      const data = await generateSimuladoTri({
+        materiaFocus: topSubjects.join(', '),
+        quantidade: 5,
       });
 
-      const data = await res.json();
-      if (data.success && data.data?.questoes?.length) {
+      if (data?.questoes?.length) {
+        setQuestions(shuffleQuestionList(data.questoes));
+      } else if (data?.data?.questoes?.length) {
         setQuestions(shuffleQuestionList(data.data.questoes));
       } else {
         // Fallback adaptive set

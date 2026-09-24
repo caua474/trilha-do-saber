@@ -23,6 +23,7 @@ import {
   Layers,
   Award,
 } from 'lucide-react';
+import { generateFlashcards } from '../services/geminiService';
 
 interface Flashcard {
   id: number;
@@ -104,23 +105,14 @@ export const FlashcardGeneratorModal: React.FC<FlashcardGeneratorModalProps> = (
     setActiveMode('all');
 
     try {
-      const response = await fetch('/api/generate-flashcards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          materia: materia.trim(),
-          topico: topico.trim(),
-          quantidade,
-        }),
+      const json = await generateFlashcards({
+        materia: materia.trim(),
+        topico: topico.trim(),
+        quantidade,
       });
 
-      const json = await response.json();
-
-      if (!response.ok || !json.success) {
-        throw new Error(json.error || 'Erro ao gerar flashcards.');
-      }
-
-      const cards: Flashcard[] = (json.data?.flashcards || []).map((c: any, index: number) => ({
+      const rawCards = json?.data?.flashcards || json?.flashcards || [];
+      const cards: Flashcard[] = rawCards.map((c: any, index: number) => ({
         ...c,
         id: c.id || Date.now() + index,
         materia: materia.trim(),
@@ -201,7 +193,7 @@ export const FlashcardGeneratorModal: React.FC<FlashcardGeneratorModalProps> = (
 
   const handleCopyCard = () => {
     if (!currentCard) return;
-    const text = `🎴 Flashcard MenteUp [${currentCard.materia || materia} - ${currentCard.topico || topico}]\n\n❓ FRENTE: ${currentCard.frente}\n💡 RESPOSTA: ${currentCard.verso}\n📌 DICA: ${currentCard.dica || 'Sem dica'}`;
+    const text = `🎴 Flashcard Gabaritou [${currentCard.materia || materia} - ${currentCard.topico || topico}]\n\n❓ FRENTE: ${currentCard.frente}\n💡 RESPOSTA: ${currentCard.verso}\n📌 DICA: ${currentCard.dica || 'Sem dica'}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -219,7 +211,7 @@ export const FlashcardGeneratorModal: React.FC<FlashcardGeneratorModalProps> = (
             <div>
               <div className="flex items-center space-x-2">
                 <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full">
-                  MenteUp AI
+                  Gabaritou AI
                 </span>
                 <span className="text-xs font-bold text-amber-200">Repetição Espaçada</span>
               </div>

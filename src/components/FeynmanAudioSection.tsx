@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { playClickSound, playSuccessSound } from '../utils/audio';
 import { MicrophonePermissionModal } from './MicrophonePermissionModal';
+import { evaluateFeynmanAudio } from '../services/geminiService';
 
 const FEYNMAN_TOPICS = [
   {
@@ -155,21 +156,17 @@ export const FeynmanAudioSection: React.FC = () => {
     setFeedback(null);
 
     try {
-      const response = await fetch('/api/feynman-evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pergunta: currentTopic.pergunta,
-          conceitosChave: currentTopic.conceitosChave,
-          transcriptText: transcriptText.trim()
-        })
+      const resData = await evaluateFeynmanAudio({
+        pergunta: currentTopic.pergunta,
+        conceitosChave: currentTopic.conceitosChave,
+        transcriptText: transcriptText.trim()
       });
 
-      const resData = await response.json();
-      if (resData.success && resData.data) {
-        setFeedback(resData.data);
+      const feedbackData = resData?.data || resData;
+      if (feedbackData && (feedbackData.notaPrecisao !== undefined || feedbackData.diagnosticoFeynman)) {
+        setFeedback(feedbackData);
       } else {
-        throw new Error(resData.error || 'Erro na avaliação');
+        throw new Error(resData?.error || 'Erro na avaliação');
       }
     } catch (e) {
       console.error('Erro na avaliação Feynman:', e);

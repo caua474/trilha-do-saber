@@ -38,9 +38,10 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const availableModels = [
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Padrão e Recomendado - Mais rápido, inteligente e preciso)' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Raciocínio Complexo e Profundo)' },
-    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Ultrarrápido)' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Padrão Oficial - Ultrarrápido e Preciso)' },
+    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Nova Geração Inteligente)' },
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Raciocínio Complexo Avançado e STEM)' },
+    { id: 'gemini-flash-latest', name: 'Gemini Flash Latest (Versão Estável Mais Recente)' },
   ];
 
   // Função de validação leve da API Key

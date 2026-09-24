@@ -17,8 +17,12 @@ import {
   Mic,
   MicOff,
   RotateCcw,
+  Brain,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { GabiAvatar } from './GabiAvatar';
+import { chatWithGabi, solveQuestion } from '../services/geminiService';
 
 export interface GabiResponse {
   resposta_suporte: string;
@@ -38,6 +42,8 @@ interface GabiAssistantModalProps {
   onNavigateShortcut?: (atalho: string) => void;
   initialPrompt?: string | null;
   onTypingChange?: (isTyping: boolean) => void;
+  apiKey?: string;
+  onOpenSettings?: () => void;
 }
 
 const FAQ_SUGGESTIONS = [
@@ -54,12 +60,14 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
   onNavigateShortcut,
   initialPrompt,
   onTypingChange,
+  apiKey,
+  onOpenSettings,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'gabi',
-      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora inteligente no MenteUp! Estou aqui para responder qualquer dúvida de estudos, cálculos, curiosidades, conversas ou te guiar pelo app de forma direta e natural. O que vamos aprender hoje?',
+      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora inteligente no Gabaritou / Gabaritou! Estou aqui para responder qualquer dúvida de estudos, cálculos, curiosidades ou te guiar pelo app de forma direta e natural. O que vamos aprender hoje?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -69,6 +77,14 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+
+  // Estado para visualização do Mapa Mental / Esquema
+  const [mindMapData, setMindMapData] = useState<{
+    titulo: string;
+    ramos: { emoji: string; titulo: string; itens: string[] }[];
+    conclusao: string;
+  } | null>(null);
+  const [copiedMindMap, setCopiedMindMap] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -213,18 +229,15 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
       let atalho = 'nenhum';
 
       if (currentImg) {
-        // Envio com visão multimodal para resolução de questão
-        const response = await fetch('/api/solve-question', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            duvida: query || 'Resolva a questão desta imagem com gabarito e explicação.',
-            imagemBase64: currentImg,
-          }),
+        // Envio com visão multimodal para resolução de questão via serviço centralizado
+        const resData = await solveQuestion({
+          duvida: query || 'Resolva a questão desta imagem com gabarito e explicação.',
+          imagemBase64: currentImg,
+          apiKey: apiKey || undefined,
         });
-        const resData = await response.json();
-        if (resData.success && resData.data) {
-          const d = resData.data;
+
+        if (resData) {
+          const d = resData;
           if (d.foto_ilegivel) {
             gabiText =
               d.mensagem_erro_ilegivel ||
@@ -237,15 +250,12 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
             'Identifiquei a imagem enviada! Posso te explicar qualquer dúvida sobre os conceitos desta questão se você me indicar o assunto.';
         }
       } else {
-        const response = await fetch('/api/gabi-support', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pergunta: query }),
+        const gabiData = await chatWithGabi({
+          pergunta: query,
+          apiKey: apiKey || undefined,
         });
 
-        const resData = await response.json();
-        if (resData && resData.data) {
-          const gabiData: GabiResponse = resData.data;
+        if (gabiData) {
           gabiText = gabiData.resposta_suporte || 'Aqui está a sua resposta!';
           atalho = gabiData.botao_atalho || 'nenhum';
         } else {
@@ -270,12 +280,36 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
       }
     } catch (error: any) {
       console.error('Erro no atendimento da Professora Gabi:', error);
-      // Fallback amigável e garantido
+
+      // Resolução matemática direta caso o erro ocorra
+      const p = query.toLowerCase().trim();
+      const mathQuery = p.replace(/^(quanto\s+[eé]|quanto\s+fica|calcule|resolva|qual\s+(é|e)\s+o\s+resultado\s+de|qual\s+(o\s+)?valor\s+de)\s+/i, '').replace(/[?!=]/g, '').trim();
+      const simpleCalc = mathQuery.match(/^(\d+(?:[.,]\d+)?)\s*([x*+\-\/÷])\s*(\d+(?:[.,]\d+)?)$/i);
+
+      let fallbackText = '';
+      let fallbackAtalho = 'nenhum';
+
+      if (simpleCalc) {
+        const n1 = parseFloat(simpleCalc[1].replace(',', '.'));
+        const op = simpleCalc[2].toLowerCase();
+        const n2 = parseFloat(simpleCalc[3].replace(',', '.'));
+        let resNum: number | string = 0;
+        if (op === 'x' || op === '*') resNum = n1 * n2;
+        else if (op === '+') resNum = n1 + n2;
+        else if (op === '-') resNum = n1 - n2;
+        else if (op === '/' || op === '÷') resNum = n2 !== 0 ? (n1 / n2) : 'indefinido (divisão por zero)';
+        const displayOp = (op === '*' || op === 'x') ? 'x' : op;
+        fallbackText = `${n1} ${displayOp} ${n2} = **${resNum}**.`;
+      } else {
+        fallbackText = `⚠️ Não foi possível obter uma resposta em tempo real da IA no momento. Por favor, verifique ou configure a sua chave de API nas Configurações.`;
+        fallbackAtalho = 'tela_perfil';
+      }
+
       const fallbackMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'gabi',
-        text: `Entendido! Sobre "${query}": posso te responder de forma direta e objetiva, ou te explicar em 3 passos se for uma dúvida de estudo. Como você prefere que eu te ajude?`,
-        botaoAtalho: 'nenhum',
+        text: fallbackText,
+        botaoAtalho: fallbackAtalho,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -283,6 +317,53 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
       setIsLoading(false);
       onTypingChange?.(false);
     }
+  };
+
+  // Gerador de Mapa Mental e Esquema Conceitual baseado na resposta
+  const handleGenerateMindMap = (text: string) => {
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || 'Conceito Central';
+    const cleanTitle = firstLine.replace(/^[#*•\-\d.\s📌💡📝✅]+/, '').slice(0, 50) || 'Mapa Mental do Conceito';
+
+    const ramos: { emoji: string; titulo: string; itens: string[] }[] = [];
+    let currentRamo: { emoji: string; titulo: string; itens: string[] } = {
+      emoji: '💡',
+      titulo: 'Ideia Central & Fundamento',
+      itens: [],
+    };
+
+    const emojis = ['⚡', '📐', '🔬', '🎯', '📝', '✨', '📌'];
+    let emojiIdx = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('#') || line.startsWith('**') || (line.includes(':') && line.length < 50)) {
+        if (currentRamo.itens.length > 0) {
+          ramos.push(currentRamo);
+        }
+        currentRamo = {
+          emoji: emojis[emojiIdx % emojis.length],
+          titulo: line.replace(/[#*:]/g, '').trim(),
+          itens: [],
+        };
+        emojiIdx++;
+      } else {
+        const itemText = line.replace(/^[•\-\*]\s*/, '').trim();
+        if (itemText && !itemText.startsWith('---')) {
+          currentRamo.itens.push(itemText);
+        }
+      }
+    }
+
+    if (currentRamo.itens.length > 0 || ramos.length === 0) {
+      ramos.push(currentRamo);
+    }
+
+    setMindMapData({
+      titulo: cleanTitle,
+      ramos: ramos.slice(0, 5),
+      conclusao: lines[lines.length - 1] || 'Memorize esses pontos-chave para gabaritar na sua prova.',
+    });
   };
 
   // Dispara automaticamente quando a Gabi é aberta com uma pergunta inicial
@@ -475,6 +556,20 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
               >
                 <div className="whitespace-pre-line">{msg.text}</div>
                 {msg.sender === 'gabi' && renderShortcutButton(msg.botaoAtalho)}
+
+                {msg.sender === 'gabi' && msg.id !== 'welcome' && (
+                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateMindMap(msg.text)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/70 text-purple-700 dark:text-purple-300 text-[11px] font-bold transition border border-purple-200/70 dark:border-purple-800/60 cursor-pointer shadow-xs active:scale-95"
+                      title="Gerar Mapa Mental / Esquema deste conteúdo"
+                    >
+                      <Brain className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                      <span>🧠 Gerar Mapa Mental / Esquema</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -582,6 +677,96 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
             <Send className="w-4 h-4" />
           </button>
         </form>
+
+        {/* Mind Map / Schema Modal Overlay */}
+        {mindMapData && (
+          <div className="absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-sm p-4 sm:p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-slate-900 border border-purple-500/40 rounded-2xl p-5 shadow-2xl flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-500 flex items-center justify-center">
+                    <Brain className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
+                      Esquema Visual de Síntese
+                    </span>
+                    <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white line-clamp-1">
+                      {mindMapData.titulo}
+                    </h4>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const textToCopy = `🧠 ESQUEMA: ${mindMapData.titulo}\n\n` +
+                        mindMapData.ramos.map((r) => `${r.emoji} ${r.titulo}:\n` + r.itens.map((it) => `  • ${it}`).join('\n')).join('\n\n') +
+                        `\n\n📌 Conclusão: ${mindMapData.conclusao}`;
+                      navigator.clipboard.writeText(textToCopy);
+                      setCopiedMindMap(true);
+                      setTimeout(() => setCopiedMindMap(false), 2000);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedMindMap ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedMindMap ? 'Copiado!' : 'Copiar'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMindMapData(null)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-4 space-y-3.5 scrollbar-thin">
+                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50 text-center">
+                  <span className="text-[10px] uppercase font-bold text-purple-600 dark:text-purple-300 tracking-wider">🎯 Núcleo Central</span>
+                  <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">{mindMapData.titulo}</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {mindMapData.ramos.map((ramo, rIdx) => (
+                    <div key={rIdx} className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-3 shadow-xs">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-base">{ramo.emoji}</span>
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{ramo.titulo}</h5>
+                      </div>
+                      <ul className="space-y-1 pl-1">
+                        {ramo.itens.map((it, itIdx) => (
+                          <li key={itIdx} className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5 leading-snug">
+                            <span className="text-purple-500 font-bold mt-0.5">•</span>
+                            <span>{it}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                {mindMapData.conclusao && (
+                  <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40">
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 tracking-wider block">✅ Aplicação & Dica de Ouro</span>
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-1 font-medium">{mindMapData.conclusao}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMindMapData(null)}
+                  className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition cursor-pointer"
+                >
+                  Fechar Esquema
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

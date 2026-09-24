@@ -157,7 +157,7 @@ export function exportMaterialToPdf(material: StudyMaterial, theme: PdfVisualThe
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Resumo Sintetizado (${pal.name})`, margin + 5, y + 8.5);
+  doc.text(`Gabaritou • Resumo Sintetizado (${pal.name})`, margin + 5, y + 8.5);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
@@ -296,14 +296,14 @@ export function exportMaterialToPdf(material: StudyMaterial, theme: PdfVisualThe
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`MenteUp_Resumo_${material.title.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
+  doc.save(`Gabaritou_Resumo_${material.title.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
 }
 
 // 2. EXPORTAÇÃO DE PLANO DO TUTOR
@@ -344,7 +344,7 @@ export function exportTutorPlanToPdf(plan: TutorPlan, theme: PdfVisualTheme = 'c
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Plano do Tutor (${pal.name})`, margin + 5, y + 9);
+  doc.text(`Gabaritou • Plano do Tutor (${pal.name})`, margin + 5, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -399,14 +399,14 @@ export function exportTutorPlanToPdf(plan: TutorPlan, theme: PdfVisualTheme = 'c
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Página ${i} de ${totalPages}`,
+      `Gabaritou • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`MenteUp_Plano_${plan.materia.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
+  doc.save(`Gabaritou_Plano_${plan.materia.replace(/[^a-zA-Z0-9]/g, '_')}_${theme}.pdf`);
 }
 
 // 3. EXPORTAÇÃO DE RESOLUÇÃO DO SCANNER (TIRA-DÚVIDAS 3 PASSOS)
@@ -459,7 +459,7 @@ export function exportQuestionSolutionToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Scanner Tira-Dúvidas (${pal.name})`, margin + 5, y + 9);
+  doc.text(`Gabaritou • Scanner Tira-Dúvidas (${pal.name})`, margin + 5, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -616,7 +616,7 @@ export function exportQuestionSolutionToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Resolução Tira-Dúvidas • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Resolução Tira-Dúvidas • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -624,7 +624,7 @@ export function exportQuestionSolutionToPdf(
   }
 
   const cleanMateria = (solution.materia || 'Questao').replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`MenteUp_Scanner_${cleanMateria}_${theme}.pdf`);
+  doc.save(`Gabaritou_Scanner_${cleanMateria}_${theme}.pdf`);
 }
 
 // 4. EXPORTAÇÃO DE MAPA MENTAL
@@ -673,7 +673,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Mapa Mental do Edital (${pal.name})`, margin + 6, y + 10);
+  doc.text(`Gabaritou • Mapa Mental do Edital (${pal.name})`, margin + 6, y + 10);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -777,7 +777,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Mapa Mental • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Mapa Mental • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -785,7 +785,7 @@ export function exportMindmapToPdf(mindmap: MindmapData, theme: PdfVisualTheme =
   }
 
   const cleanTopico = (mindmap.topicoNome || 'Topico').replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`MenteUp_MapaMental_${cleanTopico}_${theme}.pdf`);
+  doc.save(`Gabaritou_MapaMental_${cleanTopico}_${theme}.pdf`);
 }
 
 // 5. EXPORTAÇÃO DE CORREÇÃO DE REDAÇÃO ENEM (0 A 1000 PONTOS + C1-C5)
@@ -850,7 +850,7 @@ export function exportEssayCorrectionToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Relatório Oficial de Redação ENEM (${pal.name})`, margin + 6, y + 9);
+  doc.text(`Gabaritou • Relatório Oficial de Redação ENEM (${pal.name})`, margin + 6, y + 9);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -1038,14 +1038,14 @@ export function exportEssayCorrectionToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Correção Oficial de Redação ENEM • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Correção Oficial de Redação ENEM • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
     );
   }
 
-  doc.save(`MenteUp_Redacao_ENEM_${notaTotal}pts_${theme}.pdf`);
+  doc.save(`Gabaritou_Redacao_ENEM_${notaTotal}pts_${theme}.pdf`);
 }
 
 // ============================================================================
@@ -1088,7 +1088,7 @@ export function exportBibliotecaTopicToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Resumo & Pontos Principais (${pal.name})`, margin + 6, y + 8);
+  doc.text(`Gabaritou • Resumo & Pontos Principais (${pal.name})`, margin + 6, y + 8);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
@@ -1311,7 +1311,7 @@ export function exportBibliotecaTopicToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Resumos da Biblioteca com jsPDF & autoTable • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Resumos da Biblioteca com jsPDF & autoTable • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 7,
       { align: 'center' }
@@ -1319,7 +1319,7 @@ export function exportBibliotecaTopicToPdf(
   }
 
   const cleanTitle = topic.titulo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-  doc.save(`MenteUp_Resumo_${cleanTitle}_${theme}.pdf`);
+  doc.save(`Gabaritou_Resumo_${cleanTitle}_${theme}.pdf`);
 }
 
 // ============================================================================
@@ -1376,7 +1376,7 @@ export function exportBibliotecaCollectionToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Caderno de Resumos & Pontos Principais`, margin + 6, y + 10);
+  doc.text(`Gabaritou • Caderno de Resumos & Pontos Principais`, margin + 6, y + 10);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -1494,7 +1494,7 @@ export function exportBibliotecaCollectionToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Caderno de Resumos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Caderno de Resumos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -1502,7 +1502,7 @@ export function exportBibliotecaCollectionToPdf(
   }
 
   const cleanFiltro = disciplinaFiltro.replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`MenteUp_Caderno_Resumos_${cleanFiltro}_${theme}.pdf`);
+  doc.save(`Gabaritou_Caderno_Resumos_${cleanFiltro}_${theme}.pdf`);
 }
 
 // ============================================================================
@@ -1564,7 +1564,7 @@ export function exportBibliotecaPlanToPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(pal.headerTitle[0], pal.headerTitle[1], pal.headerTitle[2]);
-  doc.text(`MenteUp • Plano de Estudos Estruturado (${pal.name})`, margin + 6, y + 8);
+  doc.text(`Gabaritou • Plano de Estudos Estruturado (${pal.name})`, margin + 6, y + 8);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
@@ -1705,7 +1705,7 @@ export function exportBibliotecaPlanToPdf(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `MenteUp • Plano de Estudos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
+      `Gabaritou • Plano de Estudos • Tema: ${pal.name} • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 8,
       { align: 'center' }
@@ -1713,5 +1713,5 @@ export function exportBibliotecaPlanToPdf(
   }
 
   const cleanTitle = plan.titulo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-  doc.save(`MenteUp_Plano_${cleanTitle}_${theme}.pdf`);
+  doc.save(`Gabaritou_Plano_${cleanTitle}_${theme}.pdf`);
 }

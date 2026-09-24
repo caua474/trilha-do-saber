@@ -25,6 +25,7 @@ import {
   Bookmark,
   Target
 } from 'lucide-react';
+import { getPersonalizedKnowledgePill } from '../services/geminiService';
 
 export interface PersonalizedPill {
   categoria: string;
@@ -247,22 +248,16 @@ export const DailyPersonalizedKnowledgePillSection: React.FC = () => {
     try {
       const materiaTarget = customMateria || lowestTopic?.materia || 'Física';
 
-      const response = await fetch('/api/personalized-knowledge-pill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lowestSubjects: topicStats.slice(0, 3),
-          customTopic: materiaTarget
-        })
+      const json = await getPersonalizedKnowledgePill({
+        lowestSubjects: topicStats.slice(0, 3),
+        customTopic: materiaTarget,
       });
 
-      if (response.ok) {
-        const json = await response.json();
-        if (json.data && json.data.titulo) {
-          setPill(json.data);
-          setIsGeneratingAi(false);
-          return;
-        }
+      const pillData = json?.data || json;
+      if (pillData && pillData.titulo) {
+        setPill(pillData);
+        setIsGeneratingAi(false);
+        return;
       }
 
       // Fallback

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { GabiAvatar } from './GabiAvatar';
 import { useGeminiError } from '../context/GeminiErrorContext';
+import { sendPlaygroundChat, FORCED_GEMINI_MODEL } from '../services/geminiService';
 import { classifyGeminiError } from '../utils/geminiErrorHandler';
 
 export interface AttachedFile {
@@ -54,19 +55,19 @@ export interface AiStudioPlaygroundProps {
 
 export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
   apiKey = '',
-  model = 'gemini-3.8-flash',
+  model = 'gemini-2.5-flash',
   temperature = 0.7,
   systemInstruction = '',
   onOpenSettings,
   onOpenApiKeyModal
 }) => {
   const { showError } = useGeminiError();
-  const effectiveModel = (!model || model === 'gemini-2.5-flash' || model === 'gemini-3.6-flash') ? 'gemini-3.8-flash' : model;
+  const effectiveModel = (!model || model === 'gemini-3.8-flash' || model === 'gemini-3.6-flash') ? 'gemini-2.5-flash' : model;
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-msg',
       role: 'assistant',
-      content: 'Olá! Sou a Professora Gabi, sua assistente de estudos do MenteUp! Como posso te ajudar hoje? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
+      content: 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -240,7 +241,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
         id: `welcome-${Date.now()}`,
         role: 'assistant',
         content:
-          'Histórico limpo! Sou a Professora Gabi, sua assistente de estudos do MenteUp! Como posso te ajudar agora? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
+          'Histórico limpo! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar agora? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -272,7 +273,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
     try {
       let aiReply = '';
 
-      // Tenta prioritariamente o endpoint do servidor com Gemini 3.8 Flash
+      // Envio via serviço centralizado com gemini-1.5-flash forçado
       const fileParts = currentAttachments.map((att) => ({
         inlineData: {
           mimeType: att.type,
@@ -281,30 +282,17 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
       }));
 
       try {
-        const response = await fetch('/api/gemini/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: userMessage.content,
-            fileParts: fileParts,
-            apiKey: apiKey,
-            model: effectiveModel,
-            temperature: temperature,
-            systemInstruction: systemInstruction,
-            history: messages.slice(-8).map((m) => ({
-              role: m.role === 'user' ? 'user' : 'model',
-              parts: [{ text: m.content }],
-            })),
-          }),
+        aiReply = await sendPlaygroundChat({
+          prompt: userMessage.content,
+          fileParts: fileParts,
+          apiKey: apiKey,
+          temperature: temperature,
+          systemInstruction: systemInstruction,
+          history: messages.slice(-8).map((m) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }],
+          })),
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          aiReply = data.reply || 'Sem resposta gerada pelo assistente.';
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `Erro do servidor (${response.status})`);
-        }
       } catch (backendErr: any) {
         // Fallback direto se houver chave configurada e o backend falhar
         const cleanApiKey = apiKey.trim();
@@ -381,7 +369,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
       console.error('Erro no processamento da IA:', err);
       const classified = classifyGeminiError(err);
       showError(err, {
-        componentName: 'Tira-Dúvidas MenteUp AI',
+        componentName: 'Tira-Dúvidas Gabaritou AI',
         retryAction: () => {
           setInputPrompt(currentPrompt);
           setAttachments(currentAttachments);
@@ -453,11 +441,11 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
             size={40}
             showOnlineStatus={true}
             statusBadgeSize={10}
-            alt="Professora Gabi - MenteUp AI"
+            alt="Professora Gabi - Gabaritou AI"
           />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white">Tira-Dúvidas MenteUp AI</h2>
+              <h2 className="text-sm font-bold text-white">Tira-Dúvidas Gabaritou AI</h2>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">
                 <Sparkles className="w-3 h-3 text-purple-400" /> {effectiveModel}
               </span>
@@ -465,7 +453,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
                 Temp: {temperature}
               </span>
             </div>
-            <p className="text-xs text-slate-400">Tutora inteligente do MenteUp com texto, imagens, redação e voz</p>
+            <p className="text-xs text-slate-400">Tutora inteligente do Gabaritou com texto, imagens, redação e voz</p>
           </div>
         </div>
 
@@ -514,7 +502,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
               {apiKey ? (
                 <span className="text-emerald-400 font-mono font-medium">Chave ativa configurada</span>
               ) : (
-                <span className="text-slate-400 font-mono">Padrão do MenteUp (ou insira sua chave nas preferências)</span>
+                <span className="text-slate-400 font-mono">Padrão do Gabaritou (ou insira sua chave nas preferências)</span>
               )}
             </span>
           </div>
@@ -556,7 +544,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
                 <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-white/10 text-xs font-semibold text-purple-300">
                   <span>Professora Gabi</span>
                   <span className="text-[10px] font-normal text-purple-200/90 bg-purple-900/60 border border-purple-500/30 px-2 py-0.5 rounded-full">
-                    MenteUp AI
+                    Gabaritou AI
                   </span>
                 </div>
               )}

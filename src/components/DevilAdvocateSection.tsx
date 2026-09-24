@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldAlert, MessageSquare, Send, Sparkles, CheckCircle2, AlertCircle, ArrowRight, BookOpen, Flame, User } from 'lucide-react';
+import { devilAdvocateDebate } from '../services/geminiService';
 
 interface ChatTurn {
   autor: 'aluno' | 'advogado';
@@ -22,15 +23,9 @@ export const DevilAdvocateSection: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/devil-advocate-debate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tema, tese }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.data) {
-        const d = data.data;
+      const data = await devilAdvocateDebate({ tema, tese });
+      const d = data?.data || data;
+      if (d) {
         setChat([
           { autor: 'aluno', texto: `Entendi o tema "${tema}". Minha tese é: ${tese}` },
           {
@@ -60,19 +55,14 @@ export const DevilAdvocateSection: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/devil-advocate-debate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tema,
-          tese,
-          historico: newChat,
-        }),
+      const data = await devilAdvocateDebate({
+        tema,
+        tese,
+        historico: newChat,
       });
 
-      const data = await res.json();
-      if (data.success && data.data) {
-        const d = data.data;
+      const d = data?.data || data;
+      if (d && d.contestacao_principal) {
         setChat((prev) => [
           ...prev,
           {

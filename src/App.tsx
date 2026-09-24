@@ -204,7 +204,7 @@ async function clearEntireIndexedDB(): Promise<void> {
   ]);
 }
 
-function MenteUpApp() {
+function GabaritouApp() {
   // Authentication State
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
@@ -291,12 +291,12 @@ function MenteUpApp() {
   const [geminiModel, setGeminiModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('gabaritai_gemini_model');
-      if (saved && saved !== 'gemini-2.5-flash' && saved !== 'gemini-3.6-flash' && saved !== 'gemini-1.5-flash') {
+      if (saved && saved !== 'gemini-3.8-flash' && saved !== 'gemini-3.6-flash') {
         return saved;
       }
-      return 'gemini-3.8-flash';
+      return 'gemini-2.5-flash';
     } catch (e) {
-      return 'gemini-3.8-flash';
+      return 'gemini-2.5-flash';
     }
   });
   const [geminiTemperature, setGeminiTemperature] = useState<number>(() => {
@@ -833,6 +833,8 @@ function MenteUpApp() {
         {activeModal === 'gabi' && (
           <GabiAssistantModal
             initialPrompt={gabiInitialPrompt}
+            apiKey={geminiApiKey}
+            onOpenSettings={() => setActiveModal('playground_settings')}
             onNavigateShortcut={(atalho) => {
               if (atalho === 'arena') {
                 setPrimaryTab('arena');
@@ -840,9 +842,15 @@ function MenteUpApp() {
                 setPrimaryTab('redacao_ia');
               } else if (atalho === 'simulados') {
                 setPrimaryTab('simulados_treino');
-              } else if (atalho === 'pro') {
+              } else if (atalho === 'pro' || atalho === 'tela_assinatura') {
                 setActiveModal('pro');
                 return;
+              } else if (atalho === 'tela_perfil') {
+                setActiveModal('playground_settings');
+                return;
+              } else if (atalho === 'tela_caderno_erros') {
+                setPrimaryTab('conteudos');
+                setAbaAtiva('caderno_erros');
               }
               setActiveModal(null);
             }}
@@ -1073,7 +1081,7 @@ function MenteUpApp() {
 export default function App() {
   return (
     <GeminiErrorProvider>
-      <MenteUpApp />
+      <GabaritouApp />
     </GeminiErrorProvider>
   );
 }

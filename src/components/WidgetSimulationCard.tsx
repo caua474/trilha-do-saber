@@ -194,7 +194,7 @@ export const WidgetSimulationCard: React.FC<WidgetProps> = ({
       {/* Action Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <p className="text-xs text-slate-400">
-          💡 <strong>Como instalar:</strong> Mantenha o dedo pressionado na tela inicial do seu celular, toque em <strong>+ (Widgets)</strong> e pesquise por <strong>MenteUp</strong>.
+          💡 <strong>Como instalar:</strong> Mantenha o dedo pressionado na tela inicial do seu celular, toque em <strong>+ (Widgets)</strong> e pesquise por <strong>Gabaritou</strong>.
         </p>
 
         <button

@@ -28,6 +28,7 @@ import { exportEssayCorrectionToPdf, PdfVisualTheme } from '../utils/pdfExport';
 import { EnemEssayFullAnalysis, EssayCompetencyDetail, SingleCompetencyAnalysis } from '../types';
 import { useGeminiError } from '../context/GeminiErrorContext';
 import { classifyGeminiError, ClassifiedGeminiError } from '../utils/geminiErrorHandler';
+import { analyzeEssay, analyzeSingleCompetency } from '../services/geminiService';
 import { validateEssayInput, validateSingleCompetencyInput, sanitizeInputText } from '../utils/textValidation';
 
 interface RedacaoCorretorProps {
@@ -162,41 +163,21 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
     setErro(null);
 
     try {
-      const res = await fetch('/api/analyze-essay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tema: cleanTema || undefined,
-          texto: cleanTexto,
-        }),
+      const data = await analyzeEssay({
+        tema: cleanTema || undefined,
+        texto: cleanTexto,
       });
 
-      let json: any = null;
-      try {
-        const rawText = await res.text();
-        // Tenta parse direto ou reparo básico de corte
-        try {
-          json = JSON.parse(rawText);
-        } catch (_) {
-          const firstBrace = rawText.indexOf('{');
-          const lastBrace = rawText.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            json = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
-          }
-        }
-      } catch (parseErr) {
-        console.warn('Resposta não pôde ser parseada. Acionando fallback silencioso:', parseErr);
-      }
-
-      if (res.ok && json?.success && json?.data) {
-        setAnaliseCompleta(json.data);
+      const essayResult = data?.data || data;
+      if (essayResult?.nota_total !== undefined) {
+        setAnaliseCompleta(essayResult);
         setFallbackActive(false);
         setFallbackReason(null);
         setErro(null);
         clearError(); // Oculta qualquer banner de erro no topo da página
       } else {
         // Fallback silencioso: calcula a nota e relatório pelas diretrizes oficiais do ENEM
-        const fallbackData = json?.data || gerarAnaliseLocal(cleanTexto, cleanTema);
+        const fallbackData = gerarAnaliseLocal(cleanTexto, cleanTema);
         setAnaliseCompleta(fallbackData);
         setFallbackActive(false);
         setFallbackReason(null);
@@ -235,41 +216,22 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
     setErro(null);
 
     try {
-      const res = await fetch('/api/analyze-single-competency', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          competencia: competenciaSelecionada,
-          tema: cleanTema || undefined,
-          texto: cleanTexto,
-        }),
+      const data = await analyzeSingleCompetency({
+        competencia: competenciaSelecionada,
+        tema: cleanTema || undefined,
+        texto: cleanTexto,
       });
 
-      let json: any = null;
-      try {
-        const rawText = await res.text();
-        try {
-          json = JSON.parse(rawText);
-        } catch (_) {
-          const firstBrace = rawText.indexOf('{');
-          const lastBrace = rawText.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            json = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
-          }
-        }
-      } catch (parseErr) {
-        console.warn('Resposta individual não pôde ser parseada. Acionando fallback silencioso:', parseErr);
-      }
-
-      if (res.ok && json?.success && json?.data) {
-        setAnaliseIndividual(json.data);
+      const singleResult = data?.data || data;
+      if (singleResult?.nota !== undefined) {
+        setAnaliseIndividual(singleResult);
         setFallbackActive(false);
         setFallbackReason(null);
         setErro(null);
         clearError(); // Oculta qualquer banner de erro no topo da página
       } else {
         // Fallback silencioso
-        const fallbackData = json?.data || gerarAnaliseIndividualLocal(competenciaSelecionada, texto, tema);
+        const fallbackData = gerarAnaliseIndividualLocal(competenciaSelecionada, texto, tema);
         setAnaliseIndividual(fallbackData);
         setFallbackActive(false);
         setFallbackReason(null);
@@ -298,7 +260,7 @@ export default function RedacaoCorretor({ onOpenSettings }: RedacaoCorretorProps
   const handleCopiarResultadoCompleto = () => {
     if (!analiseCompleta) return;
     const comps = analiseCompleta.competencias || [];
-    const textoCopiado = `📊 MenteUp • CORREÇÃO OFICIAL DE REDAÇÃO ENEM
+    const textoCopiado = `📊 Gabaritou • CORREÇÃO OFICIAL DE REDAÇÃO ENEM
 Tema: ${analiseCompleta.tema_detectado || tema || 'Geral'}
 🏆 NOTA FINAL (0 a 1000): ${analiseCompleta.nota_final} PONTOS
 
@@ -325,7 +287,7 @@ ${analiseCompleta.sugestao_reescrita || analiseCompleta.dica_de_ouro || ''}`;
 
   const handleCopiarResultadoIndividual = () => {
     if (!analiseIndividual) return;
-    const textoCopiado = `🎯 MenteUp • TREINO DE COMPETÊNCIA ENEM
+    const textoCopiado = `🎯 Gabaritou • TREINO DE COMPETÊNCIA ENEM
 Competência: C${analiseIndividual.competencia_numero} - ${analiseIndividual.competencia_nome}
 Tema: ${tema || 'Geral'}
 🏆 NOTA OBTIDA (0 a 200): ${analiseIndividual.nota} PONTOS (${analiseIndividual.nivel || ''})

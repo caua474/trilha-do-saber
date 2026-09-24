@@ -29,6 +29,7 @@ import {
   Play,
   ArrowRight
 } from 'lucide-react';
+import { askGemini } from '../services/geminiService';
 
 export interface EnemTerm {
   id: string;
@@ -407,24 +408,12 @@ Responda ESTRITAMENTE em formato JSON válido contendo exatamente as seguintes c
 }`;
 
     try {
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: promptText,
-          systemInstruction: 'Você é um professor doutor especialista em redação nota 1000 do ENEM. Retorne apenas JSON sem marcações adicionais.',
-        }),
+      const data = await askGemini({
+        contents: promptText,
+        systemInstruction: 'Você é um professor doutor especialista em redação nota 1000 do ENEM. Retorne apenas JSON sem marcações adicionais.',
       });
 
-      if (!response.ok) {
-        throw new Error('Erro ao se comunicar com a IA');
-      }
-
-      const data = await response.json();
       let rawText = data.text || '';
-      
       // Clean JSON formatting if markdown wraps it
       rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
 

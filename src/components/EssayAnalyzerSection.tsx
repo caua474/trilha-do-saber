@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { EnemEssayAnalysis } from '../types';
 import { ConnectiveTipsCarousel } from './ConnectiveTipsCarousel';
+import { analyzeEssay } from '../services/geminiService';
 import PdfThemeSelectorModal from './PdfThemeSelectorModal';
 import { exportEssayCorrectionToPdf, PdfVisualTheme } from '../utils/pdfExport';
 
@@ -150,32 +151,11 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/analyze-essay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tema, texto }),
-      });
+      const resData = await analyzeEssay({ tema, texto });
+      const finalAnalysis = resData?.data || resData;
 
-      let resData: any = null;
-      try {
-        const raw = await response.text();
-        try {
-          resData = JSON.parse(raw);
-        } catch (_) {
-          const firstBrace = raw.indexOf('{');
-          const lastBrace = raw.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            resData = JSON.parse(raw.slice(firstBrace, lastBrace + 1));
-          }
-        }
-      } catch (parseErr) {
-        console.warn('Fallback silencioso de JSON em EssayAnalyzerSection:', parseErr);
-      }
-
-      if (response.ok && resData?.success && resData?.data) {
-        setAnalysis(resData.data);
-      } else if (resData?.data) {
-        setAnalysis(resData.data);
+      if (finalAnalysis?.nota_estimada_total || finalAnalysis?.nota_total || finalAnalysis?.competencias) {
+        setAnalysis(finalAnalysis);
       } else {
         // Fallback estruturado compatível
         setAnalysis({
@@ -243,7 +223,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
-                Corretor Especialista • MenteUp
+                Corretor Especialista • Gabaritou
               </span>
               <span className="bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
                 Modelo Oficial ENEM 2026
@@ -272,7 +252,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                MenteUp Redação
+                Gabaritou Redação
               </span>
               <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                 <span>📌 Card de Dica do Dia: Regras & Conectivos Fundamentais</span>
@@ -458,7 +438,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                        Diagnóstico • MenteUp
+                        Diagnóstico • Gabaritou
                       </span>
                       <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                         {analysis.tema_detectado || 'Tema Identificado'}

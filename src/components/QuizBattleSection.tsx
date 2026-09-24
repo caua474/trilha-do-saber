@@ -32,6 +32,7 @@ import { shuffleQuestionOptions, prepareQuestionsWithFullShuffle } from '../util
 import { saveDuelResult } from '../utils/db';
 import { DuelResultLog } from '../types';
 import { TopDuelosSection } from './TopDuelosSection';
+import { generateQuizBattle } from '../services/geminiService';
 import {
   playQuizSuccessPling,
   playSuccessSound,
@@ -227,25 +228,13 @@ export const QuizBattleSection: React.FC<QuizBattleSectionProps> = ({ onAddXP })
     setIsBattleFinished(false);
 
     try {
-      const response = await fetch('/api/generate-quiz-battle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          materia: selectedSubject,
-          topico: customTopic.trim() || 'Desafio 1v1 ENEM e Vestibulares',
-          criador: player1Name.trim() || 'Você',
-        }),
+      const json = await generateQuizBattle({
+        materia: selectedSubject,
+        topico: customTopic.trim() || 'Desafio 1v1 ENEM e Vestibulares',
+        criador: player1Name.trim() || 'Você',
       });
 
-      const json = await response.json();
-
-      if (!response.ok || !json.success) {
-        throw new Error(json.error || 'Erro ao gerar batalha.');
-      }
-
-      const rawBattleData: QuizBattleData = json.data;
+      const rawBattleData: QuizBattleData = json.data || json;
       const battleData: QuizBattleData = {
         ...rawBattleData,
         questoes: shuffleQuizBattleQuestions(rawBattleData.questoes || []),

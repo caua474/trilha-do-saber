@@ -32,7 +32,7 @@ export const GeminiErrorBanner: React.FC<GeminiErrorBannerProps> = ({ onOpenSett
         border: 'border-amber-500/50',
         iconBg: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
         badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-        badgeText: 'Autenticação • VITE_GEMINI_API_KEY',
+        badgeText: 'Serviço de IA Indisponível',
         Icon: KeyRound,
       };
     }
@@ -127,21 +127,6 @@ export const GeminiErrorBanner: React.FC<GeminiErrorBannerProps> = ({ onOpenSett
 
             {/* Lado Direito: Ações */}
             <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-white/10 shrink-0">
-              {/* Botão de Configurar Chave (quando for erro de autenticação) */}
-              {isAuth && onOpenSettings && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearError();
-                    onOpenSettings();
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>Configurar Chave</span>
-                </button>
-              )}
-
               {/* Botão Tentar Novamente */}
               {(retryAction || error.actionType === 'retry') && (
                 <button

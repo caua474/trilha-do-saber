@@ -81,7 +81,7 @@ export const sendStreakReminderNotification = (streakDays: number, isStreakAtRis
 
   const body = isStreakAtRisk
     ? `Você ainda não concluiu suas metas de estudo do cronograma hoje. Estude agora para não zerar sua sequência e ganhe +50 XP!`
-    : `Seu horário de estudos agendado no cronograma chegou. Abra o Gabaritou e revise sua matéria!`;
+    : `Seu horário de estudos agendado no cronograma chegou. Abra o MenteUp e revise sua matéria!`;
 
   return sendLocalNotification(title, body);
 };

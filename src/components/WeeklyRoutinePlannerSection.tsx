@@ -6,28 +6,28 @@ interface RoutineBlock {
   dia: 'Seg' | 'Ter' | 'Qua' | 'Qui' | 'Sex' | 'Sáb' | 'Dom';
   horario: string; // e.g., "08:00 - 12:00"
   materiaOuAtividade: string;
-  categoria: 'Escola / Cursinho' | 'Estudo Gabaritou' | 'Exercícios & Simulados' | 'Lazer & Descanso';
+  categoria: 'Escola / Cursinho' | 'Estudo MenteUp' | 'Exercícios & Simulados' | 'Lazer & Descanso';
   concluido?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   'Escola / Cursinho': { bg: 'bg-blue-100 dark:bg-blue-950/80', text: 'text-blue-800 dark:text-blue-300', border: 'border-blue-300' },
-  'Estudo Gabaritou': { bg: 'bg-indigo-100 dark:bg-indigo-950/80', text: 'text-indigo-800 dark:text-indigo-300', border: 'border-indigo-300' },
+  'Estudo MenteUp': { bg: 'bg-indigo-100 dark:bg-indigo-950/80', text: 'text-indigo-800 dark:text-indigo-300', border: 'border-indigo-300' },
   'Exercícios & Simulados': { bg: 'bg-emerald-100 dark:bg-emerald-950/80', text: 'text-emerald-800 dark:text-emerald-300', border: 'border-emerald-300' },
   'Lazer & Descanso': { bg: 'bg-amber-100 dark:bg-amber-950/80', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-300' },
 };
 
 const INITIAL_BLOCKS: RoutineBlock[] = [
   { id: '1', dia: 'Seg', horario: '07:30 - 12:30', materiaOuAtividade: 'Escola / Cursinho', categoria: 'Escola / Cursinho' },
-  { id: '2', dia: 'Seg', horario: '14:00 - 16:00', materiaOuAtividade: 'Matemática & Exercícios TRI', categoria: 'Estudo Gabaritou', concluido: true },
+  { id: '2', dia: 'Seg', horario: '14:00 - 16:00', materiaOuAtividade: 'Matemática & Exercícios TRI', categoria: 'Estudo MenteUp', concluido: true },
   { id: '3', dia: 'Seg', horario: '16:30 - 18:00', materiaOuAtividade: 'Redação & Caderno de Erros', categoria: 'Exercícios & Simulados', concluido: true },
   { id: '4', dia: 'Seg', horario: '19:00 - 21:00', materiaOuAtividade: 'Academia & Lazer', categoria: 'Lazer & Descanso' },
   { id: '5', dia: 'Ter', horario: '07:30 - 12:30', materiaOuAtividade: 'Escola / Cursinho', categoria: 'Escola / Cursinho' },
-  { id: '6', dia: 'Ter', horario: '14:00 - 16:30', materiaOuAtividade: 'Física & Flashcards', categoria: 'Estudo Gabaritou' },
+  { id: '6', dia: 'Ter', horario: '14:00 - 16:30', materiaOuAtividade: 'Física & Flashcards', categoria: 'Estudo MenteUp' },
   { id: '7', dia: 'Qua', horario: '14:00 - 17:00', materiaOuAtividade: 'Simulado Parcial ENEM', categoria: 'Exercícios & Simulados' },
-  { id: '8', dia: 'Qui', horario: '14:00 - 16:00', materiaOuAtividade: 'Biologia & Química', categoria: 'Estudo Gabaritou' },
-  { id: '9', dia: 'Sex', horario: '14:00 - 16:00', materiaOuAtividade: 'História e Geografia', categoria: 'Estudo Gabaritou' },
-  { id: '10', dia: 'Sáb', horario: '09:00 - 12:00', materiaOuAtividade: 'Revisão Espaçada Leitner', categoria: 'Estudo Gabaritou' },
+  { id: '8', dia: 'Qui', horario: '14:00 - 16:00', materiaOuAtividade: 'Biologia & Química', categoria: 'Estudo MenteUp' },
+  { id: '9', dia: 'Sex', horario: '14:00 - 16:00', materiaOuAtividade: 'História e Geografia', categoria: 'Estudo MenteUp' },
+  { id: '10', dia: 'Sáb', horario: '09:00 - 12:00', materiaOuAtividade: 'Revisão Espaçada Leitner', categoria: 'Estudo MenteUp' },
   { id: '11', dia: 'Dom', horario: '10:00 - 18:00', materiaOuAtividade: 'Descanso Total e Família', categoria: 'Lazer & Descanso' },
 ];
 
@@ -38,7 +38,7 @@ export const WeeklyRoutinePlannerSection: React.FC = () => {
   const [diaAdd, setDiaAdd] = useState<'Seg' | 'Ter' | 'Qua' | 'Qui' | 'Sex' | 'Sáb' | 'Dom'>('Seg');
   const [horarioAdd, setHorarioAdd] = useState<string>('14:00 - 16:00');
   const [materiaAdd, setMateriaAdd] = useState<string>('');
-  const [categoriaAdd, setCategoriaAdd] = useState<'Escola / Cursinho' | 'Estudo Gabaritou' | 'Exercícios & Simulados' | 'Lazer & Descanso'>('Estudo Gabaritou');
+  const [categoriaAdd, setCategoriaAdd] = useState<'Escola / Cursinho' | 'Estudo MenteUp' | 'Exercícios & Simulados' | 'Lazer & Descanso'>('Estudo MenteUp');
 
   const handleAddBlock = () => {
     if (!materiaAdd.trim()) return;
@@ -142,7 +142,7 @@ export const WeeklyRoutinePlannerSection: React.FC = () => {
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white"
             >
               <option value="Escola / Cursinho">Escola / Cursinho</option>
-              <option value="Estudo Gabaritou">Estudo Gabaritou</option>
+              <option value="Estudo MenteUp">Estudo MenteUp</option>
               <option value="Exercícios & Simulados">Exercícios & Simulados</option>
               <option value="Lazer & Descanso">Lazer & Descanso</option>
             </select>

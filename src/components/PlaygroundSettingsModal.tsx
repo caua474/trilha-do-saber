@@ -38,9 +38,8 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const availableModels = [
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Padrão Oficial - Ultrarrápido e Preciso)' },
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Nova Geração Inteligente)' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Raciocínio Complexo Avançado e STEM)' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Padrão Recomendado - Sem estouro de cota e ultraestável)' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Alta Velocidade e Precisão Avançada)' },
     { id: 'gemini-flash-latest', name: 'Gemini Flash Latest (Versão Estável Mais Recente)' },
   ];
 
@@ -122,7 +121,7 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
             <GabiAvatar size={36} showOnlineStatus={true} statusBadgeSize={9} alt="Professora Gabi" />
             <div>
               <h3 className="text-base font-bold text-white leading-tight">
-                Configurações do Tira-Dúvidas Gabaritou AI
+                Configurações do Tira-Dúvidas MenteUp AI
               </h3>
               <p className="text-xs text-slate-400">Personalize o modelo de IA e preferências da Professora Gabi</p>
             </div>
@@ -174,7 +173,7 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
                   setValidationState('idle');
                   setValidationMessage(null);
                 }}
-                placeholder="Deixe em branco para usar a chave padrão do Gabaritou"
+                placeholder="Deixe em branco para usar a chave padrão do MenteUp"
                 className={`w-full bg-slate-950 border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none font-mono transition-colors ${
                   validationState === 'valid'
                     ? 'border-emerald-500/60 focus:border-emerald-500'
@@ -214,7 +213,7 @@ export const PlaygroundSettingsModal: React.FC<PlaygroundSettingsModalProps> = (
             )}
 
             <p className="text-[11px] text-slate-500">
-              Caso você queira utilizar uma chave própria do Gemini, insira aqui. O Gabaritou fará uma validação leve antes de salvar.
+              Caso você queira utilizar uma chave própria do Gemini, insira aqui. O MenteUp fará uma validação leve antes de salvar.
             </p>
           </div>
 

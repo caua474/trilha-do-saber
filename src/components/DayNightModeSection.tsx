@@ -58,7 +58,7 @@ export const DayNightModeSection: React.FC<DayNightModeSectionProps> = ({ theme,
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                Gabaritou AI Engine
+                MenteUp AI Engine
               </span>
               <span className="bg-indigo-500/30 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                 Modo Dia & Noite

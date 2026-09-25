@@ -1,5 +1,5 @@
 /**
- * Serviço centralizado do cliente Gemini para a plataforma Gabaritou.
+ * Serviço centralizado do cliente Gemini para a plataforma MenteUp.
  * 
  * Implementa cliente robusto com:
  * - Uso prioritário e forçado do modelo 'gemini-1.5-flash'.
@@ -25,18 +25,21 @@ export class GeminiServiceError extends Error {
 }
 
 /**
- * Recupera a chave de API configurada no cliente (localStorage ou variável de ambiente).
+ * Recupera a chave de API configurada para o serviço de IA.
+ * Lê diretamente de import.meta.env.VITE_GEMINI_API_KEY do ambiente do Vercel.
  */
 export function getGeminiApiKey(): string {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('gabaritai_gemini_api_key');
-    if (saved && saved.trim() && saved.trim() !== '5,00') {
-      return saved.trim();
-    }
-  }
   const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (envKey && typeof envKey === 'string' && envKey.trim()) {
+  if (envKey && typeof envKey === 'string' && envKey.trim() && envKey.trim() !== '5,00') {
     return envKey.trim();
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('gabaritai_gemini_api_key');
+      if (saved && saved.trim() && saved.trim() !== '5,00') {
+        return saved.trim();
+      }
+    } catch (_) {}
   }
   return '';
 }
@@ -109,14 +112,14 @@ export async function callGeminiApi<T = any>(
     clearTimeout(timeoutId);
     if (netErr.name === 'AbortError') {
       throw new GeminiServiceError(
-        `Tempo limite esgotado ao aguardar resposta do Gemini (${timeoutMs / 1000}s). Tente novamente.`,
+        'Tempo limite esgotado. Por favor, tente novamente em alguns instantes.',
         408,
         'TIMEOUT',
         netErr
       );
     }
     throw new GeminiServiceError(
-      `Falha na conexão de rede com a API: ${netErr.message || 'Sem conexão com a internet.'}`,
+      'Falha de conexão. Por favor, tente novamente em alguns instantes.',
       0,
       'NETWORK_ERROR',
       netErr
@@ -128,17 +131,16 @@ export async function callGeminiApi<T = any>(
   // Tratamento específico de status HTTP: 401, 405, 500
   if (response.status === 401) {
     throw new GeminiServiceError(
-      'Não Autorizado (401): A chave de API do Gemini informada é inválida ou expirou. Por favor, acerte sua chave de API nas Configurações da IA.',
+      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
       401,
       'UNAUTHORIZED'
     );
   }
 
   if (response.status === 405) {
-    // 405 Method Not Allowed
     console.warn(`[geminiService] Erro 405 em ${endpoint}. Verificando método HTTP.`);
     throw new GeminiServiceError(
-      `Método Não Permitido (405): O servidor não aceitou a requisição no endpoint ${endpoint}.`,
+      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
       405,
       'METHOD_NOT_ALLOWED'
     );
@@ -152,14 +154,8 @@ export async function callGeminiApi<T = any>(
       return callGeminiApi<T>(endpoint, body, { ...options, skipRetry: true });
     }
 
-    let serverErrMsg = 'Erro interno nos servidores da IA (500).';
-    try {
-      const errJson = await response.json();
-      if (errJson.error) serverErrMsg = errJson.error;
-    } catch (_) {}
-
     throw new GeminiServiceError(
-      `Erro no Servidor (500): ${serverErrMsg}`,
+      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
       500,
       'INTERNAL_SERVER_ERROR'
     );
@@ -179,7 +175,7 @@ export async function callGeminiApi<T = any>(
         jsonResult = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
       } catch (_) {
         throw new GeminiServiceError(
-          'Resposta recebida não está em formato JSON válido.',
+          'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
           response.status,
           'INVALID_JSON',
           parseErr
@@ -187,7 +183,7 @@ export async function callGeminiApi<T = any>(
       }
     } else {
       throw new GeminiServiceError(
-        'Resposta vazia ou corrompida do servidor.',
+        'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
         response.status,
         'INVALID_RESPONSE',
         parseErr
@@ -196,8 +192,11 @@ export async function callGeminiApi<T = any>(
   }
 
   if (!response.ok) {
-    const errorMsg = jsonResult?.error || `Erro na requisição (${response.status})`;
-    throw new GeminiServiceError(errorMsg, response.status, 'REQUEST_FAILED');
+    throw new GeminiServiceError(
+      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
+      response.status,
+      'REQUEST_FAILED'
+    );
   }
 
   return jsonResult;

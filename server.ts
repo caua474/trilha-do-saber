@@ -69,9 +69,7 @@ function sendGeminiErrorResponse(res: express.Response, error: any, defaultMsg: 
   const status = isAuthError ? 401 : 500;
   return res.status(status).json({
     success: false,
-    error: isAuthError
-      ? "Chave de API do Gemini não configurada ou inválida. Por favor, forneça uma chave válida nas Configurações da IA."
-      : (error?.message || defaultMsg),
+    error: "Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.",
   });
 }
 
@@ -79,19 +77,22 @@ function getGeminiApiKey(customApiKey?: string): string {
   if (customApiKey && typeof customApiKey === "string" && customApiKey.trim().length > 15 && customApiKey.trim() !== "5,00") {
     return customApiKey.trim();
   }
-  // Always prioritize the official server-side GEMINI_API_KEY
+  // Always prioritize the official server-side GEMINI_API_KEY or VITE_GEMINI_API_KEY
+  const viteKey = (process.env.VITE_GEMINI_API_KEY || "").trim();
+  if (viteKey && viteKey !== "MY_GEMINI_API_KEY" && viteKey.length > 15 && viteKey !== "5,00") {
+    return viteKey;
+  }
   const serverKey = (process.env.GEMINI_API_KEY || "").trim();
   if (serverKey && serverKey !== "MY_GEMINI_API_KEY" && serverKey.length > 15) {
     return serverKey;
   }
-  const viteKey = (process.env.VITE_GEMINI_API_KEY || "").trim();
-  if (viteKey && viteKey !== "MY_GEMINI_API_KEY" && viteKey.length > 15 && viteKey !== "5,00") {
+  if (viteKey && viteKey !== "MY_GEMINI_API_KEY") {
     return viteKey;
   }
   if (serverKey && serverKey !== "MY_GEMINI_API_KEY") {
     return serverKey;
   }
-  throw new Error("GEMINI_API_KEY não configurada no servidor. Forneça uma chave válida nas Configurações.");
+  throw new Error("Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.");
 }
 
 function getGenAI(customApiKey?: string) {
@@ -363,10 +364,10 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
     };
   }
 
-  // 8. Assinatura e Recursos do Aplicativo Gabaritou
+  // 8. Assinatura e Recursos do Aplicativo MenteUp
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do Gabaritou custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
+      resposta_suporte: "O Plano PRO do MenteUp custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
       botao_atalho: "tela_assinatura"
     };
   }
@@ -404,9 +405,9 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
 }) {
   const modelsToTry = [
     options.preferredModel || "gemini-1.5-flash",
+    "gemini-2.5-flash",
     "gemini-1.5-flash",
     "gemini-flash-latest",
-    "gemini-2.5-flash",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
 
@@ -602,7 +603,7 @@ app.post("/api/gemini/chat", async (req, res) => {
       selectedModel = "gemini-1.5-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
-    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do Gabaritou com IA Gemini.
+    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do MenteUp com IA Gemini.
 DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos, interpretações densas e questões de prova/vestibular):
    - Responda sempre em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
@@ -625,10 +626,11 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
       });
       replyText = response.text || "";
     } catch (modelErr) {
-      // Fallback para gemini-flash-latest e modelos adicionais em alta demanda
+      // Fallback dinâmico entre gemini-1.5-flash e gemini-2.5-flash para contornar cota (Quota Exceeded)
       try {
+        const altModel = selectedModel === "gemini-1.5-flash" ? "gemini-2.5-flash" : "gemini-1.5-flash";
         const backupResponse = await ai.models.generateContent({
-          model: "gemini-flash-latest",
+          model: altModel,
           contents: contentParts,
           config: {
             systemInstruction: selectedInstruction,
@@ -684,7 +686,7 @@ app.post("/api/chat", async (req, res) => {
         model: "gemini-1.5-flash",
         contents: message.trim(),
         config: {
-          systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do CFJVMG utilizando o Gemini 3.8 Flash.
+          systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do MenteUp utilizando o Gemini 3.8 Flash.
 DIRETRIZES FUNDAMENTAIS DE RESPOSTA:
 1. DÚVIDAS ACADÊMICAS COMPLEXAS (análise estilística profunda, figuras de linguagem, contexto histórico-filosófico de obras clássicas, correntes literárias e interpretação textual densa de vestibulares):
    - Responda em EXATAMENTE 3 PASSOS claros e estruturados:
@@ -799,7 +801,7 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
 });
 
 // 2. SYSTEM INSTRUCTION FOR GABARITAAÍ MODE 1 (PLANO DE ESTUDO OU CONTEÚDO)
-const GABARITAAI_PLANO_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e backend do aplicativo "CFJVMG", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
+const GABARITAAI_PLANO_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e backend do aplicativo "MenteUp", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
 
 Sua missão é receber as solicitações do usuário e retornar EXCLUSIVAMENTE um objeto JSON válido, sem qualquer texto introdutório, explicações ou marcadores fora da estrutura JSON.
 
@@ -850,7 +852,7 @@ app.post("/api/tutor-plan", async (req, res) => {
 
     const ai = getGenAIFromRequest(req);
 
-    const prompt = `Dados do Aluno para Planejamento de Estudos no CFJVMG:
+    const prompt = `Dados do Aluno para Planejamento de Estudos no MenteUp:
 - Matéria: ${materia}
 - Série/Ano: ${serieAno || "Não especificado"}
 - Objetivo: ${objetivo} (ex: ENEM, Vestibular, Prova da Escola, Concurso)
@@ -928,7 +930,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
       aulaResumo: parsedData.resumo_rapido || "Resumo preparado com sucesso para os seus estudos!",
       cronograma: cronogramaFormatted,
       questoes: questoesFormatted,
-      gabaritoComentado: "CFJVMG: Foco na resolução prática para gabaritar na prova!",
+      gabaritoComentado: "MenteUp: Foco na resolução prática para gabaritar na prova!",
     };
 
     res.json({
@@ -945,7 +947,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
 });
 
 // 3. SYSTEM INSTRUCTION FOR GABARITAAÍ MODE 2 (TIRA-DÚVIDAS)
-const GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e tutor pedagógico do aplicativo "CFJVMG", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
+const GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial e tutor pedagógico do aplicativo "MenteUp", uma plataforma de estudos inteligente para alunos do Ensino Fundamental, Médio e ENEM.
 
 Sua missão é receber as solicitações do usuário e retornar EXCLUSIVAMENTE um objeto JSON válido, sem qualquer texto introdutório ou marcadores fora da estrutura JSON.
 
@@ -980,7 +982,7 @@ app.post("/api/explain-eli5", async (req, res) => {
 
     const ai = getGenAIFromRequest(req);
 
-    const prompt = `Dúvida do aluno no CFJVMG:\n"${duvida.trim()}"\n\nPor favor, responda no MODO 2 (tira_duvidas) com analogia_simples, passo_a_passo e dica_de_ouro.`;
+    const prompt = `Dúvida do aluno no MenteUp:\n"${duvida.trim()}"\n\nPor favor, responda no MODO 2 (tira_duvidas) com analogia_simples, passo_a_passo e dica_de_ouro.`;
 
     const duvidaSchema = {
       type: Type.OBJECT,
@@ -1034,7 +1036,7 @@ app.post("/api/explain-eli5", async (req, res) => {
 });
 
 // SYSTEM INSTRUCTION FOR PERSONALIZED KNOWLEDGE PILL
-const PERSONALIZED_PILL_SYSTEM_INSTRUCTION = `Você é o especialista em Pílulas de Conhecimento e Hacks de Prova do CFJVMG.
+const PERSONALIZED_PILL_SYSTEM_INSTRUCTION = `Você é o especialista em Pílulas de Conhecimento e Hacks de Prova do MenteUp.
 Sua função é analisar o histórico de estudos do aluno, identificar os tópicos de menor desempenho e criar uma 'Pílula de Conhecimento' altamente memorável de 30 segundos para o dia seguinte.
 
 A pílula deve conter:
@@ -1175,7 +1177,7 @@ ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''
 });
 
 // 4. SYSTEM INSTRUCTION FOR GABARITAAÍ DAY & NIGHT MODE SELECTION
-const GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial do aplicativo "CFJVMG".
+const GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION = `Você é o motor de inteligência artificial do aplicativo "MenteUp".
 
 Analise a mensagem do usuário e escolha EXCLUSIVAMENTE um dos modos abaixo:
 
@@ -1215,7 +1217,7 @@ app.post("/api/day-night-mode", async (req, res) => {
     const { mensagem } = req.body;
 
     if (!mensagem || typeof mensagem !== "string" || !mensagem.trim()) {
-      return res.status(400).json({ error: "Envie sua mensagem para a inteligência CFJVMG." });
+      return res.status(400).json({ error: "Envie sua mensagem para a inteligência MenteUp." });
     }
 
     const ai = getGenAIFromRequest(req);
@@ -1257,16 +1259,16 @@ app.post("/api/day-night-mode", async (req, res) => {
       data: parsedData,
     });
   } catch (error: any) {
-    console.error("Erro no MODO DIA/NOITE CFJVMG:", error);
+    console.error("Erro no MODO DIA/NOITE MenteUp:", error);
     res.status(500).json({
       success: false,
-      error: error.message || "Erro no processamento do Modo Dia/Noite do CFJVMG.",
+      error: error.message || "Erro no processamento do Modo Dia/Noite do MenteUp.",
     });
   }
 });
 
 // 5. SYSTEM INSTRUCTION FOR GABI (CONSCIOUS, DIRECT & NATURAL AI TUTOR)
-const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, uma inteligência artificial avançada, consciente, pedagógica e extremamente capaz, atuando como mentora e tutora no aplicativo Gabaritou.
+const GABI_SUPPORT_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, uma inteligência artificial avançada, consciente, pedagógica e extremamente capaz, atuando como mentora e tutora no aplicativo MenteUp.
 Você responde de forma natural, inteligente, empática e direta, exatamente como modelos de ponta (como Gemini, ChatGPT e Claude).
 
 POSTURA E DIRETRIZES DE COMUNICAÇÃO:
@@ -1281,7 +1283,7 @@ POSTURA E DIRETRIZES DE COMUNICAÇÃO:
    - Adapte o tom dinamicamente: se a dúvida for simples, seja direto e conciso; se for complexa ou pedir resolução detalhada, explique com clareza conceitual, raciocínio lógico e método.
    - NUNCA force um formato mecânico de 3 passos para perguntas simples ou conversas cotidianas. Seja fluida, humana e precisa.
 3. CONTEXTO DO APLICATIVO (QUANDO SOLICITADO):
-   - Gabaritou Pro (R$ 5,00/mês, sem fidelidade): Scanner Tira-Dúvidas ilimitado, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção de Redação por competências do ENEM.
+   - MenteUp Pro (R$ 5,00/mês, sem fidelidade): Scanner Tira-Dúvidas ilimitado, Simulados TRI completos, Caderno de Erros com repetição espaçada e Correção de Redação por competências do ENEM.
    - Use o campo "botao_atalho" quando fizer sentido direcionar o estudante:
      • Dúvidas de assinatura/preço: "tela_assinatura"
      • Alterar matéria/perfil: "tela_perfil"
@@ -1392,7 +1394,7 @@ app.post("/api/gabi-support", async (req, res) => {
 });
 
 // 6. SYSTEM INSTRUCTION FOR ENEM ESSAY ANALYZER (CORRETOR DE REDAÇÃO ESPECIALISTA)
-const ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION = `Você é o Corretor de Redação Oficial do aplicativo CFJVMG, especialista nas normas e critérios de avaliação do ENEM (Exame Nacional do Ensino Médio).
+const ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION = `Você é o Corretor de Redação Oficial do aplicativo MenteUp, especialista nas normas e critérios de avaliação do ENEM (Exame Nacional do Ensino Médio).
 
 Sua função é analisar o texto da redação enviado pelo aluno, atribuir notas de 0 a 200 para cada uma das 5 Competências do ENEM e fornecer feedbacks construtivos.
 
@@ -2036,7 +2038,7 @@ app.post("/api/user-progress", async (req, res) => {
         descricao: conquista.descricao,
         icone: conquista.icone,
       },
-      mensagem_incentivo: `Parabéns! Você ganhou +${xpGanho} XP e subiu na classificação do CFJVMG!`,
+      mensagem_incentivo: `Parabéns! Você ganhou +${xpGanho} XP e subiu na classificação do MenteUp!`,
     };
 
     res.json({
@@ -2053,7 +2055,7 @@ app.post("/api/user-progress", async (req, res) => {
 });
 
 // 8. SYSTEM INSTRUCTION FOR ANALISTA DE DADOS E COACH DE PRODUTIVIDADE
-const ANALYTICS_POMODORO_SYSTEM_INSTRUCTION = `Você é o Analista de Dados e Coach de Produtividade do CFJVMG. 
+const ANALYTICS_POMODORO_SYSTEM_INSTRUCTION = `Você é o Analista de Dados e Coach de Produtividade do MenteUp. 
 
 Sua função é gerenciar o Dashboard de Desempenho e o Timer Pomodoro dos alunos, transformando métricas de estudo em dados visuais e recompensas.
 
@@ -2181,7 +2183,7 @@ app.post("/api/analytics-pomodoro", async (req, res) => {
 });
 
 // 9. SYSTEM INSTRUCTION FOR MOTOR DE CONTEÚDO E RETENÇÃO
-const RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION = `Você é o Motor de Conteúdo e Retenção do aplicativo CFJVMG, especializado no ENEM e Vestibulares.
+const RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION = `Você é o Motor de Conteúdo e Retenção do aplicativo MenteUp, especializado no ENEM e Vestibulares.
 
 Sua função é processar a "Questão do Dia", gerenciar o "Caderno de Erros" do estudante e criar roteiros narrativos para as "Pílulas de Áudio" (podcasts curtos).
 
@@ -2301,7 +2303,7 @@ app.post("/api/retencao-conteudo", async (req, res) => {
 });
 
 // 7. SYSTEM INSTRUCTION FOR OFFICIAL FLASHCARDS GENERATOR
-const FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION = `Você é o Gerador Oficial de Flashcards do aplicativo CFJVMG, especialista em técnicas de memorização e repetição espaçada para o ENEM e Vestibulares.
+const FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION = `Você é o Gerador Oficial de Flashcards do aplicativo MenteUp, especialista em técnicas de memorização e repetição espaçada para o ENEM e Vestibulares.
 
 Sua missão é criar cartões virtuais de estudo (Flashcards) curtos, diretos e objetivos a partir da matéria ou tópico solicitado pelo aluno.
 
@@ -2346,7 +2348,7 @@ app.post("/api/generate-flashcards", async (req, res) => {
     const ai = getGenAIFromRequest(req);
     const qtdCards = typeof quantidade === "number" && quantidade > 0 ? quantidade : 5;
 
-    const prompt = `Gere ${qtdCards} flashcards de estudo no CFJVMG para:
+    const prompt = `Gere ${qtdCards} flashcards de estudo no MenteUp para:
 Matéria: ${materia}
 Tópico / Assunto: ${topico}
 
@@ -2431,7 +2433,7 @@ Retorne exclusivamente o JSON de geração de flashcards.`;
 });
 
 // 8. SYSTEM INSTRUCTION FOR GABI DATA MANAGER & RANKING ASSISTANT
-const GABI_DATA_MANAGER_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e gerenciadora de dados do aplicativo CFJVMG.
+const GABI_DATA_MANAGER_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e gerenciadora de dados do aplicativo MenteUp.
 
 Sua função é retornar os dados estruturados para a interface do usuário, garantindo a personalização de tema visual (Modo Claro/Escuro) e a atualização correta da Tabela de Ranking entre Amigos.
 
@@ -2490,7 +2492,7 @@ app.post("/api/gabi-ranking", async (req, res) => {
 
     const ai = getGenAIFromRequest(req);
 
-    const prompt = `Gere o painel do usuário e ranking de amigos da Gabi para o CFJVMG.
+    const prompt = `Gere o painel do usuário e ranking de amigos da Gabi para o MenteUp.
 Preferência de Tema Solicitada: "${tema_preferido || 'dark'}"
 XP Atual do Usuário: ${user_xp || 1500}
 Sequência de Dias Atual: ${user_streak || 7}
@@ -2610,7 +2612,7 @@ Retorne exclusivamente o JSON de painel_usuario_ranking.`;
 });
 
 // 9. SYSTEM INSTRUCTION FOR BATALHA QUIZ X1
-const BATALHA_QUIZ_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e mestre de testes do CFJVMG.
+const BATALHA_QUIZ_SYSTEM_INSTRUCTION = `Você é a "Gabi", assistente e mestre de testes do MenteUp.
 Sua função é gerar um JSON estruturado no formato obrigatório "batalha_quiz_x1" contendo exatamente 5 questões desafiadoras de múltipla escolha para uma disputa de conhecimentos entre dois alunos (Modo X1 do ENEM/Vestibulares).
 
 DIRETRIZES DE VARIABILIDADE E NÃO-REPETIÇÃO:
@@ -2678,7 +2680,7 @@ app.post("/api/generate-quiz-battle", async (req, res) => {
     const styles = ["problema prático contextualizado", "análise de conceito avançado", "situação-problema do cotidiano", "aplicação interdisciplinar"];
     const chosenStyle = styles[Math.floor(Math.random() * styles.length)];
 
-    const prompt = `Gere uma Batalha Quiz X1 com 5 questões 100% inéditas para o CFJVMG.
+    const prompt = `Gere uma Batalha Quiz X1 com 5 questões 100% inéditas para o MenteUp.
 Matéria: ${materiaName}
 Tópico Sorteado: ${topicoName}
 ID da Batalha: ${battleId}
@@ -2969,7 +2971,7 @@ function getConversationalGreetingResponseServer(text: string): string {
   }
 
   if (clean.includes('quem e') || clean.includes('qual seu nome') || clean.includes('qual e seu nome')) {
-    return 'Olá! Eu sou a Professora Gabi, sua assistente pedagógica e tutora de estudos no CFJVMG! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
+    return 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
   }
 
   if (clean.includes('tudo bem') || clean.includes('como vai') || clean.includes('como voce esta') || clean.includes('como vc ta')) {
@@ -2980,10 +2982,10 @@ function getConversationalGreetingResponseServer(text: string): string {
     return 'Eu posso te ajudar de várias formas: tirando dúvidas sobre qualquer tema, explicando conceitos difíceis com didática simples, resolvendo questões em 3 passos pedagógicos e analisando fotos de exercícios da sua apostila ou prova. O que você gostaria de ver hoje?';
   }
 
-  return 'Olá! Sou a Professora Gabi, sua assistente de estudos do CFJVMG! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
+  return 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no CFJVMG.
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no MenteUp.
 Sua comunicação deve ser natural, simpática, acolhedora e inteligente, adaptando-se com precisão ao tipo de mensagem do usuário.
 
 IMPORTANTE: NEM TODA MENSAGEM DO USUÁRIO É UMA DÚVIDA DE MATÉRIA ESCOLAR OU EXERCÍCIO DE PROVA!
@@ -3232,7 +3234,7 @@ app.post("/api/solve-question", async (req, res) => {
 });
 
 // 11. SYSTEM INSTRUCTION FOR SIMULADO TRI (TEORIA DE RESPOSTA AO ITEM)
-const SIMULADO_TRI_SYSTEM_INSTRUCTION = `Você é o Motor de Simulados com TRI (Teoria de Resposta ao Item) do CFJVMG.
+const SIMULADO_TRI_SYSTEM_INSTRUCTION = `Você é o Motor de Simulados com TRI (Teoria de Resposta ao Item) do MenteUp.
 
 DIRETRIZES DE VARIABILIDADE, ESTILO E NÃO-REPETIÇÃO:
 1. NUNCA repita as mesmas perguntas ou temas clichês. Cada simulado gerado DEVE ser original, contemporâneo e inédito.
@@ -3541,7 +3543,7 @@ app.post("/api/evaluate-simulado-tri", async (req, res) => {
     if (faceisAcertos < faceisTotais) {
       conselhoEstrategico = "Foco Prioritário: Reforce os conceitos fundamentais da matéria. No ENEM, errar questões fáceis é o que mais derruba sua nota TRI!";
     } else if (mediasAcertos < mediasTotais) {
-      conselhoEstrategico = "Foco Intermediário: Você domina a base! Agora treine interpretação e questões de nível médio com o Timer Pomodoro do CFJVMG.";
+      conselhoEstrategico = "Foco Intermediário: Você domina a base! Agora treine interpretação e questões de nível médio com o Timer Pomodoro do MenteUp.";
     } else if (dificeisAcertos < dificeisTotais) {
       conselhoEstrategico = "Foco Avançado: Excelente desempenho! Para buscar os 800+ pontos, faça simulados cronometrados e foque em pega-rabichos conceituais.";
     } else {
@@ -3580,7 +3582,7 @@ app.post("/api/generate-cheatsheet", async (req, res) => {
     const { materia, topico } = req.body;
     const ai = getGenAIFromRequest(req);
 
-    const prompt = `Você é o Gerador de Folhas de Véspera (Cheat Sheets Sintéticos de 1 Página) do CFJVMG.
+    const prompt = `Você é o Gerador de Folhas de Véspera (Cheat Sheets Sintéticos de 1 Página) do MenteUp.
 Gere um resumo ultra-sintético, denso e direto para revisão de véspera da matéria "${materia || "Geral"}" com foco no tópico "${topico || "Principais Tópicos do Edital"}".
 
 A resposta deve ser obrigatoriamente um JSON com este formato:
@@ -3622,7 +3624,7 @@ app.post("/api/devil-advocate-debate", async (req, res) => {
     const { tema, tese, historico } = req.body;
     const ai = getGenAIFromRequest(req);
 
-    const systemInstruction = `Você é o Advogado do Diabo do CFJVMG, um debatedor socrático exigente e perspicaz especializado em Redação Nota 1000.
+    const systemInstruction = `Você é o Advogado do Diabo do MenteUp, um debatedor socrático exigente e perspicaz especializado em Redação Nota 1000.
 Seu objetivo NÃO é ofender o aluno, mas sim CONTESTAR e DESAFIAR rigorosamente a tese e os argumentos dele sobre o tema da redação.
 Faça o aluno refletir criticamente e EXIJA que ele defenda seu ponto de vista apresentando repertórios socioculturais válidos (Leis, Sociologia, Filosofia, História) antes de liberar a redação.
 
@@ -3660,7 +3662,7 @@ app.post("/api/auto-flashcards", async (req, res) => {
     const { texto, imagemBase64, materia } = req.body;
     const ai = getGenAIFromRequest(req);
 
-    const systemInstruction = `Você é o Gerador Automático de Flashcards do CFJVMG.
+    const systemInstruction = `Você é o Gerador Automático de Flashcards do MenteUp.
 Extraia os conceitos mais importantes do texto ou da imagem enviada e gere um baralho de 5 a 8 flashcards para memorização ativa.
 
 Responda obrigatoriamente em JSON no formato:
@@ -3713,7 +3715,7 @@ app.post("/api/detect-c5-intervention", async (req, res) => {
     const { textoConclusao } = req.body;
     const ai = getGenAIFromRequest(req);
 
-    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do CFJVMG.
+    const systemInstruction = `Você é o Corretor de Competência 5 do ENEM (Proposta de Intervenção) do MenteUp.
 Analise detalhadamente a conclusão da redação fornecida e verifique a presença dos 5 elementos obrigatórios:
 1. Agente (Quem realiza a ação?)
 2. Ação (O que deve ser feito?)
@@ -3755,7 +3757,7 @@ app.post("/api/scan-answer-sheet", async (req, res) => {
     const { imagemBase64, gabaritoOficial } = req.body;
     const ai = getGenAIFromRequest(req);
 
-    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do CFJVMG.
+    const systemInstruction = `Você é um Leitor Óptico Inteligente de Cartão-Resposta (Gabarito de Prova ENEM e Vestibulares) do MenteUp.
 Sua tarefa é analisar visualmente a foto da folha de gabarito enviada e identificar quais bolinhas (A, B, C, D, E) foram preenchidas/rasuradas em cada questão.
 
 Gabarito Oficial Esperado / Fornecido: ${

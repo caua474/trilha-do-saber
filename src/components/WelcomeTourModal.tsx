@@ -189,7 +189,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
-                  Bem-vindo ao Gabaritou, {userName}!
+                  Bem-vindo ao MenteUp, {userName}!
                 </h2>
               </div>
               <p className="text-xs text-slate-400">

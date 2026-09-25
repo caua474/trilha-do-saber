@@ -434,7 +434,7 @@ export const SisuSimulatorSection: React.FC<SisuSimulatorSectionProps> = ({ onGo
             <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl text-xs leading-relaxed space-y-1 text-slate-200">
               <div className="font-bold text-amber-400 uppercase text-[10px] flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4" />
-                <span>Diagnóstico do Gabaritou</span>
+                <span>Diagnóstico do MenteUp</span>
               </div>
               <p className="font-semibold">{getDiagnosticAdvice()}</p>
             </div>

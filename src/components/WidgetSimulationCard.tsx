@@ -117,7 +117,7 @@ export const WidgetSimulationCard: React.FC<WidgetProps> = ({
             <div className="flex items-center space-x-2">
               <span className="text-base">🎓</span>
               <span className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                Gabaritou
+                MenteUp
               </span>
             </div>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800 flex items-center gap-1">
@@ -194,7 +194,7 @@ export const WidgetSimulationCard: React.FC<WidgetProps> = ({
       {/* Action Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <p className="text-xs text-slate-400">
-          💡 <strong>Como instalar:</strong> Mantenha o dedo pressionado na tela inicial do seu celular, toque em <strong>+ (Widgets)</strong> e pesquise por <strong>Gabaritou</strong>.
+          💡 <strong>Como instalar:</strong> Mantenha o dedo pressionado na tela inicial do seu celular, toque em <strong>+ (Widgets)</strong> e pesquise por <strong>MenteUp</strong>.
         </p>
 
         <button

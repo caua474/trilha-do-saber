@@ -301,7 +301,7 @@ export const SubjectCatalogSection: React.FC<SubjectCatalogSectionProps> = ({
               {/* Left Column: Description & Key Tip */}
               <div className="space-y-3 bg-black/40 p-4 rounded-2xl border border-white/10">
                 <span className="text-[10px] uppercase font-black text-amber-400 block">
-                  💡 Dica-Chave • Gabaritou
+                  💡 Dica-Chave • MenteUp
                 </span>
                 <p className="text-xs text-amber-200 font-semibold leading-relaxed bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
                   "{selectedTopic.dicaChave}"

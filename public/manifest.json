@@ -1,6 +1,6 @@
 {
-  "name": "app inteligente - Assistente de Estudos ENEM",
-  "short_name": "app inteligente",
+  "name": "MenteUp - Assistente de Estudos ENEM",
+  "short_name": "MenteUp",
   "description": "Sintetizador inteligente de resumos, flashcards e simulação TRI com suporte total a Leitura Offline.",
   "start_url": "/",
   "display": "standalone",

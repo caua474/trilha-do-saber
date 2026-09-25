@@ -67,7 +67,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
     {
       id: 'welcome',
       sender: 'gabi',
-      text: 'Oii! 👋 Eu sou a Professora Gabi, sua mentora inteligente no Gabaritou / Gabaritou! Estou aqui para responder qualquer dúvida de estudos, cálculos, curiosidades ou te guiar pelo app de forma direta e natural. O que vamos aprender hoje?',
+      text: 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Estou aqui para responder qualquer dúvida de estudos, cálculos, curiosidades ou te guiar pelo app de forma direta e natural. O que vamos aprender hoje?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -301,8 +301,8 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
         const displayOp = (op === '*' || op === 'x') ? 'x' : op;
         fallbackText = `${n1} ${displayOp} ${n2} = **${resNum}**.`;
       } else {
-        fallbackText = `⚠️ Não foi possível obter uma resposta em tempo real da IA no momento. Por favor, verifique ou configure a sua chave de API nas Configurações.`;
-        fallbackAtalho = 'tela_perfil';
+        fallbackText = 'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.';
+        fallbackAtalho = 'nenhum';
       }
 
       const fallbackMsg: ChatMessage = {
@@ -375,7 +375,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
   }, [initialPrompt]);
 
   const renderShortcutButton = (atalho?: string) => {
-    if (!atalho || atalho === 'nenhum') return null;
+    if (!atalho || atalho === 'nenhum' || atalho === 'tela_perfil') return null;
 
     let label = 'Ir para a tela';
     let icon = <ArrowRight className="w-3.5 h-3.5" />;
@@ -383,12 +383,11 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
     if (atalho === 'tela_assinatura') {
       label = '⭐ Conhecer o Plano PRO (R$ 5,00/mês)';
       icon = <Zap className="w-3.5 h-3.5 text-amber-400" />;
-    } else if (atalho === 'tela_perfil') {
-      label = '⚙️ Alterar Matéria nas Configurações';
-      icon = <ArrowRight className="w-3.5 h-3.5" />;
     } else if (atalho === 'tela_caderno_erros') {
       label = '📓 Ver Caderno de Erros';
       icon = <ArrowRight className="w-3.5 h-3.5" />;
+    } else {
+      return null;
     }
 
     return (
@@ -556,20 +555,6 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
               >
                 <div className="whitespace-pre-line">{msg.text}</div>
                 {msg.sender === 'gabi' && renderShortcutButton(msg.botaoAtalho)}
-
-                {msg.sender === 'gabi' && msg.id !== 'welcome' && (
-                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleGenerateMindMap(msg.text)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/70 text-purple-700 dark:text-purple-300 text-[11px] font-bold transition border border-purple-200/70 dark:border-purple-800/60 cursor-pointer shadow-xs active:scale-95"
-                      title="Gerar Mapa Mental / Esquema deste conteúdo"
-                    >
-                      <Brain className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                      <span>🧠 Gerar Mapa Mental / Esquema</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           ))}

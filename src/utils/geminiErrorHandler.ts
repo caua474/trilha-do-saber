@@ -82,11 +82,11 @@ export function classifyGeminiError(error: any): ClassifiedGeminiError {
   ) {
     return {
       type: 'AUTH_ERROR',
-      title: 'Chave da API Gemini Inválida ou Ausente',
+      title: 'Instabilidade no Serviço de IA',
       message:
-        'A chave de autenticação do Gemini não foi configurada ou expirou. Você pode inserir sua chave gratuita do Google AI Studio nas configurações para continuar gerando respostas com IA.',
-      actionLabel: 'Configurar Chave da API',
-      actionType: 'open_settings',
+        'Não foi possível obter resposta no momento. Por favor, tente novamente em alguns instantes.',
+      actionLabel: 'Tentar Novamente',
+      actionType: 'retry',
       isAuthError: true,
       isOfflineError: false,
       isQuotaError: false,
@@ -104,10 +104,10 @@ export function classifyGeminiError(error: any): ClassifiedGeminiError {
   ) {
     return {
       type: 'QUOTA_ERROR',
-      title: 'Limite Temporário de Requisições Atingido',
+      title: 'Serviço Temporariamente Ocupado',
       message:
-        'O limite gratuito de requisições por minuto da API do Gemini foi atingido. Aguarde alguns segundos para tentar novamente ou utilize sua própria chave do Google AI Studio.',
-      actionLabel: 'Aguardar e Tentar Novamente',
+        'Não foi possível obter resposta no momento. Por favor, tente novamente em alguns instantes.',
+      actionLabel: 'Tentar Novamente',
       actionType: 'retry',
       isAuthError: false,
       isOfflineError: false,
@@ -128,7 +128,7 @@ export function classifyGeminiError(error: any): ClassifiedGeminiError {
       type: 'SERVER_ERROR',
       title: 'Instabilidade Temporária no Serviço de IA',
       message:
-        'Os servidores do Gemini apresentaram uma oscilação momentânea ao processar esta resposta. Os dados salvos localmente continuam intactos.',
+        'Não foi possível obter resposta no momento. Por favor, tente novamente em alguns instantes.',
       actionLabel: 'Tentar Novamente',
       actionType: 'retry',
       isAuthError: false,
@@ -143,8 +143,7 @@ export function classifyGeminiError(error: any): ClassifiedGeminiError {
     type: 'UNKNOWN_ERROR',
     title: 'Falha na Resposta da IA',
     message:
-      error?.message ||
-      'Não foi possível concluir a operação com a inteligência artificial. Tente novamente em instantes.',
+      'Não foi possível obter resposta no momento. Por favor, tente novamente em alguns instantes.',
     actionLabel: 'Tentar Novamente',
     actionType: 'retry',
     isAuthError: false,

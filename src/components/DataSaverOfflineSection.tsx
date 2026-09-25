@@ -118,7 +118,7 @@ export const DataSaverOfflineSection: React.FC = () => {
             Modo Economia de Dados 3G/4G
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Com esta opção ativa, o Gabaritou utiliza dados armazenados em cache local e reduz o uso de mídia pesada.
+            Com esta opção ativa, o MenteUp utiliza dados armazenados em cache local e reduz o uso de mídia pesada.
           </p>
         </div>
 

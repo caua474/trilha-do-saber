@@ -103,7 +103,7 @@ export function getConversationalGreetingResponse(text: string): string {
   }
 
   if (clean.includes('quem e') || clean.includes('qual seu nome') || clean.includes('qual e seu nome')) {
-    return 'Olá! Eu sou a Professora Gabi, sua assistente pedagógica e tutora de estudos no Gabaritou! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
+    return 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Estou aqui para te explicar matérias escolares, tirar dúvidas do cotidiano e resolver exercícios passo a passo para o ENEM e vestibulares. Como posso te ajudar agora?';
   }
 
   if (clean.includes('tudo bem') || clean.includes('como vai') || clean.includes('como voce esta') || clean.includes('como vc ta')) {
@@ -114,10 +114,10 @@ export function getConversationalGreetingResponse(text: string): string {
     return 'Eu posso te ajudar de várias formas: tirando dúvidas sobre qualquer tema, explicando conceitos difíceis com didática simples, resolvendo questões em 3 passos pedagógicos e analisando fotos de exercícios da sua apostila ou prova. O que você gostaria de ver hoje?';
   }
 
-  return 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
+  return 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Como posso te ajudar hoje? Envie suas dúvidas teóricas, exercícios escolares ou a foto de uma questão para estudarmos juntos!';
 }
 
-const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no Gabaritou.
+const RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION = `Você é a Professora Gabi, tutora inteligente e assistente educacional no MenteUp.
 Sua comunicação deve ser natural, simpática, acolhedora e inteligente, adaptando-se com precisão ao tipo de mensagem do usuário.
 
 IMPORTANTE: NEM TODA MENSAGEM DO USUÁRIO É UMA DÚVIDA DE MATÉRIA ESCOLAR OU EXERCÍCIO DE PROVA!
@@ -180,25 +180,25 @@ ESTRUTURA DA RESPOSTA (FORMATO JSON OBRIGATÓRIO):
 export function getGeminiApiKey(): string {
   let key = '';
 
-  // 1. localStorage gabaritai_gemini_api_key (configurado pelo usuário)
+  // 1. import.meta.env.VITE_GEMINI_API_KEY diretamente do ambiente Vercel
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const saved = localStorage.getItem('gabaritai_gemini_api_key');
-      if (saved && saved.trim() && saved.trim().length > 20 && saved.trim() !== 'MY_GEMINI_API_KEY') {
-        key = saved.trim();
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
+      const envVal = String(import.meta.env.VITE_GEMINI_API_KEY).trim();
+      if (envVal.length > 15 && envVal !== 'MY_GEMINI_API_KEY' && envVal !== '5,00') {
+        key = envVal;
       }
     }
   } catch {
     // ignora
   }
 
-  // 2. import.meta.env.VITE_GEMINI_API_KEY (apenas se for chave válida, não placeholder ou valor corrompido)
+  // 2. localStorage gabaritai_gemini_api_key (fallback secundário)
   if (!key) {
     try {
-      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
-        const envVal = String(import.meta.env.VITE_GEMINI_API_KEY).trim();
-        if (envVal.length > 20 && envVal !== 'MY_GEMINI_API_KEY' && envVal !== '5,00') {
-          key = envVal;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('gabaritai_gemini_api_key');
+        if (saved && saved.trim() && saved.trim().length > 15 && saved.trim() !== 'MY_GEMINI_API_KEY') {
+          key = saved.trim();
         }
       }
     } catch {
@@ -449,7 +449,7 @@ export async function solveQuestionWithClientGemini(
           dataObj.resolucao_passo_a_passo ||
           dataObj.gabarito_final ||
           (isGreeting
-            ? 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje?'
+            ? 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Como posso te ajudar hoje?'
             : 'Aqui está a explicação sobre a sua dúvida.');
 
         return {

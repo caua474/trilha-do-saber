@@ -525,7 +525,7 @@ export async function getTopDuelistsThisWeek(currentUserName = 'Você'): Promise
   // Build the user entry
   const userEntry: Omit<TopDuelist, 'rank'> = {
     id: 'user_current',
-    name: currentUserName === 'Você' ? 'Você (Aluno Gabaritou)' : `${currentUserName} (Você)`,
+    name: currentUserName === 'Você' ? 'Você (Aluno MenteUp)' : `${currentUserName} (Você)`,
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     elo: combinedPoints >= 4000 ? 'Diamante I' : combinedPoints >= 3000 ? 'Platina I' : 'Ouro II',
     vitorias: combinedWins,

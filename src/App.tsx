@@ -204,7 +204,7 @@ async function clearEntireIndexedDB(): Promise<void> {
   ]);
 }
 
-function GabaritouApp() {
+function MenteUpApp() {
   // Authentication State
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
@@ -282,6 +282,10 @@ function GabaritouApp() {
 
   // Gemini AI Studio Playground States
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    if (envKey && typeof envKey === 'string' && envKey.trim() && envKey.trim() !== '5,00') {
+      return envKey.trim();
+    }
     try {
       return localStorage.getItem('gabaritai_gemini_api_key') || '';
     } catch (e) {
@@ -291,12 +295,12 @@ function GabaritouApp() {
   const [geminiModel, setGeminiModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('gabaritai_gemini_model');
-      if (saved && saved !== 'gemini-3.8-flash' && saved !== 'gemini-3.6-flash') {
+      if (saved === 'gemini-1.5-flash' || saved === 'gemini-2.5-flash') {
         return saved;
       }
-      return 'gemini-2.5-flash';
+      return 'gemini-1.5-flash';
     } catch (e) {
-      return 'gemini-2.5-flash';
+      return 'gemini-1.5-flash';
     }
   });
   const [geminiTemperature, setGeminiTemperature] = useState<number>(() => {
@@ -1081,7 +1085,7 @@ function GabaritouApp() {
 export default function App() {
   return (
     <GeminiErrorProvider>
-      <GabaritouApp />
+      <MenteUpApp />
     </GeminiErrorProvider>
   );
 }

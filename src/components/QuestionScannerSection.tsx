@@ -222,7 +222,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
       ctx.fillRect(0, 0, 600, 300);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText('⚡ Gabaritou • Scanner de Questão', 30, 50);
+      ctx.fillText('⚡ MenteUp • Scanner de Questão', 30, 50);
       ctx.font = '14px sans-serif';
       ctx.fillStyle = '#cbd5e1';
       ctx.fillText('Questão: Um bloco de 5 kg é puxado por uma força F = 20 N em superfície lisa.', 30, 110);
@@ -543,17 +543,6 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-black/5 dark:border-white/5">
-                    {errorDetails?.type === 'AUTH_ERROR' && onOpenSettings && (
-                      <button
-                        type="button"
-                        onClick={onOpenSettings}
-                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                      >
-                        <KeyRound className="w-3 h-3" />
-                        <span>Configurar VITE_GEMINI_API_KEY</span>
-                      </button>
-                    )}
-
                     <button
                       type="button"
                       onClick={() => handleSolveQuestion()}
@@ -637,7 +626,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                           <GabiAvatar size={44} showOnlineStatus={true} />
                           <div>
                             <span className="text-[10px] font-black uppercase text-purple-300 tracking-widest block">
-                              Tira-Dúvidas Gabaritou AI • Professora Gabi
+                              Tira-Dúvidas MenteUp AI • Professora Gabi
                             </span>
                             <h3 className="text-base font-extrabold text-white">
                               Atendimento & Orientação de Estudos
@@ -663,12 +652,12 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                                 Professora Gabi
                               </span>
                               <span className="text-[11px] text-slate-400 font-medium">
-                                Mentora Gabaritou
+                                Mentora MenteUp
                               </span>
                             </div>
                             <div className="text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-relaxed font-normal bg-purple-50/60 dark:bg-purple-950/30 p-4 sm:p-5 rounded-2xl border border-purple-100 dark:border-purple-900/40 whitespace-pre-line shadow-2xs">
                               {cleanedGreetingText ||
-                                'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie suas dúvidas, exercícios escolares, redações ou a foto de uma questão para estudarmos juntos!'}
+                                'Olá! Sou a Professora Gabi, sua assistente de estudos do MenteUp! Como posso te ajudar hoje? Envie suas dúvidas, exercícios escolares, redações ou a foto de uma questão para estudarmos juntos!'}
                             </div>
                           </div>
                         </div>
@@ -757,7 +746,7 @@ export const QuestionScannerSection: React.FC<QuestionScannerSectionProps> = ({ 
                     <div className="bg-slate-900 text-white p-5 rounded-3xl border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest block">
-                          Tira-Dúvidas Gabaritou AI • Scanner IA Vision
+                          Tira-Dúvidas MenteUp AI • Scanner IA Vision
                         </span>
                         <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                           <span>Matéria: {solution.materia || 'Geral'}</span>

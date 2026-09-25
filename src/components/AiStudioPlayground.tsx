@@ -62,12 +62,12 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
   onOpenApiKeyModal
 }) => {
   const { showError } = useGeminiError();
-  const effectiveModel = (!model || model === 'gemini-3.8-flash' || model === 'gemini-3.6-flash') ? 'gemini-2.5-flash' : model;
+  const effectiveModel = (!model || model === 'gemini-3.8-flash' || model === 'gemini-3.6-flash' || model === 'gemini-3.1-pro-preview') ? 'gemini-1.5-flash' : model;
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-msg',
       role: 'assistant',
-      content: 'Olá! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar hoje? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
+      content: 'Oii! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Como posso te ajudar hoje? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -241,7 +241,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
         id: `welcome-${Date.now()}`,
         role: 'assistant',
         content:
-          'Histórico limpo! Sou a Professora Gabi, sua assistente de estudos do Gabaritou! Como posso te ajudar agora? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
+          'Histórico limpo! Sou a Professora Gabi, sua mentora inteligente no MenteUp! Como posso te ajudar agora? Envie dúvidas, redações, arquivos ou perguntas para estudarmos juntos.',
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -369,7 +369,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
       console.error('Erro no processamento da IA:', err);
       const classified = classifyGeminiError(err);
       showError(err, {
-        componentName: 'Tira-Dúvidas Gabaritou AI',
+        componentName: 'Tira-Dúvidas MenteUp AI',
         retryAction: () => {
           setInputPrompt(currentPrompt);
           setAttachments(currentAttachments);
@@ -441,11 +441,11 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
             size={40}
             showOnlineStatus={true}
             statusBadgeSize={10}
-            alt="Professora Gabi - Gabaritou AI"
+            alt="Professora Gabi - MenteUp AI"
           />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white">Tira-Dúvidas Gabaritou AI</h2>
+              <h2 className="text-sm font-bold text-white">Tira-Dúvidas MenteUp AI</h2>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">
                 <Sparkles className="w-3 h-3 text-purple-400" /> {effectiveModel}
               </span>
@@ -453,7 +453,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
                 Temp: {temperature}
               </span>
             </div>
-            <p className="text-xs text-slate-400">Tutora inteligente do Gabaritou com texto, imagens, redação e voz</p>
+            <p className="text-xs text-slate-400">Tutora inteligente do MenteUp com texto, imagens, redação e voz</p>
           </div>
         </div>
 
@@ -502,7 +502,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
               {apiKey ? (
                 <span className="text-emerald-400 font-mono font-medium">Chave ativa configurada</span>
               ) : (
-                <span className="text-slate-400 font-mono">Padrão do Gabaritou (ou insira sua chave nas preferências)</span>
+                <span className="text-slate-400 font-mono">Padrão do MenteUp (ou insira sua chave nas preferências)</span>
               )}
             </span>
           </div>
@@ -544,7 +544,7 @@ export const AiStudioPlayground: React.FC<AiStudioPlaygroundProps> = ({
                 <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-white/10 text-xs font-semibold text-purple-300">
                   <span>Professora Gabi</span>
                   <span className="text-[10px] font-normal text-purple-200/90 bg-purple-900/60 border border-purple-500/30 px-2 py-0.5 rounded-full">
-                    Gabaritou AI
+                    MenteUp AI
                   </span>
                 </div>
               )}

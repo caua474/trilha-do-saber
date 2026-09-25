@@ -35,7 +35,7 @@ export function getGeminiApiKey(): string {
   }
   if (typeof window !== 'undefined') {
     try {
-      const saved = localStorage.getItem('gabaritai_gemini_api_key');
+      const saved = localStorage.getItem('menteup_gemini_api_key') || localStorage.getItem('gabaritai_gemini_api_key');
       if (saved && saved.trim() && saved.trim() !== '5,00') {
         return saved.trim();
       }
@@ -50,8 +50,10 @@ export function getGeminiApiKey(): string {
 export function setGeminiApiKey(apiKey: string): void {
   if (typeof window !== 'undefined') {
     if (!apiKey || !apiKey.trim()) {
+      localStorage.removeItem('menteup_gemini_api_key');
       localStorage.removeItem('gabaritai_gemini_api_key');
     } else {
+      localStorage.setItem('menteup_gemini_api_key', apiKey.trim());
       localStorage.setItem('gabaritai_gemini_api_key', apiKey.trim());
     }
   }

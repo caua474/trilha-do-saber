@@ -192,11 +192,11 @@ export function getGeminiApiKey(): string {
     // ignora
   }
 
-  // 2. localStorage gabaritai_gemini_api_key (fallback secundário)
+  // 2. localStorage menteup_gemini_api_key / gabaritai_gemini_api_key (fallback secundário)
   if (!key) {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('gabaritai_gemini_api_key');
+        const saved = localStorage.getItem('menteup_gemini_api_key') || localStorage.getItem('gabaritai_gemini_api_key');
         if (saved && saved.trim() && saved.trim().length > 15 && saved.trim() !== 'MY_GEMINI_API_KEY') {
           key = saved.trim();
         }

@@ -3,18 +3,25 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Unregister any active service worker and clear stale caches in development/preview
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
+// Safe cleanup of stale service workers and caches outside sandboxed iframes
+if (typeof window !== 'undefined') {
+  try {
+    const isSandboxedIframe = window.self !== window.top;
+    if (!isSandboxedIframe && 'serviceWorker' in navigator && navigator.serviceWorker?.getRegistrations) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      }).catch(() => {});
     }
-  }).catch(() => {});
 
-  if ('caches' in window) {
-    caches.keys().then((keys) => {
-      keys.forEach((key) => caches.delete(key));
-    }).catch(() => {});
+    if (!isSandboxedIframe && 'caches' in window && caches?.keys) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key).catch(() => {}));
+      }).catch(() => {});
+    }
+  } catch {
+    // Gracefully ignore restrictions in sandboxed preview iframe
   }
 }
 

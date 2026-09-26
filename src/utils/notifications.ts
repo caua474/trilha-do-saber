@@ -32,12 +32,23 @@ export const saveNotificationSettings = (settings: NotificationSettings) => {
 };
 
 export const isNotificationSupported = (): boolean => {
-  return typeof window !== 'undefined' && 'Notification' in window;
+  try {
+    if (typeof window === 'undefined') return false;
+    // Don't attempt to access Notification API inside a sandboxed iframe
+    if (window.self !== window.top) return false;
+    return 'Notification' in window && typeof Notification !== 'undefined';
+  } catch {
+    return false;
+  }
 };
 
 export const getNotificationPermission = (): NotificationPermission => {
-  if (!isNotificationSupported()) return 'denied';
-  return Notification.permission;
+  try {
+    if (!isNotificationSupported()) return 'denied';
+    return Notification.permission;
+  } catch {
+    return 'denied';
+  }
 };
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission> => {

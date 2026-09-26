@@ -65,6 +65,18 @@ import { OpcoesGeraisModal } from './components/OpcoesGeraisModal';
 
 // Utilities & Data
 import { StudyMaterial, TutorPlan, ELI5Explanation, UserProfile, AuthUser } from './types';
+import {
+  getAllMaterials,
+  getAllTutorPlans,
+  getAllELI5Explanations,
+  deleteMaterial,
+  deleteTutorPlan,
+  deleteELI5Explanation,
+  clearEntireDatabase,
+  clearAllMaterials,
+  clearAllTutorPlans,
+  clearAllELI5Explanations,
+} from './utils/db';
 
 // Audio feedback utilities (self-contained Web Audio API)
 function playClickSound(): void {
@@ -100,108 +112,6 @@ function playSuccessSound(): void {
     osc.start(now);
     osc.stop(now + 0.3);
   } catch {}
-}
-
-// IndexedDB storage helper (self-contained, robust fallback)
-const DB_NAME = 'AssistenteEstudosDB';
-const DB_VERSION = 3;
-
-async function fetchFromIndexedDB<T>(storeName: string): Promise<T[]> {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return [];
-  return new Promise((resolve) => {
-    try {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => resolve([]);
-      request.onsuccess = () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(storeName)) {
-          database.close();
-          return resolve([]);
-        }
-        const tx = database.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
-        const getAllReq = store.getAll();
-        getAllReq.onsuccess = () => {
-          database.close();
-          resolve(getAllReq.result || []);
-        };
-        getAllReq.onerror = () => {
-          database.close();
-          resolve([]);
-        };
-      };
-    } catch {
-      resolve([]);
-    }
-  });
-}
-
-async function deleteFromIndexedDB(storeName: string, id: string): Promise<void> {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return;
-  return new Promise((resolve) => {
-    try {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => resolve();
-      request.onsuccess = () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(storeName)) {
-          database.close();
-          return resolve();
-        }
-        const tx = database.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        store.delete(id);
-        tx.oncomplete = () => {
-          database.close();
-          resolve();
-        };
-        tx.onerror = () => {
-          database.close();
-          resolve();
-        };
-      };
-    } catch {
-      resolve();
-    }
-  });
-}
-
-async function clearIndexedDBStore(storeName: string): Promise<void> {
-  if (typeof window === 'undefined' || !('indexedDB' in window)) return;
-  return new Promise((resolve) => {
-    try {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => resolve();
-      request.onsuccess = () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(storeName)) {
-          database.close();
-          return resolve();
-        }
-        const tx = database.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        store.clear();
-        tx.oncomplete = () => {
-          database.close();
-          resolve();
-        };
-        tx.onerror = () => {
-          database.close();
-          resolve();
-        };
-      };
-    } catch {
-      resolve();
-    }
-  });
-}
-
-async function clearEntireIndexedDB(): Promise<void> {
-  await Promise.all([
-    clearIndexedDBStore('materials'),
-    clearIndexedDBStore('tutor_plans'),
-    clearIndexedDBStore('eli5_explanations'),
-  ]);
 }
 
 function MenteUpApp() {
@@ -338,15 +248,15 @@ function MenteUpApp() {
   const loadDatabaseItems = useCallback(async () => {
     try {
       const [mats, plans, eli5s] = await Promise.all([
-        fetchFromIndexedDB<StudyMaterial>('materials'),
-        fetchFromIndexedDB<TutorPlan>('tutor_plans'),
-        fetchFromIndexedDB<ELI5Explanation>('eli5_explanations'),
+        getAllMaterials(),
+        getAllTutorPlans(),
+        getAllELI5Explanations(),
       ]);
       setMaterials(mats);
       setTutorPlans(plans);
       setEli5Explanations(eli5s);
-    } catch (e) {
-      console.error('Erro ao carregar banco de dados:', e);
+    } catch {
+      // Falha silenciosa defensiva
     }
   }, []);
 
@@ -914,31 +824,31 @@ function MenteUpApp() {
               setActiveModal(null);
             }}
             onDeleteMaterial={async (id) => {
-              await deleteFromIndexedDB('materials', id);
+              await deleteMaterial(id);
               setMaterials((prev) => prev.filter((m) => m.id !== id));
             }}
             onDeleteTutorPlan={async (id) => {
-              await deleteFromIndexedDB('tutor_plans', id);
+              await deleteTutorPlan(id);
               setTutorPlans((prev) => prev.filter((p) => p.id !== id));
             }}
             onDeleteELI5={async (id) => {
-              await deleteFromIndexedDB('eli5_explanations', id);
+              await deleteELI5Explanation(id);
               setEli5Explanations((prev) => prev.filter((e) => e.id !== id));
             }}
             onClearHistory={async (cat) => {
               if (cat === 'all') {
-                await clearEntireIndexedDB();
+                await clearEntireDatabase();
                 setMaterials([]);
                 setTutorPlans([]);
                 setEli5Explanations([]);
               } else if (cat === 'materials') {
-                await clearIndexedDBStore('materials');
+                await clearAllMaterials();
                 setMaterials([]);
               } else if (cat === 'tutor') {
-                await clearIndexedDBStore('tutor_plans');
+                await clearAllTutorPlans();
                 setTutorPlans([]);
               } else if (cat === 'eli5') {
-                await clearIndexedDBStore('eli5_explanations');
+                await clearAllELI5Explanations();
                 setEli5Explanations([]);
               }
             }}

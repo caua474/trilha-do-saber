@@ -120,7 +120,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
     const guestUser: AuthUser = {
       id: `guest-${Date.now()}`,
       name: 'Visitante ENEM',
-      email: 'visitante@gabaritou.app',
+      email: 'visitante@menteup.app',
       provider: 'guest',
       isGuest: true,
       isPro: false,

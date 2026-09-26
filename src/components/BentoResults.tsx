@@ -366,7 +366,7 @@ ${material.perguntas
                       }`}>
                         {item.focusTopic || 'Resumo Geral'}
                       </span>
-                      <h5 className="text-xs font-bold truncate">{item.title}</h5>
+                      <h5 className="text-xs font-bold whitespace-normal line-clamp-2 leading-snug">{item.title}</h5>
                     </div>
                     <div className="flex items-center justify-between text-[10px] opacity-80 pt-1 border-t border-white/20 dark:border-slate-800">
                       <span>{new Date(item.createdAt).toLocaleDateString('pt-BR')}</span>
@@ -389,7 +389,7 @@ ${material.perguntas
             <BookOpen className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-md">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white whitespace-normal line-clamp-2 max-w-md leading-snug">
               {material.title}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">

@@ -463,8 +463,8 @@ function MenteUpApp() {
         onOpenCalendar={() => setActiveModal('calendar')}
         onOpenBanca={() => setActiveModal('banca')}
         onOpenGraficosTri={() => {
-          setPrimaryTab('simulados_treino');
-          setAbaAtiva('simulado_tri');
+          setPrimaryTab('perfil_gamificacao');
+          setAbaAtiva('estatisticas_estudo');
         }}
         onOpenOnboarding={() => setActiveModal('onboarding')}
         onOpenTour={() => setActiveModal('welcome_tour')}
@@ -519,8 +519,12 @@ function MenteUpApp() {
         />
       )}
 
-      {/* Main Content Area */}
-      <div id="tab-content-area" className="flex-1 w-full">
+      {/* Main Content Area com espaçamento inferior para garantir que o menu fixo nunca cubra botões/cards */}
+      <div
+        id="tab-content-area"
+        className="flex-1 w-full pb-28 sm:pb-32"
+        style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         {/* 1. HOME TAB */}
         {primaryTab === 'home' && (
           <DashboardPrincipal

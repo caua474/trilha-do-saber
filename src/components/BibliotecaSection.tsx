@@ -1746,7 +1746,7 @@ export const BibliotecaSection: React.FC<BibliotecaSectionProps> = ({
                                   </span>
                                 </div>
 
-                                <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-snug whitespace-normal line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                   {item.titulo}
                                 </h4>
 

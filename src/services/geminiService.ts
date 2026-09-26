@@ -8,7 +8,7 @@
  * - Centralização de todas as chamadas espalhadas nos componentes.
  */
 
-export const FORCED_GEMINI_MODEL = 'gemini-1.5-flash';
+export const FORCED_GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 export class GeminiServiceError extends Error {
   status?: number;
@@ -114,14 +114,14 @@ export async function callGeminiApi<T = any>(
     clearTimeout(timeoutId);
     if (netErr.name === 'AbortError') {
       throw new GeminiServiceError(
-        'Tempo limite esgotado. Por favor, tente novamente em alguns instantes.',
+        'Tempo limite esgotado ao aguardar resposta da IA (Timeout).',
         408,
         'TIMEOUT',
         netErr
       );
     }
     throw new GeminiServiceError(
-      'Falha de conexão. Por favor, tente novamente em alguns instantes.',
+      `Falha de conexão com o servidor de IA: ${netErr?.message || 'Verifique sua conexão com a internet.'}`,
       0,
       'NETWORK_ERROR',
       netErr
@@ -130,74 +130,76 @@ export async function callGeminiApi<T = any>(
     clearTimeout(timeoutId);
   }
 
-  // Tratamento específico de status HTTP: 401, 405, 500
-  if (response.status === 401) {
-    throw new GeminiServiceError(
-      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
-      401,
-      'UNAUTHORIZED'
-    );
-  }
-
-  if (response.status === 405) {
-    console.warn(`[geminiService] Erro 405 em ${endpoint}. Verificando método HTTP.`);
-    throw new GeminiServiceError(
-      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
-      405,
-      'METHOD_NOT_ALLOWED'
-    );
-  }
-
-  if (response.status >= 500) {
-    // Se for 500 e não for retry, tenta mais uma vez rapidamente após um breve delay
-    if (!options.skipRetry) {
-      console.warn(`[geminiService] Status 500 em ${endpoint}. Tentando retentativa de contingência...`);
-      await new Promise((r) => setTimeout(r, 600));
-      return callGeminiApi<T>(endpoint, body, { ...options, skipRetry: true });
-    }
-
-    throw new GeminiServiceError(
-      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
-      500,
-      'INTERNAL_SERVER_ERROR'
-    );
-  }
-
-  // Parse seguro do corpo da resposta
-  let jsonResult: any;
+  // Parse do corpo da resposta
+  let jsonResult: any = null;
   const rawText = await response.text();
   try {
     jsonResult = JSON.parse(rawText);
-  } catch (parseErr) {
-    // Tentativa de reparo caso venha com marcações ou texto adicional
+  } catch (_parseErr) {
     const firstBrace = rawText.indexOf('{');
     const lastBrace = rawText.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
         jsonResult = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
-      } catch (_) {
-        throw new GeminiServiceError(
-          'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
-          response.status,
-          'INVALID_JSON',
-          parseErr
-        );
-      }
-    } else {
-      throw new GeminiServiceError(
-        'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
-        response.status,
-        'INVALID_RESPONSE',
-        parseErr
-      );
+      } catch (_) {}
     }
   }
 
+  const serverErrorMessage = typeof jsonResult?.error === 'string'
+    ? jsonResult.error
+    : jsonResult?.error?.message || jsonResult?.message || (rawText.length < 250 && !rawText.includes('<html') ? rawText : '');
+
   if (!response.ok) {
+    if (response.status === 405) {
+      throw new GeminiServiceError(
+        serverErrorMessage || `Método HTTP não permitido (405 Method Not Allowed) em ${endpoint}. Certifique-se de usar o método POST.`,
+        405,
+        'METHOD_NOT_ALLOWED'
+      );
+    }
+
+    if (response.status === 429 || serverErrorMessage.includes('429') || serverErrorMessage.toLowerCase().includes('quota')) {
+      throw new GeminiServiceError(
+        serverErrorMessage || 'Limite de cota de requisições excedido no Gemini (429 Quota Exceeded). Aguarde alguns instantes ou use sua chave de API nas configurações.',
+        429,
+        'QUOTA_EXCEEDED'
+      );
+    }
+
+    if (response.status === 401) {
+      throw new GeminiServiceError(
+        serverErrorMessage || 'Chave de API Gemini inválida ou não autorizada (401 Unauthorized). Verifique sua chave nas configurações.',
+        401,
+        'UNAUTHORIZED'
+      );
+    }
+
+    if (response.status >= 500) {
+      if (!options.skipRetry) {
+        console.warn(`[geminiService] Status ${response.status} em ${endpoint}. Tentando retentativa de contingência...`);
+        await new Promise((r) => setTimeout(r, 600));
+        return callGeminiApi<T>(endpoint, body, { ...options, skipRetry: true });
+      }
+
+      throw new GeminiServiceError(
+        serverErrorMessage || `Erro interno no servidor de IA (${response.status}).`,
+        response.status,
+        'INTERNAL_SERVER_ERROR'
+      );
+    }
+
     throw new GeminiServiceError(
-      'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.',
+      serverErrorMessage || `Erro na requisição (${response.status}).`,
       response.status,
       'REQUEST_FAILED'
+    );
+  }
+
+  if (!jsonResult) {
+    throw new GeminiServiceError(
+      'Resposta inválida recebida do servidor.',
+      response.status,
+      'INVALID_RESPONSE'
     );
   }
 

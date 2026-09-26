@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -17,19 +17,27 @@ import { PrimaryTab } from './BottomNavigationBar';
 import { AbaAtiva } from './NavigationTabs';
 import { playClickSound, playSuccessSound } from '../utils/audio';
 
-export const WELCOME_TOUR_KEY = 'cfjvmg_welcome_tour_seen_v1';
+export const WELCOME_TOUR_KEY = 'menteup_welcome_tour_seen_v1';
+const LEGACY_TOUR_KEYS = ['cfjvmg_welcome_tour_seen_v1', 'gabaritai_welcome_tour_seen_v1'];
 
 export const hasSeenWelcomeTour = (): boolean => {
   try {
-    return localStorage.getItem(WELCOME_TOUR_KEY) === 'true';
-  } catch {
+    if (localStorage.getItem(WELCOME_TOUR_KEY) === 'true') return true;
+    for (const key of LEGACY_TOUR_KEYS) {
+      if (localStorage.getItem(key) === 'true') return true;
+    }
     return false;
+  } catch {
+    return true;
   }
 };
 
 export const markWelcomeTourSeen = (): void => {
   try {
     localStorage.setItem(WELCOME_TOUR_KEY, 'true');
+    for (const key of LEGACY_TOUR_KEYS) {
+      localStorage.setItem(key, 'true');
+    }
   } catch (e) {
     console.error('Erro ao registrar tour visto:', e);
   }
@@ -133,6 +141,19 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   const step = TOUR_STEPS[currentStepIndex];
   const isLast = currentStepIndex === TOUR_STEPS.length - 1;
 
+  // Marca imediatamente no localStorage para não reabrir em recarregamentos
+  useEffect(() => {
+    markWelcomeTourSeen();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        playClickSound();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleNext = () => {
     playClickSound();
     if (isLast) {
@@ -167,6 +188,11 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   return (
     <div
       id="welcome-tour-modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleSkip();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md"
     >
       <motion.div

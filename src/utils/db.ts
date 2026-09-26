@@ -1,7 +1,7 @@
 import { StudyMaterial, TutorPlan, ELI5Explanation, QuizResultLog, DuelResultLog, TopDuelist } from '../types';
 
 const DB_NAME = 'AssistenteEstudosDB';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 export const STORES = {
   MATERIALS: 'materials',
@@ -9,7 +9,23 @@ export const STORES = {
   ELI5_EXPLANATIONS: 'eli5_explanations',
   QUIZ_RESULTS: 'quiz_results',
   DUEL_RESULTS: 'duel_results',
+  PONTUACOES: 'pontuacoes',
 } as const;
+
+export interface SisuScoreRecord {
+  id: string;
+  createdAt: string;
+  scores: {
+    MAT: number;
+    NAT: number;
+    HUM: number;
+    LIN: number;
+    RED: number;
+  };
+  selectedUniv?: string;
+  selectedCursoNome?: string;
+  selectedCategoria?: string;
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -66,6 +82,12 @@ function openDB(): Promise<IDBDatabase> {
         duelStore.createIndex('materia', 'materia', { unique: false });
         duelStore.createIndex('winner', 'winner', { unique: false });
       }
+
+      // Store 6: pontuacoes (Simulador SISU & Pontuações TRI por Área)
+      if (!db.objectStoreNames.contains(STORES.PONTUACOES)) {
+        const scoreStore = db.createObjectStore(STORES.PONTUACOES, { keyPath: 'id' });
+        scoreStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
     };
   });
 }
@@ -98,6 +120,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
 
 export async function saveMaterial(material: StudyMaterial): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.MATERIALS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.MATERIALS, 'readwrite');
     const store = transaction.objectStore(STORES.MATERIALS);
@@ -109,24 +132,31 @@ export async function saveMaterial(material: StudyMaterial): Promise<void> {
 }
 
 export async function getAllMaterials(): Promise<StudyMaterial[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORES.MATERIALS, 'readonly');
-    const store = transaction.objectStore(STORES.MATERIALS);
-    const request = store.getAll();
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.MATERIALS)) return [];
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MATERIALS, 'readonly');
+      const store = transaction.objectStore(STORES.MATERIALS);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      const results = (request.result as StudyMaterial[]) || [];
-      // Sort newest first
-      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      resolve(results);
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const results = (request.result as StudyMaterial[]) || [];
+        // Sort newest first
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao buscar materiais:', err);
+    return [];
+  }
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.MATERIALS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.MATERIALS, 'readwrite');
     const store = transaction.objectStore(STORES.MATERIALS);
@@ -139,6 +169,7 @@ export async function deleteMaterial(id: string): Promise<void> {
 
 export async function clearAllMaterials(): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.MATERIALS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.MATERIALS, 'readwrite');
     const store = transaction.objectStore(STORES.MATERIALS);
@@ -155,6 +186,7 @@ export async function clearAllMaterials(): Promise<void> {
 
 export async function saveTutorPlan(plan: TutorPlan): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.TUTOR_PLANS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.TUTOR_PLANS, 'readwrite');
     const store = transaction.objectStore(STORES.TUTOR_PLANS);
@@ -166,24 +198,31 @@ export async function saveTutorPlan(plan: TutorPlan): Promise<void> {
 }
 
 export async function getAllTutorPlans(): Promise<TutorPlan[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORES.TUTOR_PLANS, 'readonly');
-    const store = transaction.objectStore(STORES.TUTOR_PLANS);
-    const request = store.getAll();
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.TUTOR_PLANS)) return [];
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.TUTOR_PLANS, 'readonly');
+      const store = transaction.objectStore(STORES.TUTOR_PLANS);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      const results = (request.result as TutorPlan[]) || [];
-      // Sort newest first
-      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      resolve(results);
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const results = (request.result as TutorPlan[]) || [];
+        // Sort newest first
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao buscar tutor plans:', err);
+    return [];
+  }
 }
 
 export async function deleteTutorPlan(id: string): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.TUTOR_PLANS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.TUTOR_PLANS, 'readwrite');
     const store = transaction.objectStore(STORES.TUTOR_PLANS);
@@ -196,6 +235,7 @@ export async function deleteTutorPlan(id: string): Promise<void> {
 
 export async function clearAllTutorPlans(): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.TUTOR_PLANS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.TUTOR_PLANS, 'readwrite');
     const store = transaction.objectStore(STORES.TUTOR_PLANS);
@@ -212,6 +252,7 @@ export async function clearAllTutorPlans(): Promise<void> {
 
 export async function saveELI5Explanation(explanation: ELI5Explanation): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.ELI5_EXPLANATIONS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.ELI5_EXPLANATIONS, 'readwrite');
     const store = transaction.objectStore(STORES.ELI5_EXPLANATIONS);
@@ -223,24 +264,31 @@ export async function saveELI5Explanation(explanation: ELI5Explanation): Promise
 }
 
 export async function getAllELI5Explanations(): Promise<ELI5Explanation[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORES.ELI5_EXPLANATIONS, 'readonly');
-    const store = transaction.objectStore(STORES.ELI5_EXPLANATIONS);
-    const request = store.getAll();
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.ELI5_EXPLANATIONS)) return [];
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.ELI5_EXPLANATIONS, 'readonly');
+      const store = transaction.objectStore(STORES.ELI5_EXPLANATIONS);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      const results = (request.result as ELI5Explanation[]) || [];
-      // Sort newest first
-      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      resolve(results);
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const results = (request.result as ELI5Explanation[]) || [];
+        // Sort newest first
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao buscar ELI5:', err);
+    return [];
+  }
 }
 
 export async function deleteELI5Explanation(id: string): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.ELI5_EXPLANATIONS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.ELI5_EXPLANATIONS, 'readwrite');
     const store = transaction.objectStore(STORES.ELI5_EXPLANATIONS);
@@ -253,6 +301,7 @@ export async function deleteELI5Explanation(id: string): Promise<void> {
 
 export async function clearAllELI5Explanations(): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.ELI5_EXPLANATIONS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.ELI5_EXPLANATIONS, 'readwrite');
     const store = transaction.objectStore(STORES.ELI5_EXPLANATIONS);
@@ -269,6 +318,10 @@ export async function clearAllELI5Explanations(): Promise<void> {
 
 export async function saveQuizResult(log: QuizResultLog): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.QUIZ_RESULTS)) {
+    console.warn(`[IndexedDB] Tabela ${STORES.QUIZ_RESULTS} não encontrada.`);
+    return;
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.QUIZ_RESULTS, 'readwrite');
     const store = transaction.objectStore(STORES.QUIZ_RESULTS);
@@ -280,19 +333,27 @@ export async function saveQuizResult(log: QuizResultLog): Promise<void> {
 }
 
 export async function getAllQuizResults(): Promise<QuizResultLog[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORES.QUIZ_RESULTS, 'readonly');
-    const store = transaction.objectStore(STORES.QUIZ_RESULTS);
-    const request = store.getAll();
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.QUIZ_RESULTS)) {
+      return [];
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.QUIZ_RESULTS, 'readonly');
+      const store = transaction.objectStore(STORES.QUIZ_RESULTS);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      const results = (request.result as QuizResultLog[]) || [];
-      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      resolve(results);
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const results = (request.result as QuizResultLog[]) || [];
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao obter quiz results:', err);
+    return [];
+  }
 }
 
 export async function getTodayQuizCount(): Promise<number> {
@@ -313,6 +374,7 @@ export async function getTodayQuizCount(): Promise<number> {
 
 export async function clearAllQuizResults(): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.QUIZ_RESULTS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.QUIZ_RESULTS, 'readwrite');
     const store = transaction.objectStore(STORES.QUIZ_RESULTS);
@@ -324,11 +386,65 @@ export async function clearAllQuizResults(): Promise<void> {
 }
 
 // -------------------------------------------------------------
+// Pontuações Store Operations (Simulador SISU & Histórico)
+// -------------------------------------------------------------
+
+export async function savePontuacao(record: SisuScoreRecord): Promise<void> {
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.PONTUACOES)) {
+      console.warn(`[IndexedDB] Tabela ${STORES.PONTUACOES} não encontrada.`);
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PONTUACOES, 'readwrite');
+      const store = transaction.objectStore(STORES.PONTUACOES);
+      const request = store.put(record);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao salvar pontuação:', err);
+  }
+}
+
+export async function getAllPontuacoes(): Promise<SisuScoreRecord[]> {
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.PONTUACOES)) {
+      return [];
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PONTUACOES, 'readonly');
+      const store = transaction.objectStore(STORES.PONTUACOES);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const results = (request.result as SisuScoreRecord[]) || [];
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao buscar pontuações:', err);
+    return [];
+  }
+}
+
+export async function getLatestPontuacao(): Promise<SisuScoreRecord | null> {
+  const all = await getAllPontuacoes();
+  return all.length > 0 ? all[0] : null;
+}
+
+// -------------------------------------------------------------
 // Duel Results Store Operations (Batalhas 1v1 e Arena)
 // -------------------------------------------------------------
 
 export async function saveDuelResult(duel: DuelResultLog): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.DUEL_RESULTS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.DUEL_RESULTS, 'readwrite');
     const store = transaction.objectStore(STORES.DUEL_RESULTS);
@@ -340,24 +456,31 @@ export async function saveDuelResult(duel: DuelResultLog): Promise<void> {
 }
 
 export async function getAllDuelResults(): Promise<DuelResultLog[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORES.DUEL_RESULTS, 'readonly');
-    const store = transaction.objectStore(STORES.DUEL_RESULTS);
-    const request = store.getAll();
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.DUEL_RESULTS)) return [];
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.DUEL_RESULTS, 'readonly');
+      const store = transaction.objectStore(STORES.DUEL_RESULTS);
+      const request = store.getAll();
 
-    request.onsuccess = () => {
-      const results = (request.result as DuelResultLog[]) || [];
-      // Sort newest first
-      results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      resolve(results);
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const results = (request.result as DuelResultLog[]) || [];
+        // Sort newest first
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao buscar duelos:', err);
+    return [];
+  }
 }
 
 export async function clearAllDuelResults(): Promise<void> {
   const db = await openDB();
+  if (!db.objectStoreNames.contains(STORES.DUEL_RESULTS)) return;
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORES.DUEL_RESULTS, 'readwrite');
     const store = transaction.objectStore(STORES.DUEL_RESULTS);
@@ -572,11 +695,28 @@ export async function getTopDuelistsThisWeek(currentUserName = 'Você'): Promise
 // Clear Entire DB
 // -------------------------------------------------------------
 
+export async function clearAllPontuacoes(): Promise<void> {
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains(STORES.PONTUACOES)) return;
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PONTUACOES, 'readwrite');
+      const store = transaction.objectStore(STORES.PONTUACOES);
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn('[IndexedDB] Erro ao limpar pontuações:', err);
+  }
+}
+
 export async function clearEntireDatabase(): Promise<void> {
   await clearAllMaterials();
   await clearAllTutorPlans();
   await clearAllELI5Explanations();
   await clearAllQuizResults();
   await clearAllDuelResults();
+  await clearAllPontuacoes();
 }
 

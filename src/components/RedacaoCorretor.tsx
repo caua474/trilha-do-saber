@@ -558,7 +558,7 @@ ${analiseIndividual.sugestao_reescrita || analiseIndividual.dica_de_ouro || ''}`
                 key={idx}
                 type="button"
                 onClick={() => setTema(t)}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200/60 dark:border-slate-700 transition-colors cursor-pointer text-left truncate max-w-[260px]"
+                className="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200/60 dark:border-slate-700 transition-colors cursor-pointer text-left whitespace-normal line-clamp-2 max-w-[320px] leading-tight"
                 title={t}
               >
                 {t}

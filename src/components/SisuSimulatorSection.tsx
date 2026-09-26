@@ -135,13 +135,24 @@ export const SisuSimulatorSection: React.FC<SisuSimulatorSectionProps> = ({ onGo
   useEffect(() => {
     async function fetchScoresFromHistory() {
       try {
+        // 1. Tenta carregar pontuação salva especificamente no Simulador SISU
+        const latestSaved = await db.getLatestPontuacao();
+        if (latestSaved && latestSaved.scores) {
+          setScores(latestSaved.scores);
+          if (latestSaved.selectedUniv) setSelectedUniv(latestSaved.selectedUniv);
+          if (latestSaved.selectedCursoNome) setSelectedCursoNome(latestSaved.selectedCursoNome);
+          if (latestSaved.selectedCategoria) setSelectedCategoria(latestSaved.selectedCategoria);
+          return;
+        }
+
+        // 2. Se não houver registro prévio, infere do histórico de simulados/quizzes
         const quizLogs = await db.getAllQuizResults();
-        if (quizLogs.length > 0) {
+        if (quizLogs && quizLogs.length > 0) {
           const map: { [k: string]: number[] } = { MAT: [], NAT: [], HUM: [], LIN: [], RED: [] };
           quizLogs.forEach((log) => {
             const perc = log.porcentagem || 70;
             const triScore = Math.round(450 + (perc / 100) * 480);
-            const matLower = log.materia.toLowerCase();
+            const matLower = (log.materia || '').toLowerCase();
             if (matLower.includes('mat')) map.MAT.push(triScore);
             else if (matLower.includes('nat') || matLower.includes('bio') || matLower.includes('fís') || matLower.includes('quí')) map.NAT.push(triScore);
             else if (matLower.includes('hum') || matLower.includes('his') || matLower.includes('geo')) map.HUM.push(triScore);
@@ -158,11 +169,24 @@ export const SisuSimulatorSection: React.FC<SisuSimulatorSectionProps> = ({ onGo
           }));
         }
       } catch (e) {
-        console.error('Erro ao ler pontuações do IndexedDB:', e);
+        console.warn('[SisuSimulator] Aviso ao ler histórico do IndexedDB:', e);
       }
     }
     fetchScoresFromHistory();
   }, []);
+
+  const updateScoreAndSave = (key: string, val: number) => {
+    const updated = { ...scores, [key]: val };
+    setScores(updated);
+    db.savePontuacao({
+      id: 'current_sisu_scores',
+      createdAt: new Date().toISOString(),
+      scores: updated,
+      selectedUniv,
+      selectedCursoNome,
+      selectedCategoria,
+    }).catch(() => {});
+  };
 
   const courseObj = SISU_CURSOS.find((c) => c.nome === selectedCursoNome) || SISU_CURSOS[0];
   const catObj = CATEGORIAS_VAGA.find((c) => c.id === selectedCategoria) || CATEGORIAS_VAGA[0];
@@ -343,7 +367,7 @@ export const SisuSimulatorSection: React.FC<SisuSimulatorSectionProps> = ({ onGo
                   max="1000"
                   step="5"
                   value={(scores as any)[item.key]}
-                  onChange={(e) => setScores({ ...scores, [item.key]: Number(e.target.value) })}
+                  onChange={(e) => updateScoreAndSave(item.key, Number(e.target.value))}
                   className={`w-full cursor-pointer h-1.5 bg-slate-800 rounded-lg ${item.color}`}
                 />
               </div>

@@ -247,7 +247,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                   >
                     <div className="space-y-1 pr-3 flex-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-900 dark:group-hover:text-indigo-300 transition-colors">
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-900 dark:group-hover:text-indigo-300 transition-colors whitespace-normal line-clamp-2 leading-snug">
                           {item.title}
                         </span>
                         {item.focusTopic && (

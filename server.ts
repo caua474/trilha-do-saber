@@ -36,10 +36,6 @@ app.get("/api/gemini", (_req, res) => {
   res.json({ success: true, message: "Endpoint /api/gemini online. Utilize POST para enviar { contents }." });
 });
 
-app.get("/api/gabi-support", (_req, res) => {
-  res.json({ success: true, message: "Endpoint /api/gabi-support online. Utilize POST para enviar { pergunta }." });
-});
-
 app.get("/api/gemini/chat", (_req, res) => {
   res.json({ success: true, message: "Endpoint /api/gemini/chat online. Utilize POST para enviar { prompt }." });
 });
@@ -404,9 +400,10 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
   timeoutMs?: number;
 }) {
   const modelsToTry = [
-    options.preferredModel || "gemini-1.5-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-flash",
+    options.preferredModel || "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
 
@@ -1295,13 +1292,28 @@ FORMATO DE RESPOSTA (JSON):
   "botao_atalho": "tela_assinatura | tela_perfil | tela_caderno_erros | nenhum"
 }`;
 
-app.post("/api/gabi-support", async (req, res) => {
+export async function gabiSupportHandler(req: express.Request, res: express.Response) {
+  if (req.method === "OPTIONS") {
+    res.header("Allow", "GET, POST, OPTIONS");
+    return res.sendStatus(204);
+  }
+  if (req.method === "GET") {
+    return res.json({ success: true, message: "Endpoint /api/gabi-support online. Utilize POST para enviar { pergunta }." });
+  }
+  if (req.method !== "POST") {
+    res.header("Allow", "GET, POST, OPTIONS");
+    return res.status(405).json({
+      success: false,
+      error: `Método ${req.method} não permitido. O endpoint /api/gabi-support requer o método POST com corpo JSON { "pergunta": "..." }.`
+    });
+  }
+
   try {
-    const pergunta = req.body.pergunta || req.body.message || req.body.prompt || req.body.question;
-    const clientApiKey = req.body.apiKey || (typeof req.headers["x-gemini-api-key"] === "string" ? req.headers["x-gemini-api-key"] : undefined);
+    const pergunta = req.body?.pergunta || req.body?.message || req.body?.prompt || req.body?.question;
+    const clientApiKey = req.body?.apiKey || (typeof req.headers["x-gemini-api-key"] === "string" ? req.headers["x-gemini-api-key"] : undefined);
 
     if (!pergunta || typeof pergunta !== "string" || !pergunta.trim()) {
-      return res.status(400).json({ error: "Envie sua dúvida para a Professora Gabi." });
+      return res.status(400).json({ success: false, error: "Envie sua dúvida para a Professora Gabi no campo { pergunta }." });
     }
 
     const trimmedPergunta = pergunta.trim();
@@ -1323,12 +1335,9 @@ app.post("/api/gabi-support", async (req, res) => {
     try {
       ai = getGenAI(clientApiKey);
     } catch (keyErr: any) {
-      // Se não houver chave no servidor nem no cliente, tentar fallback pedagógico direto
-      const fallbackResposta = getFallbackGabiAnswer(trimmedPergunta);
-      return res.json({
-        success: true,
-        modelUsed: "gabi-instant-engine",
-        data: fallbackResposta,
+      return res.status(400).json({
+        success: false,
+        error: `Chave de API inválida ou não configurada: ${keyErr?.message || "Insira sua chave de API Gemini nas configurações."}`
       });
     }
 
@@ -1337,7 +1346,7 @@ app.post("/api/gabi-support", async (req, res) => {
         contents: `Pergunta do aluno para a Professora Gabi:\n"${trimmedPergunta}"`,
         systemInstruction: GABI_SUPPORT_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
-        preferredModel: req.body.model || req.body.preferredModel || "gemini-1.5-flash",
+        preferredModel: req.body?.model || req.body?.preferredModel || "gemini-3.1-flash-lite",
       });
 
       let parsedData: any = {};
@@ -1373,24 +1382,35 @@ app.post("/api/gabi-support", async (req, res) => {
         data: parsedData,
       });
     } catch (modelErr: any) {
-      console.log("[Professora Gabi] Utilizando motor pedagógico de resposta rápida.");
-      const fallbackResposta = getFallbackGabiAnswer(trimmedPergunta);
-      return res.json({
-        success: true,
-        modelUsed: "gabi-instant-engine",
-        data: fallbackResposta,
+      console.error("[Professora Gabi] Erro no modelo:", modelErr);
+      const isQuotaOrDemand = modelErr?.message?.includes("429") || 
+                              modelErr?.message?.includes("quota") || 
+                              modelErr?.message?.includes("RESOURCE_EXHAUSTED") ||
+                              modelErr?.message?.includes("high demand") ||
+                              modelErr?.status === 429;
+      if (isQuotaOrDemand) {
+        return res.status(429).json({
+          success: false,
+          error: `Limite de cota excedido ou alta demanda no Gemini: ${modelErr?.message || "Quota Exceeded"}. Aguarde alguns instantes ou forneça sua própria chave de API.`
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        error: `Erro na IA Gemini: ${modelErr?.message || "Falha ao gerar resposta pedagógica."}`
       });
     }
   } catch (error: any) {
     console.error("Erro na assistente Professora Gabi:", error);
-    const fallbackResposta = getFallbackGabiAnswer(req.body?.pergunta || "");
-    return res.json({
-      success: true,
-      modelUsed: "gabi-recovery-engine",
-      data: fallbackResposta,
+    return res.status(500).json({
+      success: false,
+      error: `Erro no servidor: ${error?.message || "Falha interna ao processar a mensagem."}`
     });
   }
-});
+}
+
+app.post("/api/gabi-support", gabiSupportHandler);
+app.all("/api/gabi-support", gabiSupportHandler);
+export const POST = gabiSupportHandler;
 
 // 6. SYSTEM INSTRUCTION FOR ENEM ESSAY ANALYZER (CORRETOR DE REDAÇÃO ESPECIALISTA)
 const ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION = `Você é o Corretor de Redação Oficial do aplicativo MenteUp, especialista nas normas e critérios de avaliação do ENEM (Exame Nacional do Ensino Médio).

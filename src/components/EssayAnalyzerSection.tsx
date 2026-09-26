@@ -361,7 +361,7 @@ export const EssayAnalyzerSection: React.FC<EssayAnalyzerSectionProps> = ({
                       key={i}
                       type="button"
                       onClick={() => setTema(st)}
-                      className="text-[10px] font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-950 text-slate-600 dark:text-slate-300 transition text-left truncate max-w-full"
+                      className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-950 text-slate-600 dark:text-slate-300 transition text-left whitespace-normal line-clamp-2 max-w-full leading-tight"
                     >
                       {st}
                     </button>

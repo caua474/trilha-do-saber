@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import {
   X,
   Send,
@@ -20,6 +21,8 @@ import {
   Brain,
   Copy,
   Check,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import { GabiAvatar } from './GabiAvatar';
 import { chatWithGabi, solveQuestion } from '../services/geminiService';
@@ -90,6 +93,7 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastProcessedPromptRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const faqScrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll imediato sempre que novas mensagens chegarem ou quando estiver digitando
   useEffect(() => {
@@ -301,7 +305,16 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
         const displayOp = (op === '*' || op === 'x') ? 'x' : op;
         fallbackText = `${n1} ${displayOp} ${n2} = **${resNum}**.`;
       } else {
-        fallbackText = 'Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.';
+        const errorMsg = error?.message || error?.error || String(error || '');
+        if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+          fallbackText = `⚠️ **Limite de cota temporariamente excedido (429 Quota Exceeded):**\n\n${errorMsg}\n\n*Dica: Aguarde alguns instantes ou adicione sua própria chave de API Gemini gratuita nas preferências.*`;
+        } else if (errorMsg.includes('405')) {
+          fallbackText = `⚠️ **Erro de método HTTP (405 Method Not Allowed):**\n\n${errorMsg}`;
+        } else if (errorMsg.toLowerCase().includes('conexão') || errorMsg.toLowerCase().includes('network') || errorMsg.toLowerCase().includes('fetch')) {
+          fallbackText = `📡 **Erro de conexão com o servidor:**\n\n${errorMsg}\n\n*Verifique sua conexão com a internet e tente novamente.*`;
+        } else {
+          fallbackText = `⚠️ **Não foi possível responder:** ${errorMsg || 'Erro inesperado ao consultar a Professora Gabi. Tente novamente em instantes.'}`;
+        }
         fallbackAtalho = 'nenhum';
       }
 
@@ -468,25 +481,54 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
           </div>
         </div>
 
-        {/* Quick FAQ Chips - Clicar responde automaticamente */}
+        {/* Quick FAQ Chips - Clicar responde automaticamente com indicador visual de rolagem lateral */}
         <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> Perguntas Rápidas (Clique para resposta imediata):
+              <Sparkles className="w-3 h-3" /> Perguntas Rápidas:
             </p>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium flex items-center gap-0.5">
+              <span>Deslize</span>
+              <ChevronRight className="w-3 h-3 text-purple-500 animate-pulse" />
+            </span>
           </div>
-          <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
-            {FAQ_SUGGESTIONS.map((faq, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleAskGabi(faq)}
-                disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:border-purple-300 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap transition shadow-xs cursor-pointer active:scale-95"
-              >
-                {faq}
-              </button>
-            ))}
+
+          <div className="relative group">
+            {/* Degradê visual lateral esquerdo */}
+            <div className="pointer-events-none absolute left-0 top-0 bottom-1 w-6 bg-gradient-to-r from-slate-50 dark:from-slate-950 to-transparent z-10" />
+
+            <div
+              ref={faqScrollRef}
+              className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none scroll-smooth pl-1 pr-10"
+            >
+              {FAQ_SUGGESTIONS.map((faq, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleAskGabi(faq)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:border-purple-300 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap transition shadow-xs cursor-pointer active:scale-95"
+                >
+                  {faq}
+                </button>
+              ))}
+            </div>
+
+            {/* Degradê visual lateral direito sinalizando mais perguntas */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-12 bg-gradient-to-l from-slate-50 dark:from-slate-950 via-slate-50/90 dark:via-slate-950/90 to-transparent flex items-center justify-end z-10" />
+
+            {/* Botão com seta para rolagem rápida */}
+            <button
+              type="button"
+              onClick={() => {
+                faqScrollRef.current?.scrollBy({ left: 180, behavior: 'smooth' });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-slate-700 transition cursor-pointer z-20"
+              title="Rolar mais perguntas"
+              aria-label="Ver mais perguntas"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
@@ -553,7 +595,31 @@ export const GabiAssistantModal: React.FC<GabiAssistantModalProps> = ({
                     : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 rounded-bl-none'
                 }`}
               >
-                <div className="whitespace-pre-line">{msg.text}</div>
+                {msg.sender === 'gabi' ? (
+                  <div className="prose prose-xs dark:prose-invert max-w-none text-xs leading-relaxed space-y-1.5">
+                    <ReactMarkdown
+                      components={{
+                        strong: ({ children }) => (
+                          <strong className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                            {children}
+                          </strong>
+                        ),
+                        p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 my-1.5">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 space-y-1 my-1.5">{children}</ol>,
+                        li: ({ children }) => <li className="pl-0.5">{children}</li>,
+                        h1: ({ children }) => <h1 className="text-sm font-bold text-slate-900 dark:text-white mt-2 mb-1">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-xs font-bold text-slate-900 dark:text-white mt-1.5 mb-1">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-xs font-semibold text-indigo-500 mt-1 mb-0.5">{children}</h3>,
+                        code: ({ children }) => <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-[11px] font-mono text-purple-600 dark:text-purple-300">{children}</code>
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-line">{msg.text}</div>
+                )}
                 {msg.sender === 'gabi' && renderShortcutButton(msg.botaoAtalho)}
               </div>
             </div>

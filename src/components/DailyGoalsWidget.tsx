@@ -60,8 +60,8 @@ export function getDailyGoal(): DailyGoalData {
         };
       }
     }
-  } catch (e) {
-    console.error('Erro ao ler meta diária:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 
   // Default initial goal
@@ -79,8 +79,8 @@ export function saveDailyGoal(goal: DailyGoalData) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(goal));
     // Also sync to history
     updateDayInHistory(goal);
-  } catch (e) {
-    console.error('Erro ao salvar meta diária:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 }
 
@@ -98,8 +98,8 @@ function updateDayInHistory(goal: DailyGoalData) {
       batida: goal.progressoAtual >= goal.metaTarget && goal.metaTarget > 0,
     };
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.error('Erro ao atualizar histórico:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 }
 
@@ -113,8 +113,8 @@ export function get7DaysGoalsHistory(currentGoal: DailyGoalData): DayHistoryReco
     if (raw) {
       savedHistory = JSON.parse(raw);
     }
-  } catch (e) {
-    console.error('Erro ao ler histórico:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 
   // Ensure today's entry is fresh

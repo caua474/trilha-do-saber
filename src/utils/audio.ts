@@ -13,8 +13,8 @@ export function getSoundEnabled(): boolean {
 export function setSoundEnabled(enabled: boolean): void {
   try {
     localStorage.setItem(SOUND_SETTINGS_KEY, String(enabled));
-  } catch (e) {
-    console.error('Erro ao salvar preferência de som:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 }
 
@@ -30,8 +30,8 @@ export function getQuizSuccessSoundEnabled(): boolean {
 export function setQuizSuccessSoundEnabled(enabled: boolean): void {
   try {
     localStorage.setItem(QUIZ_SOUND_SETTINGS_KEY, String(enabled));
-  } catch (e) {
-    console.error('Erro ao salvar preferência de som do quiz:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 }
 

@@ -120,8 +120,8 @@ function MenteUpApp() {
     try {
       const saved = localStorage.getItem('gabaritai_auth_user');
       if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
     return null;
   });
@@ -129,8 +129,8 @@ function MenteUpApp() {
   const handleLogout = useCallback(() => {
     try {
       localStorage.removeItem('gabaritai_auth_user');
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
     setAuthUser(null);
     setActiveModal(null);
@@ -146,8 +146,8 @@ function MenteUpApp() {
     try {
       const saved = localStorage.getItem('gabaritai_theme');
       if (saved === 'light' || saved === 'dark') return saved;
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
     return 'dark';
   });
@@ -157,8 +157,8 @@ function MenteUpApp() {
     try {
       const saved = localStorage.getItem('gabaritai_study_streak_v1');
       if (saved) return parseInt(saved, 10);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
     return 7;
   });
@@ -167,8 +167,8 @@ function MenteUpApp() {
     try {
       const saved = localStorage.getItem('gabaritai_xp_v1');
       if (saved) return parseInt(saved, 10);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
     return 1250;
   });
@@ -239,8 +239,8 @@ function MenteUpApp() {
     }
     try {
       localStorage.setItem('gabaritai_theme', theme);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Falha silenciosa defensiva
     }
   }, [theme]);
 
@@ -270,8 +270,8 @@ function MenteUpApp() {
       const updated = prev + amount;
       try {
         localStorage.setItem('gabaritai_xp_v1', updated.toString());
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // Falha silenciosa defensiva
       }
       return updated;
     });
@@ -311,8 +311,8 @@ function MenteUpApp() {
           onLogin={(user) => {
             try {
               localStorage.setItem('gabaritai_auth_user', JSON.stringify(user));
-            } catch (err) {
-              console.error('Erro ao gravar sessão:', err);
+            } catch {
+              // Falha silenciosa defensiva
             }
             setAuthUser(user);
             if (user.name) {
@@ -639,8 +639,8 @@ function MenteUpApp() {
                     const updated = prev + 1;
                     try {
                       localStorage.setItem('gabaritai_study_streak_v1', updated.toString());
-                    } catch (e) {
-                      console.error(e);
+                    } catch {
+                      // Falha silenciosa defensiva
                     }
                     return updated;
                   });
@@ -984,8 +984,8 @@ function MenteUpApp() {
                 localStorage.setItem('gabaritai_gemini_model', settings.model);
                 localStorage.setItem('gabaritai_gemini_temp', settings.temperature.toString());
                 localStorage.setItem('gabaritai_gemini_sys_instruction', settings.systemInstruction);
-              } catch (e) {
-                console.error('Erro ao salvar preferências no localStorage:', e);
+              } catch {
+                // Falha silenciosa defensiva
               }
             }}
             onClose={() => setActiveModal(null)}

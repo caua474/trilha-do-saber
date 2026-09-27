@@ -222,22 +222,39 @@ export interface GabiChatResult {
 }
 
 /**
- * Envia mensagem para a tutora Professora Gabi (/api/gabi-support).
+ * Envia mensagem para a tutora Professora Gabi (/api/gemini/chat).
  */
 export async function chatWithGabi(params: GabiChatParams): Promise<GabiChatResult> {
-  const result = await callGeminiApi<GabiChatResult>('/api/gabi-support', {
-    pergunta: params.pergunta,
-    apiKey: params.apiKey,
-    history: params.history,
-  });
+  try {
+    const result = await callGeminiApi<GabiChatResult>('/api/gemini/chat', {
+      prompt: params.pergunta,
+      pergunta: params.pergunta,
+      apiKey: params.apiKey,
+      history: params.history,
+    });
 
-  if (result.data) {
-    return result.data;
+    if (result.data) {
+      return result.data;
+    }
+    return {
+      resposta_suporte: result.resposta_suporte || result.reply || result.text || 'Aqui está a sua resposta!',
+      botao_atalho: result.botao_atalho || 'nenhum',
+    };
+  } catch (err) {
+    // Fallback para /api/gabi-support caso necessário
+    const fallbackResult = await callGeminiApi<GabiChatResult>('/api/gabi-support', {
+      pergunta: params.pergunta,
+      apiKey: params.apiKey,
+      history: params.history,
+    });
+    if (fallbackResult.data) {
+      return fallbackResult.data;
+    }
+    return {
+      resposta_suporte: fallbackResult.resposta_suporte || fallbackResult.reply || fallbackResult.text || 'Aqui está a sua resposta!',
+      botao_atalho: fallbackResult.botao_atalho || 'nenhum',
+    };
   }
-  return {
-    resposta_suporte: result.reply || result.text || 'Aqui está a sua resposta!',
-    botao_atalho: result.botao_atalho || 'nenhum',
-  };
 }
 
 export interface SolveQuestionParams {

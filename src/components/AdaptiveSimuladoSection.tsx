@@ -153,8 +153,9 @@ export const AdaptiveSimuladoSection: React.FC<AdaptiveSimuladoSectionProps> = (
             <span className="bg-purple-500/30 text-purple-200 border border-purple-400/30 text-[10px] font-extrabold uppercase px-3 py-1 rounded-full flex items-center gap-1.5 w-fit">
               <Target className="w-3.5 h-3.5 text-amber-400" /> Diagnóstico do Caderno de Erros
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              🎯 Simulado Adaptativo Inteligente
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <Target className="w-7 h-7 text-cyan-400 shrink-0" />
+              <span>Simulado Adaptativo Inteligente</span>
             </h2>
             <p className="text-xs sm:text-sm text-purple-200/90 font-medium leading-relaxed">
               Algoritmo que analisa suas fraquezas reais e gera provas personalizadas de 5 a 10 questões focando exatamente nos seus tópicos com menor taxa de acerto.

@@ -1,4 +1,4 @@
-// Local Notification Service using Browser Notification API
+// Local Notification Service using Browser Notification API defensively
 
 export interface NotificationSettings {
   enabled: boolean;
@@ -14,8 +14,8 @@ export const getNotificationSettings = (): NotificationSettings => {
     if (saved) {
       return JSON.parse(saved);
     }
-  } catch (e) {
-    console.error('Erro ao ler configurações de notificação:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
   return {
     enabled: false,
@@ -26,16 +26,17 @@ export const getNotificationSettings = (): NotificationSettings => {
 export const saveNotificationSettings = (settings: NotificationSettings) => {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch (e) {
-    console.error('Erro ao salvar configurações de notificação:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
 };
 
 export const isNotificationSupported = (): boolean => {
   try {
     if (typeof window === 'undefined') return false;
-    // Don't attempt to access Notification API inside a sandboxed iframe
-    if (window.self !== window.top) return false;
+    // Don't attempt to access Notification API inside an iframe (such as AI Studio preview)
+    const isIframe = window.self !== window.top || window !== window.parent;
+    if (isIframe) return false;
     return 'Notification' in window && typeof Notification !== 'undefined';
   } catch {
     return false;
@@ -56,8 +57,7 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
   try {
     const permission = await Notification.requestPermission();
     return permission;
-  } catch (e) {
-    console.error('Erro ao solicitar permissão de notificação:', e);
+  } catch {
     return 'denied';
   }
 };
@@ -79,8 +79,7 @@ export const sendLocalNotification = (title: string, body: string, icon?: string
     };
 
     return true;
-  } catch (e) {
-    console.error('Erro ao enviar notificação local:', e);
+  } catch {
     return false;
   }
 };
@@ -110,8 +109,8 @@ export const isTodayStudyCompleted = (): boolean => {
     if (lastDate && lastDate === new Date().toDateString()) {
       return true;
     }
-  } catch (e) {
-    console.error('Erro ao verificar se estudo foi concluído hoje:', e);
+  } catch {
+    // Falha silenciosa defensiva
   }
   return false;
 };

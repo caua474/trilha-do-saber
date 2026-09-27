@@ -1,5 +1,34 @@
 import React from 'react';
 import { PrimaryTab } from './BottomNavigationBar';
+import {
+  Calendar,
+  Flame,
+  FileSpreadsheet,
+  FileText,
+  Target,
+  Swords,
+  BookOpen,
+  Zap,
+  PenTool,
+  Clock,
+  Brain,
+  Sparkles,
+  BarChart2,
+  Award,
+  GraduationCap,
+  Library,
+  Compass,
+  Headphones,
+  Mic,
+  Camera,
+  Layers,
+  ShieldCheck,
+  Bookmark,
+  Volume2,
+  MessageSquare,
+  Smartphone,
+  Bot
+} from 'lucide-react';
 
 export type AbaAtiva =
   | 'flashcards'
@@ -75,49 +104,49 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
     }
   };
 
-  const allTabs: { id: AbaAtiva; label: string; icon: string; category: PrimaryTab }[] = [
+  const allTabs: { id: AbaAtiva; label: string; icon: React.ReactNode; category: PrimaryTab }[] = [
     // ARENA & COMPETIÇÃO
-    { id: 'arena_x1', label: 'Arena X1 (Duelos ⚔️)', icon: '⚔️', category: 'arena' },
+    { id: 'arena_x1', label: 'Arena X1 (Duelos)', icon: <Swords className="w-4 h-4 text-indigo-400" />, category: 'arena' },
 
     // CONTEÚDOS & BIBLIOTECA
-    { id: 'flashcards', label: 'Resumos & Flashcards', icon: '⚡', category: 'conteudos' },
-    { id: 'biblioteca', label: 'Biblioteca & Fichamentos', icon: '📚', category: 'conteudos' },
-    { id: 'catalogo', label: 'Catálogo do Edital', icon: '📐', category: 'conteudos' },
-    { id: 'glossario_enem', label: 'Glossário do Edital', icon: '📖', category: 'conteudos' },
-    { id: 'mapas_mentais', label: 'Mapas Mentais', icon: '🧠', category: 'conteudos' },
-    { id: 'feynman_audio', label: 'Teste Verbal Feynman', icon: '🎤', category: 'conteudos' },
-    { id: 'pilulas_conhecimento', label: 'Pílulas do Conhecimento', icon: '💡', category: 'conteudos' },
-    { id: 'audio_podcasts', label: 'Modo Áudio & Podcasts', icon: '🎧', category: 'conteudos' },
-    { id: 'auto_flashcards', label: 'Auto-Flashcards (Foto/Texto)', icon: '🎴', category: 'conteudos' },
-    { id: 'duvidas', label: 'Scanner Tira-Dúvidas', icon: '💡', category: 'conteudos' },
-    { id: 'ai_playground', label: 'Tira-Dúvidas MenteUp AI', icon: '🤖', category: 'conteudos' },
+    { id: 'flashcards', label: 'Resumos & Flashcards', icon: <Zap className="w-4 h-4 text-amber-400" />, category: 'conteudos' },
+    { id: 'biblioteca', label: 'Biblioteca & Fichamentos', icon: <Library className="w-4 h-4 text-indigo-400" />, category: 'conteudos' },
+    { id: 'catalogo', label: 'Catálogo do Edital', icon: <Compass className="w-4 h-4 text-cyan-400" />, category: 'conteudos' },
+    { id: 'glossario_enem', label: 'Glossário do Edital', icon: <BookOpen className="w-4 h-4 text-purple-400" />, category: 'conteudos' },
+    { id: 'mapas_mentais', label: 'Mapas Mentais', icon: <Brain className="w-4 h-4 text-emerald-400" />, category: 'conteudos' },
+    { id: 'feynman_audio', label: 'Teste Verbal Feynman', icon: <Mic className="w-4 h-4 text-rose-400" />, category: 'conteudos' },
+    { id: 'pilulas_conhecimento', label: 'Pílulas do Conhecimento', icon: <Sparkles className="w-4 h-4 text-yellow-400" />, category: 'conteudos' },
+    { id: 'audio_podcasts', label: 'Modo Áudio & Podcasts', icon: <Headphones className="w-4 h-4 text-sky-400" />, category: 'conteudos' },
+    { id: 'auto_flashcards', label: 'Auto-Flashcards (Foto/Texto)', icon: <Layers className="w-4 h-4 text-amber-400" />, category: 'conteudos' },
+    { id: 'duvidas', label: 'Scanner Tira-Dúvidas', icon: <Camera className="w-4 h-4 text-indigo-400" />, category: 'conteudos' },
+    { id: 'ai_playground', label: 'Tira-Dúvidas MenteUp AI', icon: <Bot className="w-4 h-4 text-indigo-400" />, category: 'conteudos' },
 
     // REDAÇÃO & IA
-    { id: 'redacao', label: 'Corretor de Redação', icon: '✍️', category: 'redacao_ia' },
-    { id: 'c5_intervencao', label: 'Detector C5 (Intervenção)', icon: '🔍', category: 'redacao_ia' },
-    { id: 'repertorio', label: 'Repertórios Coringa', icon: '📖', category: 'redacao_ia' },
-    { id: 'esquema_redacao', label: 'Esqueleto de Redação', icon: '✍️', category: 'redacao_ia' },
-    { id: 'radar_redacao', label: 'Radar de Redação', icon: '🔥', category: 'redacao_ia' },
-    { id: 'advogado_diabo', label: 'Advogado do Diabo (Debate)', icon: '😈', category: 'redacao_ia' },
+    { id: 'redacao', label: 'Corretor de Redação', icon: <PenTool className="w-4 h-4 text-rose-400" />, category: 'redacao_ia' },
+    { id: 'c5_intervencao', label: 'Detector C5 (Intervenção)', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, category: 'redacao_ia' },
+    { id: 'repertorio', label: 'Repertórios Coringa', icon: <BookOpen className="w-4 h-4 text-purple-400" />, category: 'redacao_ia' },
+    { id: 'esquema_redacao', label: 'Esqueleto de Redação', icon: <Layers className="w-4 h-4 text-amber-400" />, category: 'redacao_ia' },
+    { id: 'radar_redacao', label: 'Radar de Redação', icon: <Flame className="w-4 h-4 text-orange-400" />, category: 'redacao_ia' },
+    { id: 'advogado_diabo', label: 'Advogado do Diabo (Debate)', icon: <MessageSquare className="w-4 h-4 text-purple-400" />, category: 'redacao_ia' },
 
     // SIMULADOS & TREINO
-    { id: 'simulado_tri', label: 'Simulado TRI Oficial', icon: '📝', category: 'simulados_treino' },
-    { id: 'simulado_adaptativo', label: 'Simulado Adaptativo IA', icon: '🎯', category: 'simulados_treino' },
-    { id: 'reels_feed', label: 'Feed Reels de Questões', icon: '📱', category: 'simulados_treino' },
-    { id: 'desafios', label: 'Batalha X1 de Questões', icon: '⚔️', category: 'simulados_treino' },
-    { id: 'caderno_erros', label: 'Caderno de Erros', icon: '📓', category: 'simulados_treino' },
-    { id: 'corretor_gabarito', label: 'Corretor Visual de Gabarito', icon: '📸', category: 'simulados_treino' },
-    { id: 'estratégia_chute', label: 'Chute Consciente & Estratégia', icon: '🎯', category: 'simulados_treino' },
-    { id: 'som_ambiente', label: 'Som Ambiente de Prova', icon: '🎧', category: 'simulados_treino' },
+    { id: 'simulado_tri', label: 'Simulado TRI Oficial', icon: <FileText className="w-4 h-4 text-cyan-400" />, category: 'simulados_treino' },
+    { id: 'simulado_adaptativo', label: 'Simulado Adaptativo IA', icon: <Target className="w-4 h-4 text-cyan-400" />, category: 'simulados_treino' },
+    { id: 'reels_feed', label: 'Feed Reels de Questões', icon: <Smartphone className="w-4 h-4 text-indigo-400" />, category: 'simulados_treino' },
+    { id: 'desafios', label: 'Batalha X1 de Questões', icon: <ShieldCheck className="w-4 h-4 text-cyan-400" />, category: 'simulados_treino' },
+    { id: 'caderno_erros', label: 'Caderno de Erros', icon: <Bookmark className="w-4 h-4 text-rose-400" />, category: 'simulados_treino' },
+    { id: 'corretor_gabarito', label: 'Corretor Visual de Gabarito', icon: <Camera className="w-4 h-4 text-purple-400" />, category: 'simulados_treino' },
+    { id: 'estratégia_chute', label: 'Chute Consciente & Estratégia', icon: <Compass className="w-4 h-4 text-amber-400" />, category: 'simulados_treino' },
+    { id: 'som_ambiente', label: 'Som Ambiente de Prova', icon: <Volume2 className="w-4 h-4 text-sky-400" />, category: 'simulados_treino' },
 
     // PERFIL & GAMIFICAÇÃO
-    { id: 'estatisticas_estudo', label: 'Estatísticas de Estudo', icon: '📊', category: 'perfil_gamificacao' },
-    { id: 'mascote_xp', label: 'Mascote Gabaritão & XP', icon: '🦁', category: 'perfil_gamificacao' },
-    { id: 'ranking', label: 'Ranking Semanal Regional', icon: '🏆', category: 'perfil_gamificacao' },
-    { id: 'reta_final', label: 'Modo Reta Final (30 Dias)', icon: '🚨', category: 'perfil_gamificacao' },
-    { id: 'planner_rotina', label: 'Planner & Rotina', icon: '📅', category: 'perfil_gamificacao' },
-    { id: 'sisu_simulator', label: 'Simulador SISU', icon: '🏛️', category: 'perfil_gamificacao' },
-    { id: 'folha_vespera', label: 'Folha de Véspera (Cheat Sheet)', icon: '📑', category: 'perfil_gamificacao' },
+    { id: 'estatisticas_estudo', label: 'Estatísticas de Estudo', icon: <BarChart2 className="w-4 h-4 text-emerald-400" />, category: 'perfil_gamificacao' },
+    { id: 'mascote_xp', label: 'Mascote Gabaritão & XP', icon: <Sparkles className="w-4 h-4 text-purple-400" />, category: 'perfil_gamificacao' },
+    { id: 'ranking', label: 'Ranking Semanal Regional', icon: <Award className="w-4 h-4 text-amber-400" />, category: 'perfil_gamificacao' },
+    { id: 'reta_final', label: 'Modo Reta Final (30 Dias)', icon: <Flame className="w-4 h-4 text-amber-400" />, category: 'perfil_gamificacao' },
+    { id: 'planner_rotina', label: 'Planner & Rotina', icon: <Calendar className="w-4 h-4 text-indigo-400" />, category: 'perfil_gamificacao' },
+    { id: 'sisu_simulator', label: 'Simulador SISU', icon: <GraduationCap className="w-4 h-4 text-blue-400" />, category: 'perfil_gamificacao' },
+    { id: 'folha_vespera', label: 'Folha de Véspera (Cheat Sheet)', icon: <FileSpreadsheet className="w-4 h-4 text-emerald-400" />, category: 'perfil_gamificacao' },
   ];
 
   // Filter tabs by primary category if a category is selected, or show all if home

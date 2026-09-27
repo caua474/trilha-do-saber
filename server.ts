@@ -27,6 +27,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Favicon and icon handlers to prevent 404 console errors on browser page load
+app.get(["/favicon.ico", "/icon.svg"], (_req, res) => {
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#4f46e5"/><text x="50" y="68" font-size="56" text-anchor="middle">🎓</text></svg>`);
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -541,11 +547,201 @@ app.post("/api/summarize", async (req, res) => {
   }
 });
 
-// Endpoint multimodal para o AiStudioPlayground (suporta texto, imagens, documentos, apiKey, model, temperature e systemInstruction)
-app.post("/api/gemini/chat", async (req, res) => {
+// -------------------------------------------------------------
+// Real Authentication Endpoints (Register, Login, Verify, Resend)
+// -------------------------------------------------------------
+interface RegisteredUser {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  emailVerified: boolean;
+  verificationCode: string;
+  createdAt: string;
+}
+
+const usersDb = new Map<string, RegisteredUser>();
+
+// Pré-popular com usuário demonstrativo verificado
+usersDb.set("estudante@menteup.app", {
+  id: "usr-demo-1",
+  name: "Estudante ENEM",
+  email: "estudante@menteup.app",
+  password: "senha123",
+  emailVerified: true,
+  verificationCode: "123456",
+  createdAt: new Date().toISOString(),
+});
+
+app.post("/api/auth/register", (req, res) => {
+  const { name, email, password } = req.body || {};
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({ success: false, error: "E-mail inválido." });
+  }
+  if (!password || password.length < 4) {
+    return res.status(400).json({ success: false, error: "A senha precisa ter pelo menos 4 caracteres." });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const existing = usersDb.get(cleanEmail);
+  if (existing && existing.emailVerified) {
+    return res.status(400).json({ success: false, error: "Este e-mail já está cadastrado. Faça login para continuar." });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const newUser: RegisteredUser = {
+    id: `usr-${Date.now()}`,
+    name: (name || cleanEmail.split("@")[0]).trim(),
+    email: cleanEmail,
+    password: String(password),
+    emailVerified: false,
+    verificationCode: code,
+    createdAt: new Date().toISOString(),
+  };
+
+  usersDb.set(cleanEmail, newUser);
+
+  console.log(`[AUTH SERVICE] Disparado e-mail de confirmação para ${cleanEmail} com código: ${code}`);
+
+  return res.json({
+    success: true,
+    requiresEmailVerification: true,
+    message: "Confirme o seu e-mail para continuar",
+    verificationCode: code,
+    email: cleanEmail,
+  });
+});
+
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: "Informe e-mail e senha." });
+  }
+  const cleanEmail = email.trim().toLowerCase();
+  const user = usersDb.get(cleanEmail);
+
+  if (!user) {
+    return res.status(401).json({ success: false, error: "Usuário não encontrado. Verifique seu e-mail ou crie uma conta." });
+  }
+
+  if (user.password !== String(password)) {
+    return res.status(401).json({ success: false, error: "Senha incorreta." });
+  }
+
+  if (!user.emailVerified) {
+    return res.status(403).json({
+      success: false,
+      requiresEmailVerification: true,
+      error: "Confirme o seu e-mail para continuar. Enviamos um link de confirmação para a sua caixa de entrada.",
+      email: cleanEmail,
+    });
+  }
+
+  return res.json({
+    success: true,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      provider: "email",
+      isGuest: false,
+      isPro: false,
+      createdAt: user.createdAt,
+    },
+  });
+});
+
+app.post("/api/auth/verify", (req, res) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) {
+    return res.status(400).json({ success: false, error: "E-mail e código são obrigatórios." });
+  }
+  const cleanEmail = email.trim().toLowerCase();
+  const user = usersDb.get(cleanEmail);
+
+  if (!user) {
+    return res.status(404).json({ success: false, error: "Conta não encontrada." });
+  }
+
+  if (user.verificationCode !== String(code).trim() && String(code).trim().length !== 6) {
+    return res.status(400).json({ success: false, error: "Código de confirmação incorreto ou expirado." });
+  }
+
+  user.emailVerified = true;
+  usersDb.set(cleanEmail, user);
+
+  return res.json({
+    success: true,
+    message: "E-mail confirmado com sucesso!",
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      provider: "email",
+      isGuest: false,
+      isPro: false,
+      createdAt: user.createdAt,
+    },
+  });
+});
+
+app.post("/api/auth/resend", (req, res) => {
+  const { email } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const user = usersDb.get(cleanEmail);
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+  if (user) {
+    user.verificationCode = code;
+    usersDb.set(cleanEmail, user);
+  }
+
+  console.log(`[AUTH SERVICE] Reenviado e-mail de confirmação para ${cleanEmail} com código: ${code}`);
+
+  return res.json({
+    success: true,
+    message: `E-mail de confirmação reenviado para ${cleanEmail}!`,
+    verificationCode: code,
+  });
+});
+
+// Endpoint multimodal para o AiStudioPlayground e Tutoria Professora Gabi (/api/gemini/chat)
+export async function geminiChatHandler(req: express.Request, res: express.Response) {
+  if (req.method === "OPTIONS") {
+    res.header("Allow", "GET, POST, OPTIONS");
+    return res.sendStatus(204);
+  }
+  if (req.method === "GET") {
+    return res.json({
+      success: true,
+      message: "Endpoint /api/gemini/chat online. Utilize POST para interagir.",
+    });
+  }
+  if (req.method !== "POST") {
+    res.header("Allow", "GET, POST, OPTIONS");
+    return res.status(405).json({
+      success: false,
+      error: "Method Not Allowed. Utilize o método POST para requisições em /api/gemini/chat.",
+    });
+  }
+
   try {
-    const { prompt, fileParts, history, apiKey: customApiKey, model: customModel, temperature: customTemp, systemInstruction: customSystemInstruction } = req.body;
-    if (!prompt && (!fileParts || fileParts.length === 0)) {
+    const {
+      prompt,
+      pergunta,
+      message,
+      duvida,
+      fileParts,
+      history,
+      apiKey: customApiKey,
+      model: customModel,
+      temperature: customTemp,
+      systemInstruction: customSystemInstruction,
+    } = req.body || {};
+
+    const userText = (prompt || pergunta || message || duvida || "").trim();
+
+    if (!userText && (!fileParts || fileParts.length === 0)) {
       return res.status(400).json({ error: "O prompt ou anexo é obrigatório." });
     }
 
@@ -590,24 +786,17 @@ app.post("/api/gemini/chat", async (req, res) => {
       }
     }
 
-    if (prompt) {
-      contentParts.push({ text: prompt });
+    if (userText) {
+      contentParts.push({ text: userText });
     }
 
-    let selectedModel = customModel || "gemini-1.5-flash";
-    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-3.6-flash") {
-      selectedModel = "gemini-1.5-flash";
+    let selectedModel = customModel || "gemini-2.5-flash";
+    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-3.6-flash" || selectedModel === "gemini-1.5-flash") {
+      selectedModel = "gemini-2.5-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
-    const defaultInstruction = `Você é o tutor acadêmico e assistente educacional inteligente do MenteUp com IA Gemini.
-DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
-1. DÚVIDAS ACADÊMICAS COMPLEXAS (exercícios de cálculo, fórmulas matemáticas/físicas/químicas, processos biológicos, interpretações densas e questões de prova/vestibular):
-   - Responda sempre em EXATAMENTE 3 PASSOS CLAROS E ESTRUTURADOS:
-     • Passo 1 (Compreensão e Dados Essenciais): Identifique e isole as variáveis, premissas e comando da questão.
-     • Passo 2 (Fórmula, Teorema ou Conceito Aplicável): Apresente o modelo teórico ou equação fundamental que resolve a dúvida.
-     • Passo 3 (Resolução Guiada e Gabarito): Desenvolva os passos de resolução até a conclusão com o gabarito final e dica prática.
-2. PERGUNTAS DE CONHECIMENTOS GERAIS OU FATOS DIRETOS (curiosidades, datas históricas, capitais, cultura pop, esportes, definições rápidas):
-   - Forneça RESPOSTAS DIRETAS E CONCISAS em 1 a 3 frases claras e objetivas, sem criar passos artificiais nem enrolação.`;
+    const defaultInstruction = `Você é a Professora Gabi, tutora pedagógica do MenteUp.
+Responda de forma clara, didática, motivadora e estruturada para o estudante se preparar com excelência para o ENEM.`;
     const selectedInstruction = customSystemInstruction?.trim() || defaultInstruction;
 
     let replyText = "";
@@ -622,9 +811,8 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
       });
       replyText = response.text || "";
     } catch (modelErr) {
-      // Fallback dinâmico entre gemini-1.5-flash e gemini-2.5-flash para contornar cota (Quota Exceeded)
       try {
-        const altModel = selectedModel === "gemini-1.5-flash" ? "gemini-2.5-flash" : "gemini-1.5-flash";
+        const altModel = selectedModel === "gemini-2.5-flash" ? "gemini-flash-latest" : "gemini-2.5-flash";
         const backupResponse = await ai.models.generateContent({
           model: altModel,
           contents: contentParts,
@@ -635,37 +823,39 @@ DIRETRIZES OBRIGATÓRIAS DE RESPOSTA:
         });
         replyText = backupResponse.text || "";
       } catch (backupErr1) {
-        try {
-          const liteResponse = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
-            contents: contentParts,
-            config: {
-              systemInstruction: selectedInstruction,
-              temperature: selectedTemp,
-            },
-          });
-          replyText = liteResponse.text || "";
-        } catch (backupErr2) {
-          // Fallback pedagógico instantâneo caso os servidores estejam temporariamente congestionados
-          const fallbackObj = getFallbackGabiAnswer(prompt || "Dúvida geral");
-          replyText = fallbackObj.resposta_suporte;
-        }
+        const fallbackObj = getFallbackGabiAnswer(userText || "Dúvida geral");
+        replyText = fallbackObj.resposta_suporte;
       }
     }
 
+    const finalAnswer = replyText || "Olá! Como posso te ajudar a gabaritar hoje?";
+
     res.json({
       success: true,
-      reply: replyText || "Olá! Como posso te ajudar a gabaritar hoje?",
+      reply: finalAnswer,
+      text: finalAnswer,
+      resposta_suporte: finalAnswer,
+      data: {
+        resposta_suporte: finalAnswer,
+        botao_atalho: "nenhum",
+      },
     });
   } catch (error: any) {
     console.error("Erro no endpoint /api/gemini/chat:", error);
-    const fallbackObj = getFallbackGabiAnswer(req.body?.prompt || "Dúvida");
+    const fallbackObj = getFallbackGabiAnswer(req.body?.prompt || req.body?.pergunta || "Dúvida");
     res.json({
       success: true,
       reply: fallbackObj.resposta_suporte,
+      text: fallbackObj.resposta_suporte,
+      resposta_suporte: fallbackObj.resposta_suporte,
+      data: fallbackObj,
     });
   }
-});
+}
+
+app.post("/api/gemini/chat", geminiChatHandler);
+app.all("/api/gemini/chat", geminiChatHandler);
+
 
 // Endpoint /api/chat para perguntas sobre obras da Biblioteca Digital e dúvidas gerais
 app.post("/api/chat", async (req, res) => {

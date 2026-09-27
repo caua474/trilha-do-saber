@@ -138,13 +138,13 @@ export const DailyStudyTipModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 pb-28 sm:pb-8 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden space-y-5"
+          className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl relative space-y-5"
         >
           {/* Top Decorative Glow */}
           <div className="absolute -top-12 -right-12 w-40 h-40 bg-gradient-to-br from-amber-400/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -214,11 +214,11 @@ export const DailyStudyTipModal: React.FC = () => {
             <span>{selectedTip.exemploPratico}</span>
           </div>
 
-          {/* Action Footer */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Action Footer com botão de ação proeminente e sem sobreposição */}
+          <div className="pt-3 pb-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={handleNextRandomTip}
-              className="w-full sm:w-auto text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="w-full sm:w-auto text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Ver Outra Técnica</span>
@@ -226,7 +226,7 @@ export const DailyStudyTipModal: React.FC = () => {
 
             <button
               onClick={handleClose}
-              className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/30 transition cursor-pointer flex items-center justify-center gap-2 active:scale-95"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-300" />
               <span>Começar a Estudar Agora</span>

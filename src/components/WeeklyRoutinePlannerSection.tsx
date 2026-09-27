@@ -72,8 +72,9 @@ export const WeeklyRoutinePlannerSection: React.FC = () => {
             <span className="bg-amber-500 text-slate-950 font-black text-[10px] uppercase px-3 py-1 rounded-full flex items-center gap-1.5 w-fit">
               <Calendar className="w-3.5 h-3.5" /> Organização de Horários e Saúde Mental
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              📅 Planner de Rotina e Cronograma Semanal
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <Calendar className="w-7 h-7 text-amber-400 shrink-0" />
+              <span>Planner de Rotina e Cronograma Semanal</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
               Organize seus blocos de estudo, rotina de exercícios e momentos essenciais de descanso para manter o equilíbrio emocional até a data do exame.
@@ -82,7 +83,7 @@ export const WeeklyRoutinePlannerSection: React.FC = () => {
 
           <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-3xl flex items-center gap-3 shrink-0">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-indigo-500 text-slate-950 flex items-center justify-center font-black text-xl">
-              🗓️
+              <Calendar className="w-5 h-5 text-slate-950" />
             </div>
             <div>
               <span className="text-xs text-amber-200 font-bold block uppercase tracking-wider">Cronograma Ativo</span>

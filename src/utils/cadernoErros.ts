@@ -21,8 +21,7 @@ export function getCadernoErros(): WrongQuestion[] {
   try {
     const data = localStorage.getItem(CADERNO_ERROS_KEY);
     return data ? JSON.parse(data) : [];
-  } catch (e) {
-    console.error('Erro ao ler Caderno de Erros:', e);
+  } catch {
     return [];
   }
 }

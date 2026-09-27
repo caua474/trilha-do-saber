@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Printer, Sparkles, AlertTriangle, BookOpen, Copy, Check, Download, Zap } from 'lucide-react';
+import { FileText, FileSpreadsheet, Printer, Sparkles, AlertTriangle, BookOpen, Copy, Check, Download, Zap } from 'lucide-react';
 import { generateCheatSheet } from '../services/geminiService';
 
 interface CheatSheetData {
@@ -97,8 +97,9 @@ ${sheet.gatilhos_de_memorizacao.map((g) => `- ${g}`).join('\n')}`;
             <span className="bg-indigo-500 text-white font-black text-[10px] uppercase px-3 py-1 rounded-full flex items-center gap-1.5 w-fit">
               <FileText className="w-3.5 h-3.5" /> Compilador de Revisão de Véspera
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              📑 Gerador de Folha de Véspera (Cheat Sheet)
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <FileSpreadsheet className="w-7 h-7 text-indigo-400 shrink-0" />
+              <span>Gerador de Folha de Véspera (Cheat Sheet)</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
               Sintetize qualquer conteúdo extenso em um resumo ultra-denso de 1 página pronto para revisão rápida antes da prova ou impressão!

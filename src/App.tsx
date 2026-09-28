@@ -62,6 +62,7 @@ import { SocialShareStoryModal } from './components/SocialShareStoryModal';
 import { EnemPrintableSheetModal } from './components/EnemPrintableSheetModal';
 import { MicrophonePermissionModal } from './components/MicrophonePermissionModal';
 import { OpcoesGeraisModal } from './components/OpcoesGeraisModal';
+import { TermsAndPrivacyModal, LegalTab } from './components/TermsAndPrivacyModal';
 
 // Utilities & Data
 import { StudyMaterial, TutorPlan, ELI5Explanation, UserProfile, AuthUser } from './types';
@@ -447,6 +448,7 @@ function MenteUpApp() {
         {primaryTab === 'home' && (
           <DashboardPrincipal
             onOpenGabi={() => setActiveModal('gabi')}
+            onOpenLegal={(tab) => setActiveModal(tab)}
             onSelectDisciplina={(materia) => {
               if (materia) {
                 setSelectedDisciplina(materia as any);
@@ -996,6 +998,14 @@ function MenteUpApp() {
                 // Falha silenciosa defensiva
               }
             }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {/* Terms of Use and Privacy Policy Modal */}
+        {(activeModal === 'terms' || activeModal === 'privacy') && (
+          <TermsAndPrivacyModal
+            initialTab={activeModal as LegalTab}
             onClose={() => setActiveModal(null)}
           />
         )}

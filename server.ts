@@ -378,7 +378,7 @@ function getFallbackGabiAnswer(pergunta: string): { resposta_suporte: string; bo
   // 8. Assinatura e Recursos do Aplicativo MenteUp
   if (p.includes("pro") || p.includes("plano") || p.includes("preço") || p.includes("valor") || p.includes("assinar")) {
     return {
-      resposta_suporte: "O Plano PRO do MenteUp custa R$ 5,00/mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
+      resposta_suporte: "O Plano MenteUp Pro custa R$ 5,00 / mês (sem fidelidade, cancele quando quiser). Ele inclui:\n\n• Scanner de Questões ilimitado com resolução passo a passo\n• Simulados TRI completos com nota oficial calculada\n• Caderno de Erros com repetição espaçada\n• Correção completa de Redação por competências do ENEM",
       botao_atalho: "tela_assinatura"
     };
   }

@@ -6,6 +6,7 @@ interface DashboardPrincipalProps {
   onOpenGabi?: () => void;
   onSelectDisciplina?: (materia: string) => void;
   onNavigateTab?: (tab: string) => void;
+  onOpenLegal?: (tab: 'terms' | 'privacy') => void;
   children?: React.ReactNode;
 }
 
@@ -13,6 +14,7 @@ export default function DashboardPrincipal({
   onOpenGabi,
   onSelectDisciplina,
   onNavigateTab,
+  onOpenLegal,
   children,
 }: DashboardPrincipalProps) {
   return (
@@ -30,6 +32,32 @@ export default function DashboardPrincipal({
 
         {/* Conteúdo adicional do Dashboard */}
         {children && <div className="space-y-4 px-4">{children}</div>}
+
+        {/* Footer Institucional com Links de Termos e Privacidade */}
+        <footer className="mt-8 pt-6 pb-4 border-t border-slate-900 text-center text-xs text-slate-500 space-y-2 px-4">
+          <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.('terms')}
+              className="hover:text-indigo-400 text-slate-400 transition-colors underline cursor-pointer"
+            >
+              Termos de Uso
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.('privacy')}
+              className="hover:text-emerald-400 text-slate-400 transition-colors underline cursor-pointer"
+            >
+              Política de Privacidade (LGPD)
+            </button>
+            <span>•</span>
+            <span className="text-slate-500">MenteUp Pro (R$ 5,00 / mês)</span>
+          </div>
+          <p className="text-[11px] text-slate-600">
+            MenteUp © 2026 • Plataforma Inteligente de Estudos & Aprovação ENEM. Todos os direitos reservados.
+          </p>
+        </footer>
       </div>
 
       {/* Botão da Gabi IA ancorado acima da barra inferior sem cobrir os dados */}

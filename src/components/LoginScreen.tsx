@@ -25,6 +25,7 @@ import {
   verifyEmailCode,
   resendVerificationEmail,
 } from '../services/authService';
+import { TermsAndPrivacyModal, LegalTab } from './TermsAndPrivacyModal';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -40,6 +41,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState<LegalTab | null>(null);
 
   // Estado de Confirmação de E-mail Obrigatória
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
@@ -54,19 +56,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMsg('Por favor, informe um endereço de e-mail válido.');
+    // 1. Validação de campo de e-mail vazio
+    if (!cleanEmail) {
+      setErrorMsg('Por favor, informe o seu endereço de e-mail.');
       return;
     }
 
-    if (!password || password.length < 6) {
-      setErrorMsg('A senha precisa ter pelo menos 6 caracteres.');
+    // 2. Validação rigorosa de formato de e-mail (RFC regex)
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setErrorMsg('Formato de e-mail inválido. Por favor, utilize o formato: exemplo@dominio.com.');
       return;
     }
 
-    if (tab === 'register' && !name.trim()) {
-      setErrorMsg('Por favor, preencha o seu nome completo.');
+    // 3. Validação de campo de senha vazio
+    if (!password) {
+      setErrorMsg('Por favor, informe a sua senha.');
       return;
+    }
+
+    // 4. Validação de tamanho mínimo da senha
+    if (password.length < 6) {
+      setErrorMsg('A senha precisa conter no mínimo 6 caracteres.');
+      return;
+    }
+
+    // 5. Validação de nome no cadastro
+    if (tab === 'register') {
+      const cleanName = name.trim();
+      if (!cleanName) {
+        setErrorMsg('Por favor, preencha o seu nome completo.');
+        return;
+      }
+      if (cleanName.length < 2) {
+        setErrorMsg('O nome precisa ter pelo menos 2 caracteres.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -569,9 +594,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                 <Crown className="w-5 h-5 text-amber-300" />
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-white">MenteUp Pro</span>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                     R$ 5,00 / mês
                   </span>
                 </div>
@@ -596,7 +621,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           <span>•</span>
           <span>Cancele Quando Quiser</span>
         </div>
+
+        {/* Links Termos de Uso e Política de Privacidade */}
+        <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 pt-1 border-t border-slate-900/80">
+          <button
+            type="button"
+            onClick={() => setShowLegalModal('terms')}
+            className="hover:text-indigo-400 transition-colors underline cursor-pointer"
+          >
+            Termos de Uso
+          </button>
+          <span>•</span>
+          <button
+            type="button"
+            onClick={() => setShowLegalModal('privacy')}
+            className="hover:text-emerald-400 transition-colors underline cursor-pointer"
+          >
+            Política de Privacidade
+          </button>
+        </div>
       </motion.div>
+
+      {/* Modal de Termos de Uso e Política de Privacidade */}
+      {showLegalModal && (
+        <TermsAndPrivacyModal
+          initialTab={showLegalModal}
+          onClose={() => setShowLegalModal(null)}
+        />
+      )}
     </div>
   );
 };

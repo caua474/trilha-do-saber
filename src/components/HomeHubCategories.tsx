@@ -126,7 +126,7 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
   const categoryGroups: CategoryGroup[] = [
     {
       id: 'redacao_ia',
-      title: '✍️ Redação & IA',
+      title: 'Redação & IA',
       icon: <PenTool className="w-5 h-5 text-rose-400" />,
       emoji: '✍️',
       badge: '5 recursos',
@@ -183,7 +183,7 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
     },
     {
       id: 'conteudos_memoria',
-      title: '📚 Conteúdos & Memória',
+      title: 'Conteúdos & Memória',
       icon: <BookOpen className="w-5 h-5 text-amber-400" />,
       emoji: '📚',
       badge: '6 recursos',
@@ -258,9 +258,9 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
     },
     {
       id: 'simulados_estrategia',
-      title: '📝 Simulados & Estratégia',
+      title: 'Simulados & Estratégia',
       icon: <Target className="w-5 h-5 text-cyan-400" />,
-      emoji: '📝',
+      emoji: '🎯',
       badge: '5 recursos',
       description: 'Provas oficiais, cronômetro de aplicação, algoritmo TRI e gestão de erros.',
       borderHoverColor: 'hover:border-cyan-500/40',
@@ -315,7 +315,7 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
     },
     {
       id: 'arena_gamificacao',
-      title: '⚔️ Arena & Gamificação',
+      title: 'Arena & Gamificação',
       icon: <Swords className="w-5 h-5 text-indigo-400" />,
       emoji: '⚔️',
       badge: '4 recursos',
@@ -363,7 +363,7 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
     },
     {
       id: 'ferramentas_estudo',
-      title: '🛠️ Ferramentas de Estudo',
+      title: 'Ferramentas de Estudo',
       icon: <Wrench className="w-5 h-5 text-emerald-400" />,
       emoji: '🛠️',
       badge: '11 recursos',
@@ -599,8 +599,12 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
                     : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
                 }`}
               >
-                <span>{cat.emoji}</span>
-                <span className="hidden sm:inline">{cat.title.replace(/^[^\s]+\s/, '')}</span>
+                <span className="shrink-0 flex items-center justify-center">
+                  {React.isValidElement(cat.icon)
+                    ? React.cloneElement(cat.icon as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                    : cat.icon}
+                </span>
+                <span className="hidden sm:inline">{cat.title}</span>
               </button>
             ))}
           </div>

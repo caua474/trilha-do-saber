@@ -17,7 +17,8 @@ import {
   BookOpen,
   Shuffle,
   Eye,
-  ListOrdered
+  ListOrdered,
+  Target
 } from 'lucide-react';
 import {
   BANCO_SIMULADOS_ENEM,
@@ -684,7 +685,7 @@ export default function Simulados() {
       <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">📝</span>
+            <Target className="w-5 h-5 text-amber-400 shrink-0" />
             <h2 className="text-lg font-black text-amber-400 tracking-wide">
               Simulado TRI Oficial & Banco ENEM
             </h2>

@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,6 +11,18 @@ dotenv.config();
 if (process.env.VITE_GEMINI_API_KEY && (process.env.VITE_GEMINI_API_KEY === "5,00" || process.env.VITE_GEMINI_API_KEY.length < 15)) {
   delete process.env.VITE_GEMINI_API_KEY;
 }
+
+// Configuração do Supabase Client no Servidor
+const serverSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://eaicsblstsrlkyabzqps.supabase.co";
+const serverSupabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+export const serverSupabase = (serverSupabaseUrl && serverSupabaseAnonKey && serverSupabaseUrl.startsWith("http"))
+  ? createSupabaseClient(serverSupabaseUrl, serverSupabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  : null;
 
 const app = express();
 const PORT = 3000;
@@ -76,25 +89,21 @@ function sendGeminiErrorResponse(res: express.Response, error: any, defaultMsg: 
 }
 
 function getGeminiApiKey(customApiKey?: string): string {
+  // 1. Prioridade absoluta: GEMINI_API_KEY do servidor (process.env.GEMINI_API_KEY)
+  const serverKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (serverKey && serverKey !== "MY_GEMINI_API_KEY" && serverKey.length > 15 && serverKey !== "5,00") {
+    return serverKey;
+  }
+  // 2. Chave customizada enviada pelo cliente (se válida)
   if (customApiKey && typeof customApiKey === "string" && customApiKey.trim().length > 15 && customApiKey.trim() !== "5,00") {
     return customApiKey.trim();
   }
-  // Always prioritize the official server-side GEMINI_API_KEY or VITE_GEMINI_API_KEY
+  // 3. Fallback para VITE_GEMINI_API_KEY
   const viteKey = (process.env.VITE_GEMINI_API_KEY || "").trim();
   if (viteKey && viteKey !== "MY_GEMINI_API_KEY" && viteKey.length > 15 && viteKey !== "5,00") {
     return viteKey;
   }
-  const serverKey = (process.env.GEMINI_API_KEY || "").trim();
-  if (serverKey && serverKey !== "MY_GEMINI_API_KEY" && serverKey.length > 15) {
-    return serverKey;
-  }
-  if (viteKey && viteKey !== "MY_GEMINI_API_KEY") {
-    return viteKey;
-  }
-  if (serverKey && serverKey !== "MY_GEMINI_API_KEY") {
-    return serverKey;
-  }
-  throw new Error("Não foi possível obter uma resposta no momento. Por favor, tente novamente em alguns instantes.");
+  throw new Error("GEMINI_API_KEY não configurada no servidor.");
 }
 
 function getGenAI(customApiKey?: string) {
@@ -406,10 +415,9 @@ async function callGeminiSafe(ai: GoogleGenAI, options: {
   timeoutMs?: number;
 }) {
   const modelsToTry = [
-    options.preferredModel || "gemini-3.1-flash-lite",
-    "gemini-3.1-flash-lite",
+    options.preferredModel || "gemini-3.8-flash",
     "gemini-3.8-flash",
-    "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
   ];
   const uniqueModels = [...new Set(modelsToTry.filter(Boolean))];
 
@@ -529,7 +537,7 @@ app.post("/api/summarize", async (req, res) => {
       systemInstruction: SUMMARIZE_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: summarizeSchema,
-      preferredModel: "gemini-1.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const data = cleanAndRepairJson(resultText) || {};
@@ -573,81 +581,144 @@ usersDb.set("estudante@menteup.app", {
   createdAt: new Date().toISOString(),
 });
 
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body || {};
   if (!email || !email.includes("@")) {
     return res.status(400).json({ success: false, error: "E-mail inválido." });
   }
-  if (!password || password.length < 4) {
-    return res.status(400).json({ success: false, error: "A senha precisa ter pelo menos 4 caracteres." });
+  if (!password || password.length < 6) {
+    return res.status(400).json({ success: false, error: "A senha precisa ter pelo menos 6 caracteres." });
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  const existing = usersDb.get(cleanEmail);
-  if (existing && existing.emailVerified) {
-    return res.status(400).json({ success: false, error: "Este e-mail já está cadastrado. Faça login para continuar." });
+  const cleanName = (name || cleanEmail.split("@")[0]).trim();
+
+  // 1. Tentar cadastro direto no Supabase
+  if (serverSupabase) {
+    try {
+      const { data, error } = await serverSupabase.auth.signUp({
+        email: cleanEmail,
+        password: String(password),
+        options: {
+          data: {
+            name: cleanName,
+          },
+        },
+      });
+
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          error: error.message || "Erro ao realizar cadastro no Supabase.",
+        });
+      }
+
+      if (!data.user) {
+        return res.status(400).json({
+          success: false,
+          error: "Nenhum usuário retornado pelo Supabase.",
+        });
+      }
+
+      const isConfirmed = !!data.user?.confirmed_at || !!data.user?.email_confirmed_at;
+      return res.json({
+        success: true,
+        requiresEmailVerification: !isConfirmed,
+        message: "Confirme o seu e-mail para continuar",
+        email: cleanEmail,
+        user: {
+          id: data.user.id,
+          name: cleanName,
+          email: cleanEmail,
+          provider: "supabase",
+          isGuest: false,
+          isPro: false,
+          createdAt: data.user.created_at,
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        success: false,
+        error: err.message || "Erro de conexão com o Supabase.",
+      });
+    }
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const newUser: RegisteredUser = {
-    id: `usr-${Date.now()}`,
-    name: (name || cleanEmail.split("@")[0]).trim(),
-    email: cleanEmail,
-    password: String(password),
-    emailVerified: false,
-    verificationCode: code,
-    createdAt: new Date().toISOString(),
-  };
-
-  usersDb.set(cleanEmail, newUser);
-
-  console.log(`[AUTH SERVICE] Disparado e-mail de confirmação para ${cleanEmail} com código: ${code}`);
-
-  return res.json({
-    success: true,
-    requiresEmailVerification: true,
-    message: "Confirme o seu e-mail para continuar",
-    verificationCode: code,
-    email: cleanEmail,
+  return res.status(500).json({
+    success: false,
+    error: "Serviço Supabase não inicializado no servidor.",
   });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ success: false, error: "Informe e-mail e senha." });
   }
   const cleanEmail = email.trim().toLowerCase();
-  const user = usersDb.get(cleanEmail);
 
-  if (!user) {
-    return res.status(401).json({ success: false, error: "Usuário não encontrado. Verifique seu e-mail ou crie uma conta." });
-  }
-
-  if (user.password !== String(password)) {
-    return res.status(401).json({ success: false, error: "Senha incorreta." });
-  }
-
-  if (!user.emailVerified) {
-    return res.status(403).json({
-      success: false,
-      requiresEmailVerification: true,
-      error: "Confirme o seu e-mail para continuar. Enviamos um link de confirmação para a sua caixa de entrada.",
-      email: cleanEmail,
+  // Permite login com a conta de demonstração
+  if (cleanEmail === "estudante@menteup.app" && password === "senha123") {
+    return res.json({
+      success: true,
+      user: {
+        id: "usr-demo-1",
+        name: "Estudante ENEM",
+        email: "estudante@menteup.app",
+        provider: "demo",
+        isGuest: false,
+        isPro: false,
+        createdAt: new Date().toISOString(),
+      },
     });
   }
 
-  return res.json({
-    success: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      provider: "email",
-      isGuest: false,
-      isPro: false,
-      createdAt: user.createdAt,
-    },
+  if (serverSupabase) {
+    try {
+      const { data, error } = await serverSupabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: String(password),
+      });
+
+      if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("confirm") || msg.includes("not confirmed") || msg.includes("verification")) {
+          return res.status(403).json({
+            success: false,
+            requiresEmailVerification: true,
+            error: "Confirme o seu e-mail para continuar. Enviamos um link de confirmação para a sua caixa de entrada.",
+            email: cleanEmail,
+          });
+        }
+        return res.status(401).json({
+          success: false,
+          error: error.message || "E-mail ou senha incorretos no Supabase.",
+        });
+      }
+
+      return res.json({
+        success: true,
+        user: {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || cleanEmail.split("@")[0],
+          email: cleanEmail,
+          provider: "supabase",
+          isGuest: false,
+          isPro: false,
+          createdAt: data.user.created_at,
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        success: false,
+        error: err.message || "Erro ao conectar com o Supabase.",
+      });
+    }
+  }
+
+  return res.status(500).json({
+    success: false,
+    error: "Serviço Supabase não inicializado no servidor.",
   });
 });
 
@@ -745,19 +816,18 @@ export async function geminiChatHandler(req: express.Request, res: express.Respo
       return res.status(400).json({ error: "O prompt ou anexo é obrigatório." });
     }
 
-    let effectiveKey = "";
-    try {
-      if (customApiKey && customApiKey.trim().length > 15 && customApiKey.trim() !== "5,00") {
-        effectiveKey = customApiKey.trim();
-      } else {
-        effectiveKey = getGeminiApiKey();
+    const serverKey = (process.env.GEMINI_API_KEY || "").trim();
+    let effectiveKey = (serverKey && serverKey.length > 15 && serverKey !== "5,00") ? serverKey : "";
+    if (!effectiveKey) {
+      try {
+        effectiveKey = getGeminiApiKey(customApiKey);
+      } catch {
+        effectiveKey = "";
       }
-    } catch {
-      effectiveKey = "";
     }
     if (!effectiveKey) {
       return res.status(400).json({
-        error: "GEMINI_API_KEY não configurada no servidor e nenhuma chave foi fornecida nas configurações do Playground.",
+        error: "GEMINI_API_KEY não configurada no servidor.",
       });
     }
 
@@ -790,9 +860,9 @@ export async function geminiChatHandler(req: express.Request, res: express.Respo
       contentParts.push({ text: userText });
     }
 
-    let selectedModel = customModel || "gemini-2.5-flash";
-    if (selectedModel === "gemini-3.8-flash" || selectedModel === "gemini-3.6-flash" || selectedModel === "gemini-1.5-flash") {
-      selectedModel = "gemini-2.5-flash";
+    let selectedModel = customModel || "gemini-3.8-flash";
+    if (selectedModel.includes("2.5") || selectedModel.includes("1.5")) {
+      selectedModel = "gemini-3.8-flash";
     }
     const selectedTemp = typeof customTemp === "number" ? customTemp : 0.7;
     const defaultInstruction = `Você é a Professora Gabi, tutora pedagógica do MenteUp.
@@ -812,7 +882,7 @@ Responda de forma clara, didática, motivadora e estruturada para o estudante se
       replyText = response.text || "";
     } catch (modelErr) {
       try {
-        const altModel = selectedModel === "gemini-2.5-flash" ? "gemini-flash-latest" : "gemini-2.5-flash";
+        const altModel = "gemini-3.1-flash-lite";
         const backupResponse = await ai.models.generateContent({
           model: altModel,
           contents: contentParts,
@@ -869,7 +939,7 @@ app.post("/api/chat", async (req, res) => {
     try {
       const ai = getGenAIFromRequest(req);
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3.8-flash",
         contents: message.trim(),
         config: {
           systemInstruction: `Você é o Tutor Acadêmico e Especialista em Literatura e Vestibulares do MenteUp.
@@ -896,7 +966,7 @@ DIRETRIZES FUNDAMENTAIS DE RESPOSTA:
         try {
           const ai = getGenAIFromRequest(req);
           const backupLite = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-3.8-flash",
             contents: message.trim(),
           });
           replyText = backupLite.text || "";
@@ -934,7 +1004,7 @@ app.post("/api/gemini", async (req, res) => {
     const { text } = await callGeminiSafe(ai, {
       contents: promptString,
       systemInstruction: systemInstruction || undefined,
-      preferredModel: "gemini-1.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     res.json({
@@ -975,7 +1045,7 @@ Analise a clareza, precisão técnica e simplicidade da explicação e responda 
     const { text: resultText } = await callGeminiSafe(ai, {
       contents: prompt,
       responseMimeType: "application/json",
-      preferredModel: "gemini-1.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsed = cleanAndRepairJson(resultText) || {};
@@ -1092,7 +1162,7 @@ Por favor, elabore o plano de estudos no MODO 1 (plano_estudo) com resumo_rapido
       systemInstruction: GABARITAAI_PLANO_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: planoSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -1189,7 +1259,7 @@ app.post("/api/explain-eli5", async (req, res) => {
       systemInstruction: GABARITAAI_DUVIDAS_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: duvidaSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -1350,7 +1420,7 @@ ${customTopic ? `Tópico específico solicitado pelo aluno: ${customTopic}` : ''
       systemInstruction: PERSONALIZED_PILL_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: pillSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const data = cleanAndRepairJson(resultText) || getFallbackKnowledgePill(customTopic, lowestSubjects);
@@ -1435,7 +1505,7 @@ app.post("/api/day-night-mode", async (req, res) => {
       systemInstruction: GABARITAAI_DAY_NIGHT_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: dayNightSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -1962,7 +2032,7 @@ ${sanitizedTexto}
 """`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           systemInstruction: ENEM_ESSAY_ANALYZER_SYSTEM_INSTRUCTION,
@@ -2150,7 +2220,7 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido sem markdown ou texto fora do JSON
 }`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -2308,7 +2378,7 @@ app.post("/api/analytics-pomodoro", async (req, res) => {
     const promptText = `Análise do histórico do aluno: ${JSON.stringify(historicoEstudos || {})}. Status do pomodoro: ${statusPomodoro || "foco_ativo"}. Gerar relatório de análise de produtividade e foco.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: promptText,
       config: {
         systemInstruction: ANALYTICS_POMODORO_SYSTEM_INSTRUCTION,
@@ -2421,7 +2491,7 @@ app.post("/api/retencao-conteudo", async (req, res) => {
     const promptText = `Matéria solicitada: ${materia || "História"}. Tópico: ${topico || "Geral ENEM"}. Contexto/Erro anterior: ${erroAluno || "Nenhum erro registrado"}. Gerar questão do dia, análise para caderno de erros e roteiro para pílula de áudio.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: promptText,
       config: {
         systemInstruction: RETENCAO_CONTEUDO_SYSTEM_INSTRUCTION,
@@ -2592,7 +2662,7 @@ Retorne exclusivamente o JSON de geração de flashcards.`;
       systemInstruction: FLASHCARDS_GENERATOR_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: flashcardsSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -2761,7 +2831,7 @@ Retorne exclusivamente o JSON de painel_usuario_ranking.`;
       systemInstruction: GABI_DATA_MANAGER_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       responseSchema: rankingSchema,
-      preferredModel: "gemini-2.5-flash",
+      preferredModel: "gemini-3.8-flash",
     });
 
     const parsedData = cleanAndRepairJson(resultText) || {};
@@ -3331,7 +3401,7 @@ app.post("/api/solve-question", async (req, res) => {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents,
         config: {
           systemInstruction: RESOLUCAO_3PASSOS_SYSTEM_INSTRUCTION,
@@ -3818,7 +3888,7 @@ A resposta deve ser obrigatoriamente um JSON com este formato:
       const { text: resultText } = await callGeminiSafe(ai, {
         contents: prompt,
         responseMimeType: "application/json",
-        preferredModel: "gemini-1.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
       parsed = cleanAndRepairJson(resultText);
     } catch (aiErr) {
@@ -3893,7 +3963,7 @@ Retorne obrigatoriamente JSON no seguinte formato:
         contents,
         systemInstruction,
         responseMimeType: "application/json",
-        preferredModel: "gemini-1.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
       parsed = cleanAndRepairJson(resultText);
     } catch (aiErr) {
@@ -3968,7 +4038,7 @@ Responda obrigatoriamente em JSON no formato:
         contents: parts,
         systemInstruction,
         responseMimeType: "application/json",
-        preferredModel: "gemini-1.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
       parsed = cleanAndRepairJson(resultText);
     } catch (aiErr) {
@@ -4037,7 +4107,7 @@ Responda obrigatoriamente em JSON no seguinte formato:
         contents: `Analise o parágrafo de conclusão a seguir quanto aos 5 elementos da Competência 5 do ENEM:\n\n"""\n${textoConclusao}\n"""`,
         systemInstruction,
         responseMimeType: "application/json",
-        preferredModel: "gemini-1.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
       parsed = cleanAndRepairJson(resultText);
     } catch (aiErr) {
@@ -4157,7 +4227,7 @@ Analise rigorosamente a imagem do cartão-resposta e retorne um objeto JSON exat
         contents: parts,
         systemInstruction,
         responseMimeType: "application/json",
-        preferredModel: "gemini-1.5-flash",
+        preferredModel: "gemini-3.8-flash",
       });
       parsed = cleanAndRepairJson(resultText);
     } catch (aiErr) {

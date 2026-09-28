@@ -105,7 +105,11 @@ const STUDY_TECHNIQUES: StudyTechnique[] = [
   }
 ];
 
-export const DailyStudyTipModal: React.FC = () => {
+interface DailyStudyTipModalProps {
+  onClose?: () => void;
+}
+
+export const DailyStudyTipModal: React.FC<DailyStudyTipModalProps> = ({ onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTip, setSelectedTip] = useState<StudyTechnique | null>(null);
 
@@ -132,6 +136,9 @@ export const DailyStudyTipModal: React.FC = () => {
 
   const handleClose = () => {
     setIsOpen(false);
+    if (onClose) {
+      onClose();
+    }
   };
 
   if (!isOpen || !selectedTip) return null;

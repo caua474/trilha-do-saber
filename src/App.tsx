@@ -318,8 +318,10 @@ function MenteUpApp() {
             if (user.name) {
               setUserProfile((prev) => ({ ...prev, name: user.name }));
             }
-            // Disparar tour de boas-vindas com 3 passos para novos usuários após login
-            if (!hasSeenWelcomeTour()) {
+            // Sequenciamento: se a Dica do Dia ainda não foi vista, ela abrirá primeiro.
+            // O Tour Guiado só deve abrir após a Dica do Dia ser fechada pelo usuário.
+            const dailyTipAlreadySeen = !!localStorage.getItem('gabaritaai_daily_tip_seen_v1');
+            if (dailyTipAlreadySeen && !hasSeenWelcomeTour()) {
               setActiveModal('welcome_tour');
             }
           }}
@@ -346,8 +348,14 @@ function MenteUpApp() {
       {/* Global Gemini API Error Feedback Banner */}
       <GeminiErrorBanner onOpenSettings={() => setActiveModal('playground_settings')} />
 
-      {/* Daily Study Tip (Auto-prompts if not seen today) */}
-      <DailyStudyTipModal />
+      {/* Daily Study Tip (Auto-prompts if not seen today). O Tour só abre após a Dica ser fechada */}
+      <DailyStudyTipModal
+        onClose={() => {
+          if (!hasSeenWelcomeTour()) {
+            setActiveModal('welcome_tour');
+          }
+        }}
+      />
 
       {/* Application Header */}
       <Header

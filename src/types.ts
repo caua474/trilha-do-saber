@@ -144,7 +144,7 @@ export interface AuthUser {
   avatar?: string;
   isGuest?: boolean;
   isPro?: boolean;
-  provider: 'google' | 'email' | 'guest';
+  provider: 'google' | 'email' | 'guest' | 'supabase';
   createdAt: string;
 }
 

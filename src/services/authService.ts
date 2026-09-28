@@ -1,26 +1,36 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AuthUser } from '../types';
 
-// Credenciais opcionais do Supabase via variáveis de ambiente Vite
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+// Credenciais do Supabase via variáveis de ambiente Vite
+const defaultSupabaseUrl = 'https://eaicsblstsrlkyabzqps.supabase.co';
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || defaultSupabaseUrl;
 const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 
 export let supabase: SupabaseClient | null = null;
 
-if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        storageKey: 'menteup_supabase_auth_token',
-      },
-    });
-  } catch {
-    // Falha silenciosa defensiva
+export function getSupabaseClient(): SupabaseClient | null {
+  if (supabase) return supabase;
+  const url = (import.meta as any).env?.VITE_SUPABASE_URL || defaultSupabaseUrl;
+  const key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+  if (url && key && url.startsWith('http')) {
+    try {
+      supabase = createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          storageKey: 'menteup_supabase_auth_token',
+        },
+      });
+    } catch {
+      supabase = null;
+    }
   }
+  return supabase;
 }
+
+// Inicializar cliente se variáveis disponíveis
+getSupabaseClient();
 
 export interface SignUpParams {
   name: string;
@@ -43,18 +53,19 @@ export interface AuthResponse {
 }
 
 /**
- * Cadastra um novo usuário no serviço de autenticação real.
- * Dispara o envio de e-mail de confirmação e NUNCA autentica automaticamente
- * antes da verificação do e-mail.
+ * Cadastra um novo usuário diretamente no Supabase Auth.
+ * Dispara o e-mail de confirmação do Supabase e só retorna sucesso
+ * se a criação for confirmada pelo Supabase.
  */
 export async function signUpUser(params: SignUpParams): Promise<AuthResponse> {
   const cleanEmail = params.email.trim().toLowerCase();
   const cleanName = params.name.trim();
 
-  // 1. Tentar integração com Supabase se configurado
-  if (supabase) {
+  // 1. Tentar cadastro direto pelo cliente Supabase no navegador
+  const client = getSupabaseClient();
+  if (client) {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await client.auth.signUp({
         email: cleanEmail,
         password: params.password,
         options: {
@@ -71,21 +82,35 @@ export async function signUpUser(params: SignUpParams): Promise<AuthResponse> {
         };
       }
 
-      // Supabase por padrão não confirma e-mail imediatamente se confirmação estiver ativa
-      const isConfirmed = !!data.user?.confirmed_at || !!data.user?.email_confirmed_at;
-      if (!isConfirmed) {
+      if (!data.user) {
         return {
-          success: true,
-          requiresEmailVerification: true,
-          message: 'Confirme o seu e-mail para continuar',
+          success: false,
+          error: 'Nenhum usuário retornado pelo Supabase.',
         };
       }
+
+      // Supabase por padrão não confirma e-mail imediatamente se confirmação estiver ativa
+      const isConfirmed = !!data.user?.confirmed_at || !!data.user?.email_confirmed_at;
+      return {
+        success: true,
+        requiresEmailVerification: !isConfirmed,
+        message: 'Confirme o seu e-mail para continuar',
+        user: {
+          id: data.user.id,
+          name: cleanName,
+          email: cleanEmail,
+          provider: 'supabase',
+          isGuest: false,
+          isPro: false,
+          createdAt: data.user.created_at,
+        },
+      };
     } catch (err: any) {
-      console.warn('Erro ao chamar Supabase signUp, utilizando serviço de auth local:', err);
+      console.warn('Erro ao chamar Supabase client signUp, recorrendo à rota do servidor:', err);
     }
   }
 
-  // 2. Chamar o serviço de autenticação do backend (API local / serverless)
+  // 2. Chamar o serviço de autenticação do backend (que também se comunica com o Supabase)
   try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
@@ -98,38 +123,23 @@ export async function signUpUser(params: SignUpParams): Promise<AuthResponse> {
     });
 
     const data = await res.json();
-    if (!res.ok) {
+    if (!res.ok || !data.success) {
       return {
         success: false,
-        error: data.error || 'Erro ao realizar cadastro.',
+        error: data.error || 'Erro ao realizar cadastro no Supabase.',
       };
     }
 
     return {
       success: true,
-      requiresEmailVerification: true,
-      message: 'Confirme o seu e-mail para continuar',
-      verificationCode: data.verificationCode,
+      requiresEmailVerification: data.requiresEmailVerification ?? true,
+      message: data.message || 'Confirme o seu e-mail para continuar',
+      user: data.user,
     };
   } catch (err: any) {
-    // Fallback gracioso com persistência de verificação pendente
-    const pendingCode = Math.floor(100000 + Math.random() * 900000).toString();
-    try {
-      const pendingUsers = JSON.parse(localStorage.getItem('menteup_pending_users') || '{}');
-      pendingUsers[cleanEmail] = {
-        name: cleanName,
-        code: pendingCode,
-        password: params.password,
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem('menteup_pending_users', JSON.stringify(pendingUsers));
-    } catch {}
-
     return {
-      success: true,
-      requiresEmailVerification: true,
-      message: 'Confirme o seu e-mail para continuar',
-      verificationCode: pendingCode,
+      success: false,
+      error: 'Não foi possível conectar ao serviço do Supabase. Verifique sua conexão e tente novamente.',
     };
   }
 }

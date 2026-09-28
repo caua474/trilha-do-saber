@@ -30,13 +30,13 @@ export class GeminiServiceError extends Error {
  */
 export function getGeminiApiKey(): string {
   const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (envKey && typeof envKey === 'string' && envKey.trim() && envKey.trim() !== '5,00') {
+  if (envKey && typeof envKey === 'string' && envKey.trim().length > 15 && envKey.trim() !== '5,00') {
     return envKey.trim();
   }
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem('menteup_gemini_api_key') || localStorage.getItem('gabaritai_gemini_api_key');
-      if (saved && saved.trim() && saved.trim() !== '5,00') {
+      if (saved && saved.trim().length > 15 && saved.trim() !== '5,00') {
         return saved.trim();
       }
     } catch (_) {}

@@ -59,8 +59,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
       return;
     }
 
-    if (!password || password.length < 4) {
-      setErrorMsg('A senha precisa ter pelo menos 4 caracteres.');
+    if (!password || password.length < 6) {
+      setErrorMsg('A senha precisa ter pelo menos 6 caracteres.');
       return;
     }
 

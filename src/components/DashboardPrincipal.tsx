@@ -1,12 +1,16 @@
 import React from 'react';
 import CardMetaDiaria from './CardMetaDiaria';
 import RaioXDisciplinas from './RaioXDisciplinas';
+import { SubscriptionManagementCard } from './SubscriptionManagementCard';
+import { AuthUser } from '../types';
 
 interface DashboardPrincipalProps {
   onOpenGabi?: () => void;
   onSelectDisciplina?: (materia: string) => void;
   onNavigateTab?: (tab: string) => void;
   onOpenLegal?: (tab: 'terms' | 'privacy') => void;
+  onOpenPro?: () => void;
+  authUser?: AuthUser | null;
   children?: React.ReactNode;
 }
 
@@ -15,8 +19,24 @@ export default function DashboardPrincipal({
   onSelectDisciplina,
   onNavigateTab,
   onOpenLegal,
+  onOpenPro,
+  authUser: propAuthUser,
   children,
 }: DashboardPrincipalProps) {
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(() => {
+    if (propAuthUser) return propAuthUser;
+    try {
+      const saved = localStorage.getItem('gabaritai_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  React.useEffect(() => {
+    if (propAuthUser) setCurrentUser(propAuthUser);
+  }, [propAuthUser]);
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-white pb-32">
       <div className="w-full max-w-7xl mx-auto">
@@ -30,29 +50,55 @@ export default function DashboardPrincipal({
           <RaioXDisciplinas onSelectDisciplina={onSelectDisciplina} />
         </section>
 
+        {/* 3. Seção Minha Assinatura / Plano Pro Mercado Pago */}
+        <section className="px-4 py-3">
+          <SubscriptionManagementCard
+            authUser={currentUser}
+            onOpenPro={onOpenPro}
+            onStatusUpdated={() => {
+              try {
+                const saved = localStorage.getItem('gabaritai_auth_user');
+                setCurrentUser(saved ? JSON.parse(saved) : null);
+              } catch {}
+            }}
+          />
+        </section>
+
         {/* Conteúdo adicional do Dashboard */}
         {children && <div className="space-y-4 px-4">{children}</div>}
 
         {/* Footer Institucional com Links de Termos e Privacidade */}
         <footer className="mt-8 pt-6 pb-4 border-t border-slate-900 text-center text-xs text-slate-500 space-y-2 px-4">
           <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
-            <button
-              type="button"
-              onClick={() => onOpenLegal?.('terms')}
+            <a
+              href="#/termos-de-uso"
+              onClick={(e) => {
+                e.preventDefault();
+                onOpenLegal?.('terms');
+              }}
               className="hover:text-indigo-400 text-slate-400 transition-colors underline cursor-pointer"
             >
               Termos de Uso
-            </button>
+            </a>
             <span>•</span>
-            <button
-              type="button"
-              onClick={() => onOpenLegal?.('privacy')}
+            <a
+              href="#/politica-de-privacidade"
+              onClick={(e) => {
+                e.preventDefault();
+                onOpenLegal?.('privacy');
+              }}
               className="hover:text-emerald-400 text-slate-400 transition-colors underline cursor-pointer"
             >
               Política de Privacidade (LGPD)
-            </button>
+            </a>
             <span>•</span>
-            <span className="text-slate-500">MenteUp Pro (R$ 5,00 / mês)</span>
+            <button
+              type="button"
+              onClick={() => onOpenPro?.()}
+              className="hover:text-amber-300 text-amber-400 font-bold transition-colors cursor-pointer underline flex items-center gap-1"
+            >
+              <span>MenteUp Pro R$ 5,00 (Acesso Vitalício)</span>
+            </button>
           </div>
           <p className="text-[11px] text-slate-600">
             MenteUp © 2026 • Plataforma Inteligente de Estudos & Aprovação ENEM. Todos os direitos reservados.

@@ -265,6 +265,28 @@ function MenteUpApp() {
     loadDatabaseItems();
   }, [loadDatabaseItems]);
 
+  // Sincronização de rotas legais e páginas institucionais via URL/Hash
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      if (typeof window === 'undefined') return;
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('termos') || hash.includes('termos') || hash.includes('terms')) {
+        setActiveModal('terms');
+      } else if (path.includes('privacidade') || hash.includes('privacidade') || hash.includes('privacy')) {
+        setActiveModal('privacy');
+      }
+    };
+
+    handleUrlRoute();
+    window.addEventListener('hashchange', handleUrlRoute);
+    window.addEventListener('popstate', handleUrlRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlRoute);
+      window.removeEventListener('popstate', handleUrlRoute);
+    };
+  }, []);
+
   // Handle XP addition
   const handleAddXP = (amount: number) => {
     setUserXP((prev) => {
@@ -334,6 +356,32 @@ function MenteUpApp() {
           {activeModal === 'pro' && (
             <ProSubscriptionModal
               onClose={() => setActiveModal(null)}
+              onUpgradeSuccess={() => {
+                try {
+                  const saved = localStorage.getItem('gabaritai_auth_user');
+                  if (saved) {
+                    setAuthUser(JSON.parse(saved));
+                  }
+                } catch {}
+              }}
+            />
+          )}
+
+          {/* Modal de Termos de Uso e Política de Privacidade */}
+          {(activeModal === 'terms' || activeModal === 'privacy') && (
+            <TermsAndPrivacyModal
+              initialTab={activeModal as LegalTab}
+              onClose={() => {
+                setActiveModal(null);
+                if (typeof window !== 'undefined') {
+                  if (window.location.hash) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                  }
+                  if (window.location.pathname === '/termos-de-uso' || window.location.pathname === '/politica-de-privacidade') {
+                    window.history.replaceState(null, '', '/');
+                  }
+                }
+              }}
             />
           )}
         </AnimatePresence>
@@ -447,8 +495,10 @@ function MenteUpApp() {
         {/* 1. HOME TAB */}
         {primaryTab === 'home' && (
           <DashboardPrincipal
+            authUser={authUser}
             onOpenGabi={() => setActiveModal('gabi')}
             onOpenLegal={(tab) => setActiveModal(tab)}
+            onOpenPro={() => setActiveModal('pro')}
             onSelectDisciplina={(materia) => {
               if (materia) {
                 setSelectedDisciplina(materia as any);
@@ -606,7 +656,12 @@ function MenteUpApp() {
           <main className="max-w-7xl mx-auto px-4 pb-28 pt-2">
             {abaAtiva === 'simulado_tri' && <Simulados />}
             {abaAtiva === 'simulado_adaptativo' && <AdaptiveSimuladoSection onAddXp={handleAddXP} />}
-            {abaAtiva === 'reels_feed' && <ReelsQuestionFeedSection onAddXp={handleAddXP} />}
+            {abaAtiva === 'reels_feed' && (
+              <ReelsQuestionFeedSection
+                onAddXp={handleAddXP}
+                onOpenPro={() => setActiveModal('pro')}
+              />
+            )}
             {abaAtiva === 'desafios' && <QuizBattleSection onAddXP={handleAddXP} />}
             {abaAtiva === 'caderno_erros' && <CadernoDeErrosSection onAddXp={handleAddXP} />}
             {abaAtiva === 'corretor_gabarito' && <OpticalAnswerSheetScannerSection />}
@@ -748,13 +803,19 @@ function MenteUpApp() {
             onToggleTheme={handleToggleTheme}
             onOpenOnboarding={() => setActiveModal('onboarding')}
             onLogout={handleLogout}
+            onOpenPro={() => setActiveModal('pro')}
             onClose={() => setActiveModal(null)}
           />
         )}
 
         {/* PRO Subscription Modal */}
         {activeModal === 'pro' && (
-          <ProSubscriptionModal onClose={() => setActiveModal(null)} />
+          <ProSubscriptionModal
+            onClose={() => setActiveModal(null)}
+            onUpgradeSuccess={() => {
+              setAuthUser((prev) => (prev ? { ...prev, isPro: true } : prev));
+            }}
+          />
         )}
 
         {/* Professora Gabi AI Assistant Modal */}
@@ -1002,11 +1063,31 @@ function MenteUpApp() {
           />
         )}
 
+        {/* Modal do Plano PRO */}
+        {activeModal === 'pro' && (
+          <ProSubscriptionModal
+            onClose={() => setActiveModal(null)}
+            onUpgradeSuccess={() => {
+              setAuthUser((prev) => (prev ? { ...prev, isPro: true } : prev));
+            }}
+          />
+        )}
+
         {/* Terms of Use and Privacy Policy Modal */}
         {(activeModal === 'terms' || activeModal === 'privacy') && (
           <TermsAndPrivacyModal
             initialTab={activeModal as LegalTab}
-            onClose={() => setActiveModal(null)}
+            onClose={() => {
+              setActiveModal(null);
+              if (typeof window !== 'undefined') {
+                if (window.location.hash) {
+                  window.history.replaceState(null, '', window.location.pathname);
+                }
+                if (window.location.pathname === '/termos-de-uso' || window.location.pathname === '/politica-de-privacidade') {
+                  window.history.replaceState(null, '', '/');
+                }
+              }
+            }}
           />
         )}
       </AnimatePresence>

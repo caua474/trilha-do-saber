@@ -117,10 +117,10 @@ export const TermsAndPrivacyModal: React.FC<TermsAndPrivacyModalProps> = ({
 
                 <section className="space-y-1.5">
                   <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
-                    <span className="text-indigo-400">4.</span> Planos de Assinatura e Cancelamento
+                    <span className="text-indigo-400">4.</span> Acesso Vitalício e Pagamento Único
                   </h4>
                   <p className="text-slate-300 text-xs">
-                    O MenteUp disponibiliza acesso gratuito a simulados e ferramentas diárias, bem como o <strong>Plano MenteUp Pro (R$ 5,00 / mês)</strong>. O plano Pro não possui fidelidade, carência ou taxa de rescisão, podendo ser cancelado a qualquer instante pelo painel de configurações da conta sem cobranças adicionais.
+                    O MenteUp disponibiliza acesso gratuito a simulados e ferramentas diárias, bem como o <strong>Plano MenteUp Pro Vitalício (R$ 5,00 - Pagamento Único)</strong> via Pix direto. O acesso Pro é definitivo e perpétuo para a conta do usuário, sem cobranças mensais recorrentes, taxas de renovação ou necessidade de cancelamento.
                   </p>
                 </section>
 

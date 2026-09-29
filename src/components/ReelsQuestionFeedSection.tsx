@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Smartphone, CheckCircle2, XCircle, Clock, Zap, ArrowDown, Bookmark, Share2, Sparkles, RefreshCw, AlertTriangle, Play, Pause, Flame, Shuffle } from 'lucide-react';
+import { Smartphone, CheckCircle2, XCircle, Clock, Zap, ArrowDown, Bookmark, Share2, Sparkles, RefreshCw, AlertTriangle, Play, Pause, Flame, Shuffle, Brain } from 'lucide-react';
 import { OFFLINE_QUESTION_BANK, OfflineQuestion } from '../data/offlineQuestionBank';
 import { saveWrongQuestion } from '../utils/cadernoErros';
 import { incrementDailyGoalProgress } from './DailyGoalsWidget';
 import { shuffleAndRotateQuestions, shuffleQuestionOptions, ShuffledOptionsData } from '../utils/questionShuffle';
+import { DailyDynamicQuestionsSection } from './DailyDynamicQuestionsSection';
 
-export const ReelsQuestionFeedSection: React.FC<{ onAddXp?: (xp: number) => void }> = ({ onAddXp }) => {
+export const ReelsQuestionFeedSection: React.FC<{
+  onAddXp?: (xp: number) => void;
+  onOpenPro?: () => void;
+}> = ({ onAddXp, onOpenPro }) => {
+  const [feedMode, setFeedMode] = useState<'ai_journey' | 'enem_reels'>('ai_journey');
   const [selectedSubject, setSelectedSubject] = useState<string>('Todas');
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -143,7 +148,40 @@ export const ReelsQuestionFeedSection: React.FC<{ onAddXp?: (xp: number) => void
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+      {/* SELETOR PRINCIPAL DE MODO: JORNADA 30 DIAS IA vs REELS ENEM */}
+      <div className="flex items-center justify-center p-1.5 rounded-2xl bg-slate-900 border border-slate-800 max-w-md mx-auto">
+        <button
+          type="button"
+          onClick={() => setFeedMode('ai_journey')}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            feedMode === 'ai_journey'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Desafio 30 Dias (Perguntas IA)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFeedMode('enem_reels')}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            feedMode === 'enem_reels'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          <span>Feed Reels ENEM</span>
+        </button>
+      </div>
+
+      {feedMode === 'ai_journey' ? (
+        <DailyDynamicQuestionsSection onAddXp={onAddXp} onOpenPro={onOpenPro} />
+      ) : (
+        <div className="space-y-6 max-w-2xl mx-auto">
       {/* HEADER BANNER */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/60 rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -340,6 +378,8 @@ export const ReelsQuestionFeedSection: React.FC<{ onAddXp?: (xp: number) => void
           </button>
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 };

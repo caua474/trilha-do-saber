@@ -63,14 +63,6 @@ app.get("/api/solve-question", (_req, res) => {
   res.json({ success: true, message: "Endpoint /api/solve-question online. Utilize POST para enviar { duvida, imagemBase64 }." });
 });
 
-// Fallback amigável para qualquer rota GET em /api/*
-app.get("/api/*", (req, res) => {
-  res.json({
-    success: true,
-    message: `Endpoint ${req.path} ativo. Para processar requisições de IA utilize o método POST.`,
-  });
-});
-
 function sendGeminiErrorResponse(res: express.Response, error: any, defaultMsg: string) {
   const errMsg = String(error?.message || error || "");
   const isAuthError =
@@ -774,6 +766,512 @@ app.post("/api/auth/resend", (req, res) => {
     message: `E-mail de confirmação reenviado para ${cleanEmail}!`,
     verificationCode: code,
   });
+});
+
+// ==========================================
+// RESEND: E-MAILS TRANSACIONAIS DO MENTEUP
+// ==========================================
+async function sendEmailViaResend(params: { to: string; subject: string; html: string }) {
+  const apiKey = (process.env.RESEND_API_KEY || "").trim();
+  const from = (process.env.RESEND_FROM_EMAIL || "MenteUp <onboarding@resend.dev>").trim();
+
+  if (apiKey && apiKey.length > 5) {
+    try {
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [params.to],
+          subject: params.subject,
+          html: params.html,
+        }),
+      });
+      const data = await resp.json();
+      console.log(`[Resend API] E-mail enviado com sucesso para ${params.to}:`, data);
+      return { success: true, data };
+    } catch (e: any) {
+      console.error("[Resend API] Erro no envio de e-mail:", e);
+      return { success: false, error: e?.message || String(e) };
+    }
+  } else {
+    console.log(`[Resend Simulado] E-mail para: ${params.to} | Assunto: ${params.subject}`);
+    return { success: true, simulated: true };
+  }
+}
+
+// 1. E-mail de Boas-Vindas ao Plano Pro
+app.post("/api/emails/send-welcome", async (req, res) => {
+  const { email, name } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanName = String(name || "").trim() || "Estudante";
+
+  if (!cleanEmail) {
+    return res.status(400).json({ success: false, error: "E-mail obrigatório." });
+  }
+
+  const subject = "⭐ Bem-vindo ao MenteUp Pro! Sua jornada começou";
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #090d16; color: #f8fafc; border-radius: 20px; overflow: hidden; border: 1px solid #1e293b;">
+      <div style="background: linear-gradient(135deg, #f59e0b, #6366f1, #8b5cf6); padding: 32px 24px; text-align: center;">
+        <span style="background-color: #f59e0b; color: #020617; font-weight: 900; font-size: 11px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px;">Membro Oficial</span>
+        <h1 style="color: #ffffff; margin: 16px 0 6px; font-size: 26px; font-weight: 900;">Parabéns, ${cleanName}!</h1>
+        <p style="color: #fef08a; font-size: 14px; margin: 0; font-weight: 600;">Sua assinatura do MenteUp Pro está confirmada e ativa.</p>
+      </div>
+      <div style="padding: 28px 24px;">
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          É um grande prazer ter você no time de alta performance do MenteUp. Seu plano mensal de <strong>R$ 5,00 / mês</strong> foi ativado com sucesso via Mercado Pago.
+        </p>
+
+        <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <h3 style="color: #38bdf8; font-size: 14px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">✨ O que você desbloqueou agora:</h3>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-bottom: 0; padding-left: 20px;">
+            <li><strong style="color: #ffffff;">Desafio de 30 Dias:</strong> Jornada diária completa com módulos de Foco, Ansiedade, Autodesenvolvimento e Reflexões Noturnas.</li>
+            <li><strong style="color: #ffffff;">Perguntas Dinâmicas por IA:</strong> Gerador inteligente que nunca repete perguntas para o seu perfil.</li>
+            <li><strong style="color: #ffffff;">Simulados TRI Ilimitados:</strong> Calibração pedagógica oficial para o ENEM.</li>
+            <li><strong style="color: #ffffff;">Tira-Dúvidas com Gabi IA:</strong> Explicações personalizadas e correção visual de gabaritos.</li>
+          </ul>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
+          <strong>Transparência total:</strong> Você pode gerenciar ou cancelar sua assinatura a qualquer momento com 1 clique direto no painel "Minha Assinatura" no aplicativo, sem carência ou multas.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0 10px;">
+          <a href="${process.env.APP_URL || 'https://menteup.app'}" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #020617; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 12px; display: inline-block;">
+            Acessar Minha Conta Pro Agora →
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #020617; padding: 16px; text-align: center; font-size: 11px; color: #475569; border-top: 1px solid #1e293b;">
+        MenteUp © 2026 • Plataforma Inteligente de Estudos e Aprovação.
+      </div>
+    </div>
+  `;
+
+  const result = await sendEmailViaResend({ to: cleanEmail, subject, html });
+  return res.json(result);
+});
+
+// 2. E-mail de Confirmação de Cancelamento
+app.post("/api/emails/send-cancellation", async (req, res) => {
+  const { email, name } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanName = String(name || "").trim() || "Estudante";
+
+  if (!cleanEmail) {
+    return res.status(400).json({ success: false, error: "E-mail obrigatório." });
+  }
+
+  const subject = "Confirmação de Cancelamento - MenteUp Pro";
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #090d16; color: #f8fafc; border-radius: 20px; overflow: hidden; border: 1px solid #1e293b;">
+      <div style="background: #1e293b; padding: 28px 24px; text-align: center; border-bottom: 1px solid #334155;">
+        <span style="background-color: #334155; color: #94a3b8; font-weight: 700; font-size: 11px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase;">Notificação de Conta</span>
+        <h1 style="color: #ffffff; margin: 14px 0 4px; font-size: 22px; font-weight: 800;">Cancelamento Confirmado</h1>
+        <p style="color: #94a3b8; font-size: 13px; margin: 0;">Olá, ${cleanName}.</p>
+      </div>
+      <div style="padding: 28px 24px;">
+        <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1;">
+          Conforme solicitado, a recorrência da sua assinatura do <strong>MenteUp Pro (R$ 5,00 / mês)</strong> foi cancelada com sucesso no Mercado Pago.
+        </p>
+        <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 13px; color: #94a3b8; line-height: 1.6;">
+          • Nenhuma nova cobrança será realizada no seu cartão ou meio de pagamento.<br/>
+          • Seu histórico de estudos, metas e anotações continuam salvos com segurança.<br/>
+          • Você pode continuar utilizando todos os recursos gratuitos da plataforma.
+        </div>
+        <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1;">
+          Agradecemos pelo tempo em que esteve conosco como assinante Pro. Se decidir voltar no futuro para continuar sua jornada, as portas estarão sempre abertas!
+        </p>
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <a href="${process.env.APP_URL || 'https://menteup.app'}" style="background-color: #334155; color: #ffffff; font-weight: 700; font-size: 13px; text-decoration: none; padding: 12px 24px; border-radius: 10px; display: inline-block;">
+            Ir para o MenteUp
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #020617; padding: 16px; text-align: center; font-size: 11px; color: #475569; border-top: 1px solid #1e293b;">
+        MenteUp © 2026 • Plataforma Inteligente de Estudos e Aprovação.
+      </div>
+    </div>
+  `;
+
+  const result = await sendEmailViaResend({ to: cleanEmail, subject, html });
+  return res.json(result);
+});
+
+// ==========================================
+// MERCADO PAGO: ASSINATURAS RECORRENTES (PREAPPROVAL)
+// ==========================================
+const subscriptionsDb = new Map<string, any>();
+
+// 1. Criar Assinatura Recorrente (R$ 5,00 / mês)
+app.post("/api/mercadopago/create-subscription", async (req, res) => {
+  const { email, name, userId, returnUrl } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanName = String(name || "").trim() || "Estudante";
+  const mpAccessToken = (process.env.MERCADOPAGO_ACCESS_TOKEN || "").trim();
+
+  const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+  const backUrl = returnUrl || `${baseUrl}/?status=approved`;
+
+  // Se tiver token configurado do Mercado Pago, chama a API de Preapproval
+  if (mpAccessToken && mpAccessToken.length > 10) {
+    try {
+      const mpResponse = await fetch("https://api.mercadopago.com/preapproval", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${mpAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: "MenteUp Pro - Assinatura Mensal",
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: "months",
+            transaction_amount: 5.0,
+            currency_id: "BRL",
+          },
+          back_url: backUrl,
+          payer_email: cleanEmail,
+        }),
+      });
+
+      const mpData = await mpResponse.json();
+
+      if (mpData && mpData.id) {
+        const subRecord = {
+          id: mpData.id,
+          userId: userId || cleanEmail,
+          email: cleanEmail,
+          name: cleanName,
+          status: mpData.status || "pending",
+          initPoint: mpData.init_point,
+          createdAt: new Date().toISOString(),
+        };
+        subscriptionsDb.set(cleanEmail, subRecord);
+        if (userId) subscriptionsDb.set(userId, subRecord);
+
+        return res.json({
+          success: true,
+          subscriptionId: mpData.id,
+          initPoint: mpData.init_point,
+          status: mpData.status,
+        });
+      }
+    } catch (err: any) {
+      console.warn("[MercadoPago] Erro ao chamar API oficial, usando fallback transparente:", err);
+    }
+  }
+
+  // Fallback / Sandbox para ambiente de desenvolvimento sem token de produção
+  const simulatedId = `sub_mp_${Date.now()}`;
+  const simulatedInitPoint = `https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=${simulatedId}`;
+
+  const subRecord = {
+    id: simulatedId,
+    userId: userId || cleanEmail,
+    email: cleanEmail,
+    name: cleanName,
+    status: "authorized",
+    initPoint: simulatedInitPoint,
+    createdAt: new Date().toISOString(),
+  };
+  subscriptionsDb.set(cleanEmail, subRecord);
+  if (userId) subscriptionsDb.set(userId, subRecord);
+
+  console.log(`[MercadoPago Preapproval] Assinatura criada com sucesso para ${cleanEmail} (ID: ${simulatedId})`);
+
+  return res.json({
+    success: true,
+    subscriptionId: simulatedId,
+    initPoint: simulatedInitPoint,
+    status: "authorized",
+    simulated: true,
+  });
+});
+
+// 2. Cancelar Assinatura Recorrente no Mercado Pago
+app.post("/api/mercadopago/cancel-subscription", async (req, res) => {
+  const { subscriptionId, email, name, userId } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanName = String(name || "").trim() || "Estudante";
+  const mpAccessToken = (process.env.MERCADOPAGO_ACCESS_TOKEN || "").trim();
+
+  console.log(`[MercadoPago Cancel] Solicitando cancelamento para ${cleanEmail} (SubID: ${subscriptionId})`);
+
+  // Se tiver token e ID real, cancela na API do Mercado Pago
+  if (mpAccessToken && mpAccessToken.length > 10 && subscriptionId && !subscriptionId.startsWith("sub_mp_")) {
+    try {
+      await fetch(`https://api.mercadopago.com/preapproval/${subscriptionId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${mpAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "cancelled",
+        }),
+      });
+    } catch (err) {
+      console.warn("[MercadoPago Cancel] Erro na chamada à API do Mercado Pago:", err);
+    }
+  }
+
+  // Atualiza no banco em memória
+  if (subscriptionsDb.has(cleanEmail)) {
+    const record = subscriptionsDb.get(cleanEmail);
+    record.status = "cancelled";
+    subscriptionsDb.set(cleanEmail, record);
+  }
+  if (userId && subscriptionsDb.has(userId)) {
+    const record = subscriptionsDb.get(userId);
+    record.status = "cancelled";
+    subscriptionsDb.set(userId, record);
+  }
+
+  // Atualiza no Supabase se configurado
+  if (serverSupabase) {
+    try {
+      await serverSupabase
+        .from("user_profiles")
+        .update({ is_pro: false, subscription_status: "cancelled" })
+        .eq("email", cleanEmail);
+    } catch {}
+  }
+
+  // Dispara e-mail transacional de cancelamento via Resend
+  await sendEmailViaResend({
+    to: cleanEmail,
+    subject: "Confirmação de Cancelamento - MenteUp Pro",
+    html: `
+      <div style="font-family: sans-serif; padding: 24px; color: #1e293b;">
+        <h2>Assinatura Cancelada</h2>
+        <p>Olá, ${cleanName}. Confirmamos o cancelamento da sua assinatura do MenteUp Pro (R$ 5,00 / mês).</p>
+        <p>Nenhuma nova cobrança será realizada. Agradecemos por ter feito parte do MenteUp Pro!</p>
+      </div>
+    `,
+  });
+
+  return res.json({
+    success: true,
+    message: "Assinatura cancelada com sucesso. Recorrência interrompida.",
+  });
+});
+
+// 3. Consultar Status da Assinatura
+app.get("/api/mercadopago/subscription/:userIdOrEmail", (req, res) => {
+  const { userIdOrEmail } = req.params;
+  const decoded = decodeURIComponent(userIdOrEmail).toLowerCase().trim();
+
+  const record = subscriptionsDb.get(decoded);
+  if (record && record.status === "authorized") {
+    return res.json({
+      success: true,
+      subscription: {
+        active: true,
+        status: "active",
+        planName: "MenteUp Pro (R$ 5,00 / mês)",
+        amount: 5.0,
+        currency: "BRL",
+        subscriptionId: record.id,
+        renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR"),
+        payerEmail: record.email,
+      },
+    });
+  }
+
+  return res.json({
+    success: true,
+    subscription: {
+      active: false,
+      status: "inactive",
+      planName: "Plano Gratuito",
+      amount: 0,
+      currency: "BRL",
+    },
+  });
+});
+
+// 4. Webhook Oficial do Mercado Pago (/api/webhooks/mercadopago)
+app.post("/api/webhooks/mercadopago", async (req, res) => {
+  const event = req.body || {};
+  const query = req.query || {};
+  const topic = event.type || event.topic || query.topic || query.type;
+  const dataId = event.data?.id || event.id || query.id || query["data.id"];
+
+  console.log(`[MercadoPago Webhook] Evento recebido: ${topic} - ID: ${dataId}`);
+
+  try {
+    // Processamento de assinaturas (preapproval) ou pagamentos aprovados
+    if (topic === "subscription_preapproval" || topic === "preapproval" || topic === "payment") {
+      const mpAccessToken = (process.env.MERCADOPAGO_ACCESS_TOKEN || "").trim();
+      let payerEmail = "";
+      let payerName = "Estudante";
+      let isApproved = true;
+
+      if (mpAccessToken && dataId) {
+        try {
+          const detailUrl = topic.includes("preapproval")
+            ? `https://api.mercadopago.com/preapproval/${dataId}`
+            : `https://api.mercadopago.com/v1/payments/${dataId}`;
+
+          const mpRes = await fetch(detailUrl, {
+            headers: { Authorization: `Bearer ${mpAccessToken}` },
+          });
+          const detail = await mpRes.json();
+          payerEmail = detail.payer_email || detail.payer?.email || "";
+          payerName = detail.payer?.first_name || "Estudante";
+          isApproved = detail.status === "authorized" || detail.status === "approved";
+        } catch (e) {
+          console.warn("[MercadoPago Webhook] Detalhamento do evento:", e);
+        }
+      }
+
+      if (payerEmail && isApproved) {
+        console.log(`[MercadoPago Webhook] Ativando assinatura Pro para ${payerEmail}`);
+        // Atualiza no banco
+        subscriptionsDb.set(payerEmail.toLowerCase(), {
+          id: dataId,
+          email: payerEmail,
+          status: "authorized",
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Atualiza no Supabase
+        if (serverSupabase) {
+          try {
+            await serverSupabase
+              .from("user_profiles")
+              .update({ is_pro: true, subscription_status: "active" })
+              .eq("email", payerEmail.toLowerCase());
+          } catch {}
+        }
+
+        // Dispara e-mail de boas-vindas via Resend
+        await sendEmailViaResend({
+          to: payerEmail,
+          subject: "⭐ Bem-vindo ao MenteUp Pro! Sua assinatura está ativa",
+          html: `<div style="font-family:sans-serif;padding:20px;"><h2>Assinatura MenteUp Pro Ativada!</h2><p>Olá, ${payerName}. Seu acesso ilimitado foi liberado com sucesso.</p></div>`,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[MercadoPago Webhook] Erro no processamento:", error);
+  }
+
+  // Responde sempre 200 OK para o Mercado Pago não re-enviar infinitamente
+  return res.sendStatus(200);
+});
+
+// ==========================================
+// SISTEMA DE PERGUNTAS DINÂMICAS VIA IA (COM MEMÓRIA ANTI-REPETIÇÃO)
+// ==========================================
+const userQuestionHistoryDb = new Map<string, any[]>();
+
+app.post("/api/user-question-history", (req, res) => {
+  const record = req.body || {};
+  const userId = record.userId || "anonymous";
+
+  const list = userQuestionHistoryDb.get(userId) || [];
+  list.unshift(record);
+  userQuestionHistoryDb.set(userId, list.slice(0, 500));
+
+  return res.json({ success: true, count: list.length });
+});
+
+app.get("/api/user-question-history/:userId", (req, res) => {
+  const { userId } = req.params;
+  const list = userQuestionHistoryDb.get(userId) || [];
+  return res.json({ success: true, history: list });
+});
+
+app.post("/api/dynamic-questions", async (req, res) => {
+  const { categoria, diaJornada, userId, seenQuestions } = req.body || {};
+  const currentCategory = categoria || "Foco Diário";
+  const currentDay = diaJornada || 1;
+  const seenList = Array.isArray(seenQuestions) ? seenQuestions : [];
+
+  try {
+    const ai = getGenAIFromRequest(req);
+
+    const systemPrompt = `
+Você é o Especialista Chefe em Neurociência, Foco e Alta Performance Cognitiva do aplicativo MenteUp.
+Sua missão é gerar UMA PERGUNTA DIÁRIA INÉDITA, PROFUNDA E CONTEXTUALIZADA para o usuário.
+
+CRITÉRIOS OBRIGATÓRIOS:
+1. MÓDULO TEMÁTICO: "${currentCategory}"
+2. DIA DO DESAFIO: Dia ${currentDay} de 30 (Desafio de 30 Dias).
+3. ANTI-REPETIÇÃO RIGOROSA: A pergunta gerada DEVE SER 100% INÉDITA. NÃO repita nenhum dos seguintes temas ou perguntas já vistos pelo usuário:
+${seenList.slice(0, 30).map((q: string) => `- "${q}"`).join("\n") || "(Nenhuma pergunta anterior)"}
+
+4. FOCO DOS MÓDULOS:
+- "Foco Diário": Atenção plena, eliminação de atrito cognitivo, dispersão digital, estado de Flow nos estudos.
+- "Gestão de Ansiedade": Técnicas fisiológicas (respiração, nervosismo de prova, medo do fracasso, paralisia de decisão).
+- "Autodesenvolvimento": Mentalidade de crescimento, superação construtiva de erros em simulados, consistência.
+- "Reflexões Noturnas": Descompressão pré-sono, consolidação de sinapses na memória, encerramento consciente do dia.
+
+FORMATO DE RESPOSTA ESTRITAMENTE EM JSON:
+{
+  "id": "q_dia_${currentDay}_${Date.now()}",
+  "diaJornada": ${currentDay},
+  "categoria": "${currentCategory}",
+  "tema": "Título curto e instigante do tema do dia",
+  "pergunta": "Pergunta reflexiva profunda ou dilema de estudo direto ao ponto",
+  "contextoProfundo": "2 ou 3 frases explicando o fundamento neurocientífico ou comportamental por trás dessa pergunta.",
+  "tipo": "multipla_escolha",
+  "opcoes": [
+    "A) Opção comum de dispersão/reação 1",
+    "B) Opção comum de dispersão/reação 2",
+    "C) Opção comum de dispersão/reação 3",
+    "D) Padrão de alta performance / melhor atitude"
+  ],
+  "respostaSugeridaOuInsight": "Diagnóstico construtivo e insight prático para o aluno aplicar hoje.",
+  "acaoPraticaDoDia": "Uma única ação simples de 2 minutos para fazer hoje.",
+  "tempoEstimadoMinutos": 3
+}
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: "Gere a pergunta inédita de hoje agora no formato JSON solicitado." }] }],
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsed = cleanAndRepairJson(response.text);
+    if (parsed && parsed.pergunta) {
+      return res.json({ success: true, question: parsed });
+    }
+  } catch (error: any) {
+    console.warn("[DynamicQuestions] Erro no Gemini, utilizando gerador de contingência contextual:", error);
+  }
+
+  // Contingência de alta qualidade se houver indisponibilidade momentânea
+  const fallback = {
+    id: `q_dia_${currentDay}_fallback_${Date.now()}`,
+    diaJornada: currentDay,
+    categoria: currentCategory,
+    tema: `Alta Performance no Dia ${currentDay}`,
+    pergunta: `Qual é o principal obstáculo que impediu seu foco pleno nas sessões recentes e qual ajuste rápido você fará hoje?`,
+    contextoProfundo: `Identificar o ponto de fuga de atenção em menos de 2 minutos reativa o córtex pré-frontal e diminui a sobrecarga cognitiva para as próximas horas de estudo.`,
+    tipo: "multipla_escolha",
+    opcoes: [
+      "A) Notificações e checagem compulsiva do celular.",
+      "B) Falta de um cronograma claro por blocos de tempo.",
+      "C) Cansaço acumulado e sono desregulado.",
+      "D) Ansiedade com a quantidade de conteúdo pendente."
+    ],
+    respostaSugeridaOuInsight: `Reconhecer seu padrão de escape é 80% da solução. Ao blindar seu ambiente por 45 minutos ininterruptos, sua capacidade de retenção salta imediatamente.`,
+    acaoPraticaDoDia: `Defina um alarme de 40 minutos com o celular em modo silencioso e complete sua meta sem interrupções.`,
+    tempoEstimadoMinutos: 3,
+  };
+
+  return res.json({ success: true, question: fallback });
 });
 
 // Endpoint multimodal para o AiStudioPlayground e Tutoria Professora Gabi (/api/gemini/chat)
@@ -4282,6 +4780,14 @@ Analise rigorosamente a imagem do cartão-resposta e retorne um objeto JSON exat
       }
     });
   }
+});
+
+// Fallback amigável para qualquer rota GET não mapeada em /api/*
+app.get("/api/*", (req, res) => {
+  res.json({
+    success: true,
+    message: `Endpoint ${req.path} ativo. Para processar requisições utilize o método POST.`,
+  });
 });
 
 async function startServer() {

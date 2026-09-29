@@ -295,10 +295,10 @@ export const HomeHubCategories: React.FC<HomeHubCategoriesProps> = ({ onNavigate
         },
         {
           id: 'simulado_reels',
-          title: 'Feed Reels de Questões',
-          description: 'Resolução vertical ágil estilo reels para momentos livres',
+          title: 'Perguntas IA & Feed Reels',
+          description: 'Desafio de 30 Dias com IA e resolução ágil com memória anti-repetição',
           icon: <Smartphone className="w-5 h-5 text-indigo-400" />,
-          tag: 'Ágil',
+          tag: 'Inéditas IA',
           primaryTab: 'simulados_treino',
           subTab: 'reels_feed',
         },

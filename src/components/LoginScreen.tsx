@@ -17,6 +17,7 @@ import {
   MailCheck,
   ArrowLeft,
   KeyRound,
+  AlertCircle,
 } from 'lucide-react';
 import { AuthUser } from '../types';
 import {
@@ -41,7 +42,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLegalModal, setShowLegalModal] = useState<LegalTab | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState<LegalTab | null>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('termos') || hash.includes('termos') || hash.includes('terms')) return 'terms';
+      if (path.includes('privacidade') || hash.includes('privacidade') || hash.includes('privacy')) return 'privacy';
+    }
+    return null;
+  });
+
+  React.useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('termos') || hash.includes('termos') || hash.includes('terms')) {
+        setShowLegalModal('terms');
+      } else if (path.includes('privacidade') || hash.includes('privacidade') || hash.includes('privacy')) {
+        setShowLegalModal('privacy');
+      }
+    };
+    window.addEventListener('hashchange', handleUrlChange);
+    window.addEventListener('popstate', handleUrlChange);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
 
   // Estado de Confirmação de E-mail Obrigatória
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
@@ -49,49 +77,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
+  const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
     setErrorMsg('');
     setInfoMsg('');
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
 
-    // 1. Validação de campo de e-mail vazio
-    if (!cleanEmail) {
-      setErrorMsg('Por favor, informe o seu endereço de e-mail.');
+    // 1. Validação de envio com campos vazios (aviso claro: "Preencha todos os campos")
+    if (tab === 'register' && (!cleanName || !cleanEmail || !password)) {
+      setErrorMsg('Preencha todos os campos.');
+      return;
+    }
+    if (tab === 'login' && (!cleanEmail || !password)) {
+      setErrorMsg('Preencha todos os campos.');
       return;
     }
 
-    // 2. Validação rigorosa de formato de e-mail (RFC regex)
-    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    // 2. Validação rigorosa de formato de e-mail (aviso claro: "E-mail inválido")
     if (!EMAIL_REGEX.test(cleanEmail)) {
-      setErrorMsg('Formato de e-mail inválido. Por favor, utilize o formato: exemplo@dominio.com.');
+      setErrorMsg('E-mail inválido. Por favor, utilize o formato: exemplo@dominio.com.');
       return;
     }
 
-    // 3. Validação de campo de senha vazio
-    if (!password) {
-      setErrorMsg('Por favor, informe a sua senha.');
+    // 3. Validação individual de tamanho
+    if (tab === 'register' && cleanName.length < 2) {
+      setErrorMsg('O nome precisa ter pelo menos 2 caracteres.');
       return;
     }
 
-    // 4. Validação de tamanho mínimo da senha
     if (password.length < 6) {
-      setErrorMsg('A senha precisa conter no mínimo 6 caracteres.');
+      setErrorMsg('A senha precisa ter no mínimo 6 caracteres.');
       return;
-    }
-
-    // 5. Validação de nome no cadastro
-    if (tab === 'register') {
-      const cleanName = name.trim();
-      if (!cleanName) {
-        setErrorMsg('Por favor, preencha o seu nome completo.');
-        return;
-      }
-      if (cleanName.length < 2) {
-        setErrorMsg('O nome precisa ter pelo menos 2 caracteres.');
-        return;
-      }
     }
 
     setIsSubmitting(true);
@@ -101,7 +122,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
         // FLUXO DE CADASTRO REAL:
         // Dispara e-mail de verificação e NUNCA loga o usuário automaticamente no localStorage
         const res = await signUpUser({
-          name: name.trim(),
+          name: cleanName,
           email: cleanEmail,
           password,
         });
@@ -445,9 +466,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2"
+                    className="mb-4 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-md shadow-rose-950/40"
                   >
-                    <span>⚠️</span>
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                     <span>{errorMsg}</span>
                   </motion.div>
                 )}
@@ -501,11 +522,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                       <input
                         type="text"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (errorMsg) setErrorMsg('');
+                        }}
                         placeholder="Seu nome ou apelido de estudos"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                        className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-all ${
+                          hasAttemptedSubmit && tab === 'register' && (!name.trim() || name.trim().length < 2)
+                            ? 'border-rose-500 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/50 bg-rose-500/5'
+                            : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                        }`}
                       />
                     </div>
+                    {hasAttemptedSubmit && tab === 'register' && !name.trim() && (
+                      <span className="text-[11px] text-rose-400 font-medium mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 shrink-0" /> Preencha o seu nome completo
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -518,11 +551,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (errorMsg) setErrorMsg('');
+                      }}
                       placeholder="exemplo@gmail.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                      className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-all ${
+                        hasAttemptedSubmit && (!email.trim() || !EMAIL_REGEX.test(email.trim().toLowerCase()))
+                          ? 'border-rose-500 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/50 bg-rose-500/5'
+                          : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
+                  {hasAttemptedSubmit && !email.trim() && (
+                    <span className="text-[11px] text-rose-400 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" /> Preencha o seu e-mail
+                    </span>
+                  )}
+                  {hasAttemptedSubmit && email.trim() && !EMAIL_REGEX.test(email.trim().toLowerCase()) && (
+                    <span className="text-[11px] text-rose-400 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" /> E-mail inválido (ex: seu.nome@email.com)
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -534,9 +584,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (errorMsg) setErrorMsg('');
+                      }}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                      className={`w-full pl-10 pr-10 py-2.5 bg-slate-950/70 border rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-all ${
+                        hasAttemptedSubmit && (!password || password.length < 6)
+                          ? 'border-rose-500 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/50 bg-rose-500/5'
+                          : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      }`}
                     />
                     <button
                       type="button"
@@ -546,6 +603,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {hasAttemptedSubmit && !password && (
+                    <span className="text-[11px] text-rose-400 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" /> Preencha a sua senha
+                    </span>
+                  )}
+                  {hasAttemptedSubmit && password && password.length < 6 && (
+                    <span className="text-[11px] text-rose-400 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" /> A senha precisa ter no mínimo 6 caracteres
+                    </span>
+                  )}
                 </div>
 
                 <button
@@ -583,21 +650,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
           )}
         </div>
 
-        {/* Promo Banner: MenteUp Pro (R$ 5,00/mês) */}
-        <div
+        {/* Promo Banner: MenteUp Pro (Acesso Vitalício R$ 5,00) */}
+        <button
+          type="button"
           onClick={() => onOpenProModal?.()}
-          className="rounded-2xl p-4 bg-gradient-to-r from-indigo-950/60 via-purple-950/50 to-slate-900 border border-purple-500/30 shadow-lg relative overflow-hidden cursor-pointer hover:border-purple-400/50 transition-all group"
+          className="w-full text-left rounded-2xl p-4 bg-gradient-to-r from-amber-500/15 via-purple-950/60 to-indigo-950/60 border border-amber-400/40 shadow-lg relative overflow-hidden cursor-pointer hover:border-amber-300 transition-all group active:scale-[0.99]"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-400/30 flex items-center justify-center text-purple-300 shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 transition-transform shadow-xs">
                 <Crown className="w-5 h-5 text-amber-300" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-white">MenteUp Pro</span>
-                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    R$ 5,00 / mês
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black text-white">MenteUp Pro R$ 5,00 (Acesso Vitalício)</span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-xs">
+                    Compra Única
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
@@ -605,9 +673,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
                 </p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform shrink-0" />
+            <ArrowRight className="w-4 h-4 text-amber-300 group-hover:translate-x-1 transition-transform shrink-0" />
           </div>
-        </div>
+        </button>
 
         {/* Trust Badges */}
         <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500 pt-1">
@@ -624,21 +692,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
 
         {/* Links Termos de Uso e Política de Privacidade */}
         <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 pt-1 border-t border-slate-900/80">
-          <button
-            type="button"
-            onClick={() => setShowLegalModal('terms')}
+          <a
+            href="#/termos-de-uso"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowLegalModal('terms');
+            }}
             className="hover:text-indigo-400 transition-colors underline cursor-pointer"
           >
             Termos de Uso
-          </button>
+          </a>
           <span>•</span>
-          <button
-            type="button"
-            onClick={() => setShowLegalModal('privacy')}
+          <a
+            href="#/politica-de-privacidade"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowLegalModal('privacy');
+            }}
             className="hover:text-emerald-400 transition-colors underline cursor-pointer"
           >
             Política de Privacidade
-          </button>
+          </a>
         </div>
       </motion.div>
 
@@ -646,7 +720,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
       {showLegalModal && (
         <TermsAndPrivacyModal
           initialTab={showLegalModal}
-          onClose={() => setShowLegalModal(null)}
+          onClose={() => {
+            setShowLegalModal(null);
+            if (typeof window !== 'undefined') {
+              if (window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname);
+              }
+              if (window.location.pathname === '/termos-de-uso' || window.location.pathname === '/politica-de-privacidade') {
+                window.history.replaceState(null, '', '/');
+              }
+            }
+          }}
         />
       )}
     </div>

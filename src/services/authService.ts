@@ -151,9 +151,10 @@ export async function signInUser(params: SignInParams): Promise<AuthResponse> {
   const cleanEmail = params.email.trim().toLowerCase();
 
   // 1. Tentar Supabase Auth
-  if (supabase) {
+  const client = getSupabaseClient();
+  if (client) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await client.auth.signInWithPassword({
         email: cleanEmail,
         password: params.password,
       });
@@ -281,9 +282,10 @@ export async function verifyEmailCode(email: string, code: string): Promise<Auth
   const cleanCode = code.trim();
 
   // 1. Supabase OTP / Token se configurado
-  if (supabase) {
+  const client = getSupabaseClient();
+  if (client) {
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
+      const { data, error } = await client.auth.verifyOtp({
         email: cleanEmail,
         token: cleanCode,
         type: 'signup',
@@ -368,9 +370,10 @@ export async function verifyEmailCode(email: string, code: string): Promise<Auth
 export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email.trim().toLowerCase();
 
-  if (supabase) {
+  const client = getSupabaseClient();
+  if (client) {
     try {
-      await supabase.auth.resend({
+      await client.auth.resend({
         type: 'signup',
         email: cleanEmail,
       });

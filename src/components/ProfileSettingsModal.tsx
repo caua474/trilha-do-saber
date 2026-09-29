@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { CelebrationConfetti } from './CelebrationConfetti';
+import { SubscriptionManagementCard } from './SubscriptionManagementCard';
+import { AuthUser } from '../types';
 import {
   getNotificationSettings,
   saveNotificationSettings,
@@ -54,6 +56,7 @@ interface ProfileSettingsModalProps {
   onToggleTheme: () => void;
   onOpenOnboarding?: () => void;
   onLogout?: () => void;
+  onOpenPro?: () => void;
 }
 
 const PROFILE_KEY = 'gabaritai_user_profile_v1';
@@ -128,8 +131,17 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   onToggleTheme,
   onOpenOnboarding,
   onLogout,
+  onOpenPro,
 }) => {
   const [profile, setProfile] = useState<UserProfile>(getSavedUserProfile);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('gabaritai_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -786,6 +798,23 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
               )}
 
             </div>
+          </div>
+
+          {/* SECTION: PLANO PRO E ASSINATURA MERCADO PAGO */}
+          <div>
+            <SubscriptionManagementCard
+              authUser={currentUser}
+              onOpenPro={() => {
+                onClose();
+                onOpenPro?.();
+              }}
+              onStatusUpdated={() => {
+                try {
+                  const saved = localStorage.getItem('gabaritai_auth_user');
+                  setCurrentUser(saved ? JSON.parse(saved) : null);
+                } catch {}
+              }}
+            />
           </div>
 
           {/* SECTION 4: AÇÕES DE CONTA & BOTOES */}

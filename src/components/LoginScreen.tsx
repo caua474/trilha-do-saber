@@ -678,16 +678,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
         </button>
 
         {/* Trust Badges */}
-        <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500 pt-1">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Acesso Seguro
+        <div className="flex items-center justify-center gap-3 sm:gap-4 text-[11px] text-slate-400 pt-1 flex-wrap text-center">
+          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Pagamento único, sem mensalidade
           </span>
           <span>•</span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Padrão INEP / ENEM
+          <span className="flex items-center gap-1 text-indigo-300">
+            <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Acesso Vitalício Definitivo
           </span>
           <span>•</span>
-          <span>Pagamento único, sem mensalidade</span>
+          <span className="text-slate-400">
+            Compra Única R$ 5,00
+          </span>
         </div>
 
         {/* Links Termos de Uso e Política de Privacidade */}

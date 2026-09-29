@@ -470,7 +470,7 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   onClick={onOpenPro}
                   className="hidden lg:inline-flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black transition shadow-xs cursor-pointer pointer-events-auto active:scale-95 shrink-0"
-                  title="Planos & Assinatura PRO"
+                  title="Plano Pro Vitalício"
                 >
                   <Zap className="w-3.5 h-3.5 fill-slate-950" />
                   <span>PRO</span>

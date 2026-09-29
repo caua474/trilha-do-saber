@@ -687,7 +687,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onOpenProModa
             <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Padrão INEP / ENEM
           </span>
           <span>•</span>
-          <span>Cancele Quando Quiser</span>
+          <span>Pagamento único, sem mensalidade</span>
         </div>
 
         {/* Links Termos de Uso e Política de Privacidade */}

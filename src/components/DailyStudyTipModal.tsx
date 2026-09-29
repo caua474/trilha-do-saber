@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, X, Sparkles, Clock, Brain, RefreshCw, CheckCircle2, Bookmark, Share2 } from 'lucide-react';
+import { hasSeenWelcomeTour } from './WelcomeTourModal';
 
 export interface StudyTechnique {
   id: string;
@@ -107,25 +108,31 @@ const STUDY_TECHNIQUES: StudyTechnique[] = [
 
 interface DailyStudyTipModalProps {
   onClose?: () => void;
+  preventAutoShow?: boolean;
 }
 
-export const DailyStudyTipModal: React.FC<DailyStudyTipModalProps> = ({ onClose }) => {
+export const DailyStudyTipModal: React.FC<DailyStudyTipModalProps> = ({ onClose, preventAutoShow }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTip, setSelectedTip] = useState<StudyTechnique | null>(null);
 
   useEffect(() => {
-    // Check if user has already seen the daily tip today or on first load
-    const storageKey = 'gabaritaai_daily_tip_seen_v1';
-    const hasSeen = localStorage.getItem(storageKey);
+    // Se o usuário ainda não viu o Tour de Boas-Vindas ou se preventAutoShow estiver ativo, NÃO abre a Dica
+    if (preventAutoShow || !hasSeenWelcomeTour()) {
+      return;
+    }
 
-    if (!hasSeen) {
-      // Pick a random tip
+    // Controle diário inteligente: só exibe 1 vez ao dia para não cansar o estudante
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const storageKey = `menteup_daily_tip_seen_${todayStr}`;
+    const hasSeenToday = localStorage.getItem(storageKey);
+
+    if (!hasSeenToday) {
       const randomIndex = Math.floor(Math.random() * STUDY_TECHNIQUES.length);
       setSelectedTip(STUDY_TECHNIQUES[randomIndex]);
       setIsOpen(true);
       localStorage.setItem(storageKey, 'true');
     }
-  }, []);
+  }, [preventAutoShow]);
 
   const handleNextRandomTip = () => {
     if (!selectedTip) return;

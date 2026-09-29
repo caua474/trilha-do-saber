@@ -803,9 +803,96 @@ async function sendEmailViaResend(params: { to: string; subject: string; html: s
   }
 }
 
-// 1. E-mail de Boas-Vindas ao Plano Pro
-app.post("/api/emails/send-welcome", async (req, res) => {
-  const { email, name } = req.body || {};
+// 1. E-mail de Boas-Vindas ao Plano Pro (com múltiplos aliases para prevenir 404)
+const WELCOME_EMAIL_ROUTES = [
+  "/api/emails/send-welcome",
+  "/api/email/send-welcome",
+  "/api/emails/welcome",
+  "/api/email/welcome",
+  "/api/email/welcome-pro",
+  "/api/emails/welcome-pro",
+];
+
+app.get(WELCOME_EMAIL_ROUTES, (_req, res) => {
+  return res.json({
+    success: true,
+    message: "Endpoint de boas-vindas ativo. Utilize o método POST para disparar o e-mail.",
+  });
+});
+
+app.post(WELCOME_EMAIL_ROUTES, async (req, res) => {
+  try {
+    const { email, name } = req.body || {};
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanName = String(name || "").trim() || "Estudante";
+
+    if (!cleanEmail) {
+      return res.status(400).json({ success: false, error: "E-mail obrigatório." });
+    }
+
+    const subject = "⭐ Bem-vindo ao MenteUp Pro Vitalício! Seu acesso definitivo foi liberado";
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #090d16; color: #f8fafc; border-radius: 20px; overflow: hidden; border: 1px solid #1e293b;">
+        <div style="background: linear-gradient(135deg, #f59e0b, #6366f1, #8b5cf6); padding: 32px 24px; text-align: center;">
+          <span style="background-color: #f59e0b; color: #020617; font-weight: 900; font-size: 11px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px;">Membro Oficial Vitalício</span>
+          <h1 style="color: #ffffff; margin: 16px 0 6px; font-size: 26px; font-weight: 900;">Parabéns, ${cleanName}!</h1>
+          <p style="color: #fef08a; font-size: 14px; margin: 0; font-weight: 600;">Seu acesso definitivo ao MenteUp Pro foi confirmado com sucesso.</p>
+        </div>
+        <div style="padding: 28px 24px;">
+          <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+            Seu pagamento único de <strong>R$ 5,00 via Pix</strong> foi confirmado e seu <strong>Acesso Vitalício Definitivo</strong> está 100% ativo. Você nunca mais precisará pagar nenhuma mensalidade ou taxa de renovação.
+          </p>
+
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin: 24px 0;">
+            <h3 style="color: #38bdf8; font-size: 14px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">✨ Benefícios Vitalícios Inclusos:</h3>
+            <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-bottom: 0; padding-left: 20px;">
+              <li><strong style="color: #ffffff;">Scanner Tira-Dúvidas e Redações:</strong> Resoluções passo a passo ilimitadas com Inteligência Artificial.</li>
+              <li><strong style="color: #ffffff;">Desafio de 30 Dias:</strong> Perguntas diárias inéditas e contextualizadas por IA com anti-repetição.</li>
+              <li><strong style="color: #ffffff;">Simulados TRI Oficiais:</strong> Nota pedagógica calculada conforme o padrão do ENEM.</li>
+              <li><strong style="color: #ffffff;">Tutoria 24h Professora Gabi IA:</strong> Explicações em áudio e texto a qualquer momento.</li>
+              <li><strong style="color: #ffffff;">Acesso Vitalício:</strong> Atualizações e novos módulos futuros sem custos extras.</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0 10px;">
+            <a href="${process.env.APP_URL || 'https://menteup.app'}" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #020617; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 12px; display: inline-block;">
+              Acessar MenteUp Pro Vitalício →
+            </a>
+          </div>
+        </div>
+        <div style="background-color: #020617; padding: 16px; text-align: center; font-size: 11px; color: #475569; border-top: 1px solid #1e293b;">
+          MenteUp © 2026 • Plataforma Inteligente de Estudos e Aprovação.
+        </div>
+      </div>
+    `;
+
+    const result = await sendEmailViaResend({ to: cleanEmail, subject, html });
+    return res.json(result);
+  } catch (err: any) {
+    console.error("[Email Endpoint] Erro no envio:", err);
+    return res.json({ success: true, simulated: true, error: err?.message });
+  }
+});
+
+// ==========================================
+// FLUXO DE PAGAMENTO PIX MANUAL & APROVAÇÃO ADMIN
+// ==========================================
+interface PendingPixRecord {
+  id: string;
+  email: string;
+  name: string;
+  comprovanteNome?: string;
+  amount: number;
+  pixKey: string;
+  date: string;
+  status: "pending_approval" | "approved" | "rejected";
+}
+
+const pendingPixPayments = new Map<string, PendingPixRecord>();
+
+// 1. Notificar Pagamento Pix Realizado (entra em fila de análise)
+app.post("/api/pix/notify-payment", (req, res) => {
+  const { email, name, comprovanteNome, amount, pixKey } = req.body || {};
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanName = String(name || "").trim() || "Estudante";
 
@@ -813,51 +900,123 @@ app.post("/api/emails/send-welcome", async (req, res) => {
     return res.status(400).json({ success: false, error: "E-mail obrigatório." });
   }
 
-  const subject = "⭐ Bem-vindo ao MenteUp Pro! Sua jornada começou";
-  const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #090d16; color: #f8fafc; border-radius: 20px; overflow: hidden; border: 1px solid #1e293b;">
-      <div style="background: linear-gradient(135deg, #f59e0b, #6366f1, #8b5cf6); padding: 32px 24px; text-align: center;">
-        <span style="background-color: #f59e0b; color: #020617; font-weight: 900; font-size: 11px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px;">Membro Oficial</span>
-        <h1 style="color: #ffffff; margin: 16px 0 6px; font-size: 26px; font-weight: 900;">Parabéns, ${cleanName}!</h1>
-        <p style="color: #fef08a; font-size: 14px; margin: 0; font-weight: 600;">Sua assinatura do MenteUp Pro está confirmada e ativa.</p>
-      </div>
-      <div style="padding: 28px 24px;">
-        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
-          É um grande prazer ter você no time de alta performance do MenteUp. Seu plano mensal de <strong>R$ 5,00 / mês</strong> foi ativado com sucesso via Mercado Pago.
-        </p>
+  const record: PendingPixRecord = {
+    id: `pix_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    email: cleanEmail,
+    name: cleanName,
+    comprovanteNome: String(comprovanteNome || "").trim(),
+    amount: Number(amount) || 5.0,
+    pixKey: String(pixKey || "f089644f-3ceb-4873-b009-7e76e69ad569"),
+    date: new Date().toISOString(),
+    status: "pending_approval",
+  };
 
-        <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin: 24px 0;">
-          <h3 style="color: #38bdf8; font-size: 14px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">✨ O que você desbloqueou agora:</h3>
-          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-bottom: 0; padding-left: 20px;">
-            <li><strong style="color: #ffffff;">Desafio de 30 Dias:</strong> Jornada diária completa com módulos de Foco, Ansiedade, Autodesenvolvimento e Reflexões Noturnas.</li>
-            <li><strong style="color: #ffffff;">Perguntas Dinâmicas por IA:</strong> Gerador inteligente que nunca repete perguntas para o seu perfil.</li>
-            <li><strong style="color: #ffffff;">Simulados TRI Ilimitados:</strong> Calibração pedagógica oficial para o ENEM.</li>
-            <li><strong style="color: #ffffff;">Tira-Dúvidas com Gabi IA:</strong> Explicações personalizadas e correção visual de gabaritos.</li>
-          </ul>
-        </div>
+  pendingPixPayments.set(cleanEmail, record);
 
-        <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
-          <strong>Transparência total:</strong> Você pode gerenciar ou cancelar sua assinatura a qualquer momento com 1 clique direto no painel "Minha Assinatura" no aplicativo, sem carência ou multas.
-        </p>
+  console.log(`[PIX MANUAL] Pagamento registrado em análise para ${cleanEmail} (${cleanName}). Aguardando aprovação manual do admin.`);
 
-        <div style="text-align: center; margin: 30px 0 10px;">
-          <a href="${process.env.APP_URL || 'https://menteup.app'}" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #020617; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 12px; display: inline-block;">
-            Acessar Minha Conta Pro Agora →
-          </a>
-        </div>
-      </div>
-      <div style="background-color: #020617; padding: 16px; text-align: center; font-size: 11px; color: #475569; border-top: 1px solid #1e293b;">
-        MenteUp © 2026 • Plataforma Inteligente de Estudos e Aprovação.
-      </div>
-    </div>
-  `;
-
-  const result = await sendEmailViaResend({ to: cleanEmail, subject, html });
-  return res.json(result);
+  return res.json({
+    success: true,
+    message: "Pagamento informado! O seu acesso Pro será liberado em instantes após a confirmação do Pix na nossa conta.",
+    record,
+  });
 });
 
-// 2. E-mail de Confirmação de Cancelamento
-app.post("/api/emails/send-cancellation", async (req, res) => {
+// 2. Consultar Status do Pix de um Usuário
+app.get("/api/pix/status/:email", (req, res) => {
+  const cleanEmail = decodeURIComponent(req.params.email || "").trim().toLowerCase();
+  const record = pendingPixPayments.get(cleanEmail);
+
+  if (record) {
+    return res.json({
+      success: true,
+      hasPending: record.status === "pending_approval",
+      isApproved: record.status === "approved",
+      record,
+    });
+  }
+
+  return res.json({
+    success: true,
+    hasPending: false,
+    isApproved: false,
+  });
+});
+
+// 3. Listar Pagamentos Pendentes (para painel admin)
+app.get("/api/admin/pending-pix", (_req, res) => {
+  const list = Array.from(pendingPixPayments.values());
+  return res.json({ success: true, count: list.length, payments: list });
+});
+
+// 4. Aprovação Manual do Administrador (Libera o Pro Vitalício e envia e-mail)
+app.post("/api/admin/approve-pix", async (req, res) => {
+  const { email, adminSecret } = req.body || {};
+  const cleanEmail = String(email || "").trim().toLowerCase();
+
+  // Chave de segurança simples do administrador
+  if (adminSecret && adminSecret !== "MENTEUP2026" && adminSecret !== "admin123") {
+    return res.status(403).json({ success: false, error: "Chave de administrador inválida." });
+  }
+
+  const record = pendingPixPayments.get(cleanEmail) || {
+    id: `pix_${Date.now()}`,
+    email: cleanEmail,
+    name: "Estudante",
+    amount: 5.0,
+    pixKey: "f089644f-3ceb-4873-b009-7e76e69ad569",
+    date: new Date().toISOString(),
+    status: "approved" as const,
+  };
+
+  record.status = "approved";
+  pendingPixPayments.set(cleanEmail, record);
+
+  // Atualiza no banco Supabase se configurado
+  if (serverSupabase) {
+    try {
+      await serverSupabase
+        .from("user_profiles")
+        .update({ is_pro: true, subscription_status: "active", is_lifetime: true })
+        .eq("email", cleanEmail);
+    } catch (e) {
+      console.warn("[Admin Approve Pix] Supabase update:", e);
+    }
+  }
+
+  // Dispara o e-mail de boas-vindas do Pro Vitalício
+  try {
+    await sendEmailViaResend({
+      to: cleanEmail,
+      subject: "⭐ Seu Acesso MenteUp Pro Vitalício foi Aprovado!",
+      html: `
+        <div style="font-family: sans-serif; padding: 24px; color: #1e293b;">
+          <h2>Pagamento Confirmado!</h2>
+          <p>Olá, ${record.name || 'Estudante'}. Seu Pix de R$ 5,00 foi conferido e aprovado pelo administrador.</p>
+          <p>Seu <strong>Acesso Vitalício ao MenteUp Pro</strong> está 100% liberado de forma definitiva!</p>
+        </div>
+      `,
+    });
+  } catch {}
+
+  console.log(`[PIX APROVADO] Administrador aprovou o acesso Vitalício Pro para ${cleanEmail}!`);
+
+  return res.json({
+    success: true,
+    message: `Acesso Pro Vitalício aprovado com sucesso para ${cleanEmail}!`,
+    record,
+  });
+});
+
+// 2. E-mail de Confirmação de Cancelamento (com múltiplos aliases)
+const CANCELLATION_EMAIL_ROUTES = [
+  "/api/emails/send-cancellation",
+  "/api/email/send-cancellation",
+  "/api/emails/cancellation",
+  "/api/email/cancellation",
+];
+
+app.post(CANCELLATION_EMAIL_ROUTES, async (req, res) => {
   const { email, name } = req.body || {};
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanName = String(name || "").trim() || "Estudante";

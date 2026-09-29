@@ -5,11 +5,13 @@ import { saveWrongQuestion } from '../utils/cadernoErros';
 import { incrementDailyGoalProgress } from './DailyGoalsWidget';
 import { shuffleAndRotateQuestions, shuffleQuestionOptions, ShuffledOptionsData } from '../utils/questionShuffle';
 import { DailyDynamicQuestionsSection } from './DailyDynamicQuestionsSection';
+import { AuthUser } from '../types';
 
 export const ReelsQuestionFeedSection: React.FC<{
+  authUser?: AuthUser | null;
   onAddXp?: (xp: number) => void;
   onOpenPro?: () => void;
-}> = ({ onAddXp, onOpenPro }) => {
+}> = ({ authUser, onAddXp, onOpenPro }) => {
   const [feedMode, setFeedMode] = useState<'ai_journey' | 'enem_reels'>('ai_journey');
   const [selectedSubject, setSelectedSubject] = useState<string>('Todas');
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -179,7 +181,11 @@ export const ReelsQuestionFeedSection: React.FC<{
       </div>
 
       {feedMode === 'ai_journey' ? (
-        <DailyDynamicQuestionsSection onAddXp={onAddXp} onOpenPro={onOpenPro} />
+        <DailyDynamicQuestionsSection
+          authUser={authUser}
+          onAddXp={onAddXp}
+          onOpenPro={onOpenPro}
+        />
       ) : (
         <div className="space-y-6 max-w-2xl mx-auto">
       {/* HEADER BANNER */}

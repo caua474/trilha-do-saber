@@ -940,8 +940,24 @@ interface PendingPixRecord {
 
 const pendingPixPayments = new Map<string, PendingPixRecord>();
 
-// 1. Notificar Pagamento Pix Realizado (entra em fila de análise)
-app.post("/api/pix/notify-payment", (req, res) => {
+// 1. Notificar Pagamento Pix Realizado (com múltiplos aliases para prevenir erro 404)
+const PIX_NOTIFY_ROUTES = [
+  "/api/pix/notify-payment",
+  "/api/pix/notify-payment/",
+  "/api/pix/notify",
+  "/api/pix/notify/",
+  "/api/pix/notify_payment",
+  "/api/pix/notificacao",
+];
+
+app.get(PIX_NOTIFY_ROUTES, (_req, res) => {
+  return res.json({
+    success: true,
+    message: "Endpoint /api/pix/notify-payment ativo. Utilize o método POST para enviar a notificação de pagamento.",
+  });
+});
+
+app.post(PIX_NOTIFY_ROUTES, async (req, res) => {
   try {
     const { email, name, comprovanteNome, amount, pixKey } = req.body || {};
     const cleanEmail = String(email || "").trim().toLowerCase();
@@ -964,10 +980,24 @@ app.post("/api/pix/notify-payment", (req, res) => {
 
     pendingPixPayments.set(cleanEmail, record);
 
-    console.log(`[PIX MANUAL] Pagamento registrado em análise para ${cleanEmail} (${cleanName}). Aguardando aprovação manual do admin.`);
+    // Se configurado com Supabase, registra explicitamente como NÃO pro (pendente)
+    if (serverSupabase) {
+      try {
+        await serverSupabase
+          .from("user_profiles")
+          .update({ is_pro: false, subscription_status: "pending_approval" })
+          .eq("email", cleanEmail);
+      } catch (e) {
+        console.warn("[PIX Notify] Supabase update warning:", e);
+      }
+    }
+
+    console.log(`[PIX MANUAL] Pagamento registrado com status PENDENTE para ${cleanEmail} (${cleanName}). Acesso Pro bloqueado até aprovação pelo administrador.`);
 
     return res.json({
       success: true,
+      status: "pending_approval",
+      isPro: false,
       message: "Pagamento informado! O seu acesso Pro será liberado em instantes após a confirmação do Pix na nossa conta.",
       record,
     });
@@ -999,6 +1029,29 @@ app.get("/api/pix/status/:email", (req, res) => {
     });
   } catch (err: any) {
     return res.json({ success: true, hasPending: false, isApproved: false });
+  }
+});
+
+// Endpoint seguro para validação de Pro controlado exclusivamente pelo servidor
+app.get(["/api/user/verify-pro-status/:email", "/api/user/pro-status/:email"], (req, res) => {
+  try {
+    const cleanEmail = decodeURIComponent(req.params.email || "").trim().toLowerCase();
+    const pixRecord = pendingPixPayments.get(cleanEmail);
+    const subRecord = subscriptionsDb.get(cleanEmail);
+
+    const isApprovedPix = pixRecord?.status === "approved";
+    const isAuthorizedSub = subRecord?.status === "authorized";
+    const isPro = isApprovedPix || isAuthorizedSub;
+
+    return res.json({
+      success: true,
+      email: cleanEmail,
+      isPro,
+      status: isPro ? "approved" : pixRecord?.status === "pending_approval" ? "pending_approval" : "free",
+      hasPending: pixRecord?.status === "pending_approval",
+    });
+  } catch {
+    return res.json({ success: true, isPro: false, status: "free", hasPending: false });
   }
 });
 

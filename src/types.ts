@@ -144,7 +144,7 @@ export interface AuthUser {
   avatar?: string;
   isGuest?: boolean;
   isPro?: boolean;
-  subscriptionStatus?: 'authorized' | 'paused' | 'cancelled' | 'pending' | 'pending_approval' | 'active';
+  subscriptionStatus?: 'authorized' | 'paused' | 'cancelled' | 'pending' | 'pending_approval' | 'active' | 'approved';
   subscriptionId?: string;
   provider: 'google' | 'email' | 'guest' | 'supabase';
   createdAt: string;

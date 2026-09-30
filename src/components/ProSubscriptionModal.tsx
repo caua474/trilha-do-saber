@@ -21,15 +21,29 @@ import { sendProWelcomeEmail } from '../services/resendEmailService';
 interface ProSubscriptionModalProps {
   onClose: () => void;
   onUpgradeSuccess?: () => void;
+  onStatusChange?: (status: 'pending_approval' | 'approved') => void;
   initialStep?: 'plans' | 'checkout' | 'pending';
 }
 
 export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
   onClose,
   onUpgradeSuccess,
-  initialStep = 'plans',
+  onStatusChange,
+  initialStep,
 }) => {
-  const [step, setStep] = useState<'plans' | 'checkout' | 'pending' | 'success'>(initialStep);
+  const [step, setStep] = useState<'plans' | 'checkout' | 'pending' | 'success'>(() => {
+    if (initialStep) return initialStep;
+    try {
+      const savedUser = localStorage.getItem('gabaritai_auth_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.subscriptionStatus === 'pending_approval' && !parsed.isPro) {
+          return 'pending';
+        }
+      }
+    } catch {}
+    return 'plans';
+  });
   const [pixCopied, setPixCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [comprovanteNome, setComprovanteNome] = useState('');
@@ -53,7 +67,8 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
 
   /**
    * Notifica que o usuário efetuou o Pix.
-   * IMPORTANTE: NÃO libera o Pro de graça! Altera o status para "Pagamento em Análise / Aguardando Aprovação".
+   * BLOQUEIO REAL: NÃO libera o Pro de graça! Altera o status estritamente para
+   * "Aguardando Aprovação / Pagamento em Análise". O Pro completo SÓ é liberado se aprovado.
    */
   const handleConfirmPixPayment = async () => {
     setIsProcessing(true);
@@ -68,7 +83,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
         if (parsed.email) userEmail = parsed.email;
         if (parsed.name) userName = parsed.name;
 
-        // NÃO libera o Pro aqui! Define como pendente de aprovação manual
+        // NÃO libera o Pro aqui! Bloqueio rigoroso de acesso
         parsed.isPro = false;
         parsed.subscriptionStatus = 'pending_approval';
         parsed.pixStatus = 'pending_approval';
@@ -79,7 +94,10 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
       }
     } catch {}
 
-    // Notifica o backend sobre o pagamento pendente para o administrador
+    // Notifica o estado global na aplicação
+    onStatusChange?.('pending_approval');
+
+    // Notifica o backend sobre o pagamento pendente para fila de análise do administrador
     try {
       await fetch('/api/pix/notify-payment', {
         method: 'POST',
@@ -97,7 +115,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
     }
 
     setIsProcessing(false);
-    // Transiciona para a tela de análise / aguardando aprovação
+    // Transiciona obrigatoriamente para a tela de análise / aguardando aprovação
     setStep('pending');
   };
 
@@ -161,14 +179,14 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
         {/* Header com ícone SVG Crown nítido (sem caractere vazio) */}
         <div className="px-6 py-4 sm:py-5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-700 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner shrink-0">
-              <Crown className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/25 border border-amber-300/40 flex items-center justify-center text-amber-300 shadow-md shrink-0">
+              <Crown className="w-6 h-6 fill-amber-300 text-amber-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-slate-950" />
-                  ACESSO DEFINITIVO
+                <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xs">
+                  <Crown className="w-3.5 h-3.5 fill-slate-950 text-slate-950 shrink-0" />
+                  <span>ACESSO DEFINITIVO</span>
                 </span>
                 <span className="text-xs font-bold text-amber-200">MenteUp Pro Vitalício</span>
               </div>
@@ -176,7 +194,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                 {step === 'checkout'
                   ? 'Pagamento Único via Pix • R$ 5,00'
                   : step === 'pending'
-                  ? 'Pagamento em Análise'
+                  ? 'Aguardando Aprovação / Pagamento em Análise'
                   : step === 'success'
                   ? 'Acesso Pro Aprovado!'
                   : 'Planos & Acesso Vitalício'}
@@ -438,7 +456,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirmar Pagamento Realizado</span>
+                      <span>Confirmar Pagamento e Liberar Acesso</span>
                     </>
                   )}
                 </button>

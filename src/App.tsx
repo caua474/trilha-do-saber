@@ -354,6 +354,9 @@ function MenteUpApp() {
           {activeModal === 'pro' && (
             <ProSubscriptionModal
               onClose={() => setActiveModal(null)}
+              onStatusChange={(status) => {
+                setAuthUser((prev) => prev ? { ...prev, isPro: status === 'approved', subscriptionStatus: status === 'approved' ? 'active' : 'pending_approval' } : prev);
+              }}
               onUpgradeSuccess={() => {
                 try {
                   const saved = localStorage.getItem('gabaritai_auth_user');
@@ -807,8 +810,11 @@ function MenteUpApp() {
         {activeModal === 'pro' && (
           <ProSubscriptionModal
             onClose={() => setActiveModal(null)}
+            onStatusChange={(status) => {
+              setAuthUser((prev) => prev ? { ...prev, isPro: status === 'approved', subscriptionStatus: status === 'approved' ? 'active' : 'pending_approval' } : prev);
+            }}
             onUpgradeSuccess={() => {
-              setAuthUser((prev) => (prev ? { ...prev, isPro: true } : prev));
+              setAuthUser((prev) => (prev ? { ...prev, isPro: true, subscriptionStatus: 'active' } : prev));
             }}
           />
         )}
@@ -1062,8 +1068,11 @@ function MenteUpApp() {
         {activeModal === 'pro' && (
           <ProSubscriptionModal
             onClose={() => setActiveModal(null)}
+            onStatusChange={(status) => {
+              setAuthUser((prev) => prev ? { ...prev, isPro: status === 'approved', subscriptionStatus: status === 'approved' ? 'active' : 'pending_approval' } : prev);
+            }}
             onUpgradeSuccess={() => {
-              setAuthUser((prev) => (prev ? { ...prev, isPro: true } : prev));
+              setAuthUser((prev) => (prev ? { ...prev, isPro: true, subscriptionStatus: 'active' } : prev));
             }}
           />
         )}

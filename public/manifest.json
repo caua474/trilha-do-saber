@@ -1,7 +1,7 @@
 {
-  "name": "MenteUp - Assistente de Estudos ENEM",
+  "name": "MenteUp",
   "short_name": "MenteUp",
-  "description": "Sintetizador inteligente de resumos, flashcards e simulação TRI com suporte total a Leitura Offline.",
+  "description": "Plataforma Inteligente de Estudos e Aprovação ENEM com IA, Simulados TRI, Redação e Tutoria da Professora Gabi.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

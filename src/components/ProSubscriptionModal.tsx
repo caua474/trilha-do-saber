@@ -213,7 +213,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-5 sm:p-7 space-y-6 overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto custom-scrollbar flex-1">
           {/* STEP 1: COMPARAÇÃO E SELEÇÃO DE PLANOS */}
           {step === 'plans' && (
             <div className="space-y-4">
@@ -334,9 +334,9 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
 
           {/* STEP 2: PÁGINA DE CHECKOUT COM PIX DIRETO */}
           {step === 'checkout' && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {/* Resumo do Pedido */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-slate-950 to-purple-950/80 border border-indigo-500/30 flex items-center justify-between">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-slate-950 to-purple-950/80 border border-indigo-500/30 flex items-center justify-between shadow-sm">
                 <div>
                   <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
                     Compra Única Selecionada
@@ -344,22 +344,22 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                   <h4 className="text-sm font-extrabold text-white">MenteUp Pro • Acesso Vitalício</h4>
                   <p className="text-[11px] text-slate-300">Acesso definitivo a todos os módulos</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-xl font-black text-amber-300">R$ 5,00</span>
+                <div className="text-right shrink-0">
+                  <span className="text-xl sm:text-2xl font-black text-amber-300">R$ 5,00</span>
                   <span className="text-[10px] text-emerald-400 font-bold block">Pagamento Único</span>
                 </div>
               </div>
 
               {/* Card de Pagamento Direto via Pix */}
-              <div className="p-5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-3.5 shadow-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                     <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
                       Pix Direto Oficial
                     </span>
                   </div>
-                  <span className="text-xs font-black text-white bg-indigo-600/40 border border-indigo-400/30 px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-black text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
                     Valor: R$ 5,00
                   </span>
                 </div>
@@ -370,13 +370,13 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                     Chave Pix (Copia e Cola / Aleatória):
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-slate-900 border border-indigo-500/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-mono text-amber-300 select-all break-all">
+                    <div className="flex-1 bg-slate-900 border border-indigo-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm font-mono text-amber-300 select-all break-all shadow-inner">
                       {PIX_KEY}
                     </div>
                     <button
                       type="button"
                       onClick={handleCopyPix}
-                      className="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
+                      className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
                     >
                       {pixCopied ? (
                         <>
@@ -398,21 +398,21 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                   )}
                 </div>
 
-                {/* Instruções Passo a Passo */}
-                <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-2">
+                {/* Instruções Passo a Passo Compactas */}
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
                   <div className="font-bold text-white flex items-center gap-1.5 text-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     Como efetuar o pagamento:
                   </div>
-                  <ol className="list-decimal pl-4 space-y-1.5 text-slate-300 text-[11px] leading-relaxed">
+                  <ol className="list-decimal pl-4 space-y-1 text-slate-300 text-[11px] leading-relaxed">
                     <li>
-                      Copie a chave Pix acima: <strong className="text-amber-300">{PIX_KEY}</strong>
+                      Copie a chave Pix acima: <strong className="text-amber-300 font-mono">{PIX_KEY}</strong>
                     </li>
                     <li>
                       Abra o app do seu banco e faça a transferência de <strong>R$ 5,00</strong>.
                     </li>
                     <li>
-                      Informe abaixo seu nome ou identificação do comprovante e clique em <strong>"Confirmar Pagamento Realizado"</strong> para envio à análise.
+                      Informe abaixo seu nome do comprovante e clique no botão fixo <strong className="text-amber-300">"Confirmar Pagamento e Liberar Acesso"</strong> no rodapé.
                     </li>
                   </ol>
                 </div>
@@ -427,39 +427,9 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                     value={comprovanteNome}
                     onChange={(e) => setComprovanteNome(e.target.value)}
                     placeholder="Ex: Seu Nome Completo no Banco"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
                   />
                 </div>
-              </div>
-
-              {/* Botões de Ação do Checkout */}
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('plans')}
-                  className="w-1/3 py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
-                >
-                  Voltar
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={handleConfirmPixPayment}
-                  className="w-2/3 py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Registrando Informação...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirmar Pagamento e Liberar Acesso</span>
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           )}
@@ -612,6 +582,44 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* RODAPÉ FIXO / STICKY FOOTER PARA O CHECKOUT PIX */}
+        {step === 'checkout' && (
+          <div className="bg-slate-950/98 backdrop-blur-md border-t border-slate-800 px-4 py-3 sm:px-6 sm:py-3.5 shrink-0 z-30 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('plans')}
+                className="w-1/3 py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={handleConfirmPixPayment}
+                className="w-2/3 py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 ring-2 ring-amber-400/40"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                    <span>Registrando Informação...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-slate-950" />
+                    <span>Confirmar Pagamento e Liberar Acesso</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-2 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Pagamento único de R$ 5,00 • Sem mensalidades • Análise rápida</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

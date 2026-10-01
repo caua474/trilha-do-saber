@@ -223,7 +223,7 @@ export default function PerfilXP({
   const progressoPercent = Math.min(100, Math.round((xpAtualNivel / 300) * 100));
 
   const handleShare = () => {
-    const shareText = `🏆 Meu Perfil no Assistente ENEM:\nNível ${level} (${levelTitle})\n⚡ ${userXP.toLocaleString('pt-BR')} XP Totais\n🔥 Sequência de ${streakDays} dias de estudos!`;
+    const shareText = `🏆 Meu Perfil no MenteUp:\nNível ${level} (${levelTitle})\n⚡ ${userXP.toLocaleString('pt-BR')} XP Totais\n🔥 Sequência de ${streakDays} dias de estudos!`;
     navigator.clipboard.writeText(shareText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

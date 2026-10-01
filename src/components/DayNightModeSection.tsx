@@ -65,7 +65,7 @@ export const DayNightModeSection: React.FC<DayNightModeSectionProps> = ({ theme,
               </span>
             </div>
             <h3 className="text-lg font-extrabold text-white">
-              Assistente Inteligente: Planejamento & Revisão Noturna
+              MenteUp: Planejamento Diurno & Revisão Noturna
             </h3>
           </div>
         </div>

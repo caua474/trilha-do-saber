@@ -175,14 +175,19 @@ export const PixDirectPaymentModal: React.FC<PixDirectPaymentModalProps> = ({
                     </span>
                   </div>
                   <span className="text-xs font-black text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
-                    R$ {amount.toFixed(2).replace('.', ',')}
+                    R$ 5,00 — Pagamento Único Vitalício
                   </span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                    Chave Pix (Copia e Cola):
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      Chave Pix (Copia e Cola):
+                    </label>
+                    <span className="text-[11px] font-bold text-purple-300 bg-purple-950/80 border border-purple-500/30 px-2 py-0.5 rounded-md">
+                      Banco: Nubank
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-slate-900 border border-indigo-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm font-mono text-amber-300 select-all break-all shadow-inner">
                       {pixKey}
@@ -270,7 +275,7 @@ export const PixDirectPaymentModal: React.FC<PixDirectPaymentModalProps> = ({
 
               <div className="space-y-1.5">
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase px-3 py-1 rounded-full">
-                  Status: Pagamento em Análise
+                  Status: Aguardando Aprovação / Pagamento em Análise
                 </span>
                 <h3 className="text-xl font-black text-white">
                   Pagamento Informado com Sucesso!

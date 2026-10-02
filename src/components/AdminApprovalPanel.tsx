@@ -87,6 +87,16 @@ export const AdminApprovalPanel: React.FC<AdminApprovalPanelProps> = ({
   };
 
   useEffect(() => {
+    // Redirecionamento estrito: Se o usuário logado NÃO for o administrador oficial, redireciona imediatamente para a página inicial
+    if (authUser?.email && authUser.email.toLowerCase() !== AUTHORIZED_ADMIN_EMAIL) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState(null, '', '/');
+      }
+      onGoBack?.();
+    }
+  }, [authUser, onGoBack]);
+
+  useEffect(() => {
     // Validação automática de sessão Supabase para a conta oficial
     const client = getSupabaseClient();
     if (client) {
@@ -94,10 +104,16 @@ export const AdminApprovalPanel: React.FC<AdminApprovalPanelProps> = ({
         if (data?.user?.email?.toLowerCase() === AUTHORIZED_ADMIN_EMAIL) {
           setIsAuthenticated(true);
           sessionStorage.setItem('menteup_admin_auth', 'true');
+        } else if (data?.user?.email) {
+          // Outro usuário logado no Supabase: redireciona para a home
+          if (typeof window !== 'undefined') {
+            window.history.pushState(null, '', '/');
+          }
+          onGoBack?.();
         }
       }).catch(() => {});
     }
-  }, []);
+  }, [onGoBack]);
 
   useEffect(() => {
     if (isAuthenticated) {

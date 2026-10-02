@@ -65,8 +65,7 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
    * Confirmação Pix e Envio do Comprovante:
    * 1. Exige o preenchimento obrigatório do 'Nome no comprovante'
    * 2. Abre o WhatsApp com a mensagem formatada: Olá! Paguei o MenteUp Pro (R$ 5,00). Nome no comprovante: {nome}
-   * 3. NUNCA ativa o Pro automaticamente: altera o estado exclusivamente para 'Pagamento em Análise'
-   * 4. Remove qualquer chamada legada a /api/pix/notify-payment
+   * 3. NUNCA ativa o Pro automaticamente: altera o estado exclusivamente para 'Aguardando Aprovação / Pagamento em Análise'
    */
   const handleConfirmPixPayment = async () => {
     const cleanName = comprovanteNome.trim();
@@ -314,15 +313,20 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                     </span>
                   </div>
                   <span className="text-xs font-black text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
-                    Valor: R$ 5,00
+                    R$ 5,00 — Pagamento Único Vitalício
                   </span>
                 </div>
 
                 {/* Chave Pix em Destaque */}
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                    Chave Pix (Copia e Cola / Aleatória):
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      Chave Pix Oficial:
+                    </label>
+                    <span className="text-[11px] font-bold text-purple-300 bg-purple-950/80 border border-purple-500/30 px-2 py-0.5 rounded-md">
+                      Banco: Nubank
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-slate-900 border border-indigo-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm font-mono text-amber-300 select-all break-all shadow-inner">
                       {PIX_KEY}

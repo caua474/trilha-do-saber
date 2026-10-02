@@ -282,7 +282,13 @@ function MenteUpApp() {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
-      setIsAdminPage(path === '/admin' || path.startsWith('/admin') || hash === '#admin' || hash.startsWith('#admin'));
+      const targetIsAdmin = path === '/admin' || path.startsWith('/admin') || hash === '#admin' || hash.startsWith('#admin');
+      if (targetIsAdmin && authUser && authUser.email.toLowerCase() !== 'cauafffelipedacosta@gmail.com') {
+        window.history.pushState(null, '', '/');
+        setIsAdminPage(false);
+        return;
+      }
+      setIsAdminPage(targetIsAdmin);
 
       if (path.includes('termos') || hash.includes('termos') || hash.includes('terms')) {
         setActiveModal('terms');
@@ -298,7 +304,17 @@ function MenteUpApp() {
       window.removeEventListener('hashchange', handleUrlRoute);
       window.removeEventListener('popstate', handleUrlRoute);
     };
-  }, []);
+  }, [authUser]);
+
+  // Se o aluno tentar acessar /admin, redireciona imediatamente para a home
+  useEffect(() => {
+    if (isAdminPage && authUser && authUser.email.toLowerCase() !== 'cauafffelipedacosta@gmail.com') {
+      if (typeof window !== 'undefined') {
+        window.history.pushState(null, '', '/');
+      }
+      setIsAdminPage(false);
+    }
+  }, [isAdminPage, authUser]);
 
   // SEGURANÇA MENTEUP: Leitura do status Pro exclusivamente do servidor (Anti-Fraude e Anti-Burlar)
   useEffect(() => {

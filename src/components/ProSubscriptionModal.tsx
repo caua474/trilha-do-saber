@@ -44,15 +44,11 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
     } catch {}
     return 'plans';
   });
+  const [copied, setCopied] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [comprovanteNome, setComprovanteNome] = useState('');
-
-  // Painel de aprovação manual do administrador
-  const [showAdminSection, setShowAdminSection] = useState(false);
-  const [adminPin, setAdminPin] = useState('');
-  const [adminError, setAdminError] = useState('');
-  const [isApprovingAdmin, setIsApprovingAdmin] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   // Chave Pix Direta Oficial
   const PIX_KEY = 'f089644f-3ceb-4873-b009-7e76e69ad569';
@@ -66,111 +62,69 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
   };
 
   /**
-   * Notifica que o usuário efetuou o Pix.
-   * BLOQUEIO REAL: NÃO libera o Pro de graça! Altera o status estritamente para
-   * "Aguardando Aprovação / Pagamento em Análise". O Pro completo SÓ é liberado se aprovado.
+   * Confirmação Pix e Envio do Comprovante:
+   * 1. Exige o preenchimento obrigatório do 'Nome no comprovante'
+   * 2. Abre o WhatsApp com a mensagem formatada: Olá! Paguei o MenteUp Pro (R$ 5,00). Nome no comprovante: {nome}
+   * 3. NUNCA ativa o Pro automaticamente: altera o estado exclusivamente para 'Pagamento em Análise'
+   * 4. Remove qualquer chamada legada a /api/pix/notify-payment
    */
   const handleConfirmPixPayment = async () => {
+    const cleanName = comprovanteNome.trim();
+    if (!cleanName) {
+      setNameError('Por favor, digite seu nome conforme consta no comprovante Pix para prosseguir.');
+      return;
+    }
+    setNameError('');
     setIsProcessing(true);
 
     let userEmail = 'estudante@menteup.app';
-    let userName = 'Estudante Focado';
 
     try {
       const savedUser = localStorage.getItem('gabaritai_auth_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed.email) userEmail = parsed.email;
-        if (parsed.name) userName = parsed.name;
 
-        // NÃO libera o Pro aqui! Bloqueio rigoroso de acesso
+        // SEGURANÇA: O botão NUNCA ativa o Pro automaticamente
         parsed.isPro = false;
         parsed.subscriptionStatus = 'pending_approval';
         parsed.pixStatus = 'pending_approval';
-        parsed.pixPayerName = comprovanteNome.trim() || userName;
+        parsed.pixPayerName = cleanName;
         parsed.pixPaymentDate = new Date().toISOString();
         parsed.pixAmount = 5.0;
         localStorage.setItem('gabaritai_auth_user', JSON.stringify(parsed));
       }
     } catch {}
 
-    // Notifica o estado global na aplicação
+    // Notifica o estado global na aplicação como pendente
     onStatusChange?.('pending_approval');
 
-    // Notifica o backend sobre o pagamento pendente para fila de análise do administrador
+    // Abre o WhatsApp com a mensagem formatada exigida
+    const formattedWhatsAppMsg = `Olá! Paguei o MenteUp Pro (R$ 5,00). Nome no comprovante: ${cleanName}`;
+    const whatsappUrl = `https://wa.me/5511999999999?text=${encodeURIComponent(formattedWhatsAppMsg)}`;
     try {
-      await fetch('/api/pix/notify-payment', {
+      window.open(whatsappUrl, '_blank');
+    } catch {
+      window.location.href = whatsappUrl;
+    }
+
+    // Registra na fila do painel /admin do administrador
+    try {
+      fetch('/api/admin/register-pending-pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: userEmail,
-          name: userName,
-          comprovanteNome: comprovanteNome.trim(),
+          name: cleanName,
+          comprovanteNome: cleanName,
           amount: 5.0,
-          pixKey: PIX_KEY,
         }),
-      });
-    } catch (e) {
-      console.warn('Registro de notificação pix:', e);
-    }
+      }).catch(() => {});
+    } catch {}
 
     setIsProcessing(false);
-    // Transiciona obrigatoriamente para a tela de análise / aguardando aprovação
+    // Mostra obrigatoriamente a tela de 'Pagamento em Análise'
     setStep('pending');
-  };
-
-  /**
-   * Aprovação Manual pelo Administrador (Garante liberação segura)
-   */
-  const handleAdminManualApproval = async () => {
-    if (adminPin.trim() !== 'MENTEUP2026' && adminPin.trim() !== 'admin123') {
-      setAdminError('Código de administrador incorreto.');
-      return;
-    }
-
-    setIsApprovingAdmin(true);
-    setAdminError('');
-
-    let userEmail = 'estudante@menteup.app';
-    let userName = 'Estudante Focado';
-
-    try {
-      const savedUser = localStorage.getItem('gabaritai_auth_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.email) userEmail = parsed.email;
-        if (parsed.name) userName = parsed.name;
-
-        // Agora sim: Liberação Definitiva pelo Administrador
-        parsed.isPro = true;
-        parsed.subscriptionStatus = 'active';
-        parsed.pixStatus = 'approved';
-        parsed.isLifetime = true;
-        parsed.planName = 'MenteUp Pro Vitalício';
-        localStorage.setItem('gabaritai_auth_user', JSON.stringify(parsed));
-      }
-    } catch {}
-
-    // Notifica backend da aprovação manual
-    try {
-      await fetch('/api/admin/approve-pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          adminSecret: adminPin.trim(),
-        }),
-      });
-    } catch {}
-
-    // Dispara e-mail de boas-vindas seguro
-    try {
-      await sendProWelcomeEmail(userEmail, userName);
-    } catch {}
-
-    setIsApprovingAdmin(false);
-    setStep('success');
-    onUpgradeSuccess?.();
   };
 
   return (
@@ -420,15 +374,40 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                 {/* Identificação do Titular */}
                 <div className="space-y-1">
                   <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                    Nome no comprovante Pix (para conferência bancária):
+                    Nome no comprovante Pix (obrigatório para conferência): <span className="text-amber-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={comprovanteNome}
-                    onChange={(e) => setComprovanteNome(e.target.value)}
+                    onChange={(e) => {
+                      setComprovanteNome(e.target.value);
+                      if (nameError) setNameError('');
+                    }}
                     placeholder="Ex: Seu Nome Completo no Banco"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 shadow-inner"
+                    className={`w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none shadow-inner transition ${
+                      nameError
+                        ? 'border-rose-500 ring-2 ring-rose-500/30'
+                        : 'border-slate-700 focus:border-amber-400'
+                    }`}
                   />
+                  {nameError && (
+                    <p className="text-[11px] text-rose-400 font-medium flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{nameError}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Botão de Envio de Comprovante / Suporte WhatsApp */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleConfirmPixPayment}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm hover:border-emerald-400 group"
+                  >
+                    <MessageCircle className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <span>Enviar Comprovante via WhatsApp (Suporte 24h)</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -479,14 +458,14 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
               <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2.5">
                 <a
                   href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                    `Olá! Acabei de fazer o Pix de R$ 5,00 para o MenteUp Pro Vitalício. Nome no comprovante: ${comprovanteNome || 'Estudante'}. Aguardo a liberação!`
+                    `Olá! Paguei o MenteUp Pro (R$ 5,00). Nome no comprovante: ${comprovanteNome.trim() || 'Estudante'}`
                   )}`}
                   target="_blank"
                   rel="noreferrer"
                   className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>Enviar Comprovante (WhatsApp)</span>
+                  <span>Reabrir WhatsApp de Envio do Comprovante</span>
                 </a>
 
                 <button
@@ -496,54 +475,6 @@ export const ProSubscriptionModal: React.FC<ProSubscriptionModalProps> = ({
                 >
                   Fechar e Aguardar Liberação
                 </button>
-              </div>
-
-              {/* Seção Oculta de Aprovação do Administrador */}
-              <div className="pt-4 border-t border-slate-800/60">
-                <button
-                  type="button"
-                  onClick={() => setShowAdminSection(!showAdminSection)}
-                  className="text-[11px] text-slate-500 hover:text-slate-400 flex items-center justify-center gap-1 mx-auto cursor-pointer"
-                >
-                  <Key className="w-3 h-3" />
-                  <span>Área de Liberação Administrativa</span>
-                </button>
-
-                {showAdminSection && (
-                  <div className="mt-3 p-3.5 bg-slate-950 border border-indigo-500/30 rounded-xl max-w-sm mx-auto space-y-2 text-left animate-in fade-in">
-                    <span className="text-[10px] font-black uppercase text-indigo-300 block">
-                      Aprovação Manual do Administrador:
-                    </span>
-                    <input
-                      type="password"
-                      value={adminPin}
-                      onChange={(e) => setAdminPin(e.target.value)}
-                      placeholder="Insira o PIN de admin (MENTEUP2026)"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
-                    />
-                    {adminError && (
-                      <p className="text-[11px] text-rose-400 font-medium">{adminError}</p>
-                    )}
-                    <button
-                      type="button"
-                      disabled={isApprovingAdmin || !adminPin.trim()}
-                      onClick={handleAdminManualApproval}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      {isApprovingAdmin ? (
-                        <>
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                          <span>Aprovando Acesso Pro...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Aprovar Manualmente Agora</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}

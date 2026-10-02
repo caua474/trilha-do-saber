@@ -9,12 +9,9 @@ import {
   Copy,
   Clock,
   MessageCircle,
-  Key,
-  RefreshCw,
   Infinity as InfinityIcon,
 } from 'lucide-react';
 import { AuthUser } from '../types';
-import { sendProWelcomeEmail } from '../services/resendEmailService';
 
 interface SubscriptionManagementCardProps {
   authUser?: AuthUser | null;
@@ -28,10 +25,6 @@ export const SubscriptionManagementCard: React.FC<SubscriptionManagementCardProp
   onStatusUpdated,
 }) => {
   const [pixCopied, setPixCopied] = useState(false);
-  const [showAdminApproval, setShowAdminApproval] = useState(false);
-  const [adminPin, setAdminPin] = useState('');
-  const [adminError, setAdminError] = useState('');
-  const [isApproving, setIsApproving] = useState(false);
 
   const PIX_KEY = 'f089644f-3ceb-4873-b009-7e76e69ad569';
 
@@ -44,48 +37,6 @@ export const SubscriptionManagementCard: React.FC<SubscriptionManagementCardProp
     }
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 3000);
-  };
-
-  const handleAdminApprove = async () => {
-    if (adminPin.trim() !== 'MENTEUP2026' && adminPin.trim() !== 'admin123') {
-      setAdminError('PIN de administrador inválido.');
-      return;
-    }
-
-    setIsApproving(true);
-    setAdminError('');
-
-    try {
-      const savedUser = localStorage.getItem('gabaritai_auth_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        parsed.isPro = true;
-        parsed.subscriptionStatus = 'active';
-        parsed.pixStatus = 'approved';
-        parsed.isLifetime = true;
-        localStorage.setItem('gabaritai_auth_user', JSON.stringify(parsed));
-      }
-
-      await fetch('/api/admin/approve-pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: authUser?.email,
-          adminSecret: adminPin.trim(),
-        }),
-      });
-
-      if (authUser?.email) {
-        sendProWelcomeEmail(authUser.email, authUser.name);
-      }
-
-      setIsApproving(false);
-      setShowAdminApproval(false);
-      onStatusUpdated?.();
-      window.location.reload();
-    } catch {
-      setIsApproving(false);
-    }
   };
 
   return (
@@ -215,7 +166,7 @@ export const SubscriptionManagementCard: React.FC<SubscriptionManagementCardProp
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
               <a
                 href={`https://wa.me/5511999999999?text=${encodeURIComponent(
-                  `Olá! Acabei de fazer o Pix de R$ 5,00 para o MenteUp Pro Vitalício. Meu e-mail: ${authUser?.email || 'Estudante'}. Aguardo liberação!`
+                  `Olá! Paguei o MenteUp Pro (R$ 5,00). Nome no comprovante: ${authUser?.name || 'Estudante'}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
@@ -225,43 +176,10 @@ export const SubscriptionManagementCard: React.FC<SubscriptionManagementCardProp
                 <span>Enviar Comprovante (WhatsApp)</span>
               </a>
 
-              <button
-                type="button"
-                onClick={() => setShowAdminApproval(!showAdminApproval)}
-                className="text-xs text-slate-400 hover:text-slate-300 flex items-center gap-1 underline cursor-pointer"
-              >
-                <Key className="w-3.5 h-3.5" />
-                <span>Aprovação Manual do Administrador</span>
-              </button>
+              <span className="text-[11px] text-slate-400 font-medium">
+                Conferência automática ou via suporte
+              </span>
             </div>
-
-            {/* Painel do Administrador para Liberação */}
-            {showAdminApproval && (
-              <div className="mt-3 p-3.5 bg-slate-950 border border-amber-500/30 rounded-xl space-y-2 text-left animate-in fade-in">
-                <span className="text-[11px] font-bold text-amber-300 block">
-                  Painel de Aprovação (Administrador):
-                </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="password"
-                    value={adminPin}
-                    onChange={(e) => setAdminPin(e.target.value)}
-                    placeholder="PIN de Administrador (MENTEUP2026)"
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                  <button
-                    type="button"
-                    disabled={isApproving || !adminPin.trim()}
-                    onClick={handleAdminApprove}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {isApproving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    <span>Aprovar Pro</span>
-                  </button>
-                </div>
-                {adminError && <p className="text-[11px] text-rose-400">{adminError}</p>}
-              </div>
-            )}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-500/30">

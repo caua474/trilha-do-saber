@@ -395,3 +395,32 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
 
   return { success: true, message: `Novo e-mail de confirmação enviado para ${cleanEmail}!` };
 }
+
+/**
+ * Consulta autoritativa no servidor: valida se o usuário possui Pro ativo ou pagamento pendente.
+ * O aplicativo confia exclusivamente nesta resposta do servidor (nunca no navegador).
+ */
+export async function fetchAuthoritativeProStatus(email: string): Promise<{
+  isPro: boolean;
+  status: 'free' | 'pending_approval' | 'approved';
+}> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail) {
+    return { isPro: false, status: 'free' };
+  }
+
+  try {
+    const res = await fetch(`/api/user/pro-status/${encodeURIComponent(cleanEmail)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        isPro: Boolean(data.isPro),
+        status: data.status || (data.isPro ? 'approved' : 'free'),
+      };
+    }
+  } catch (err) {
+    console.warn('[authService] Falha ao consultar status Pro no servidor:', err);
+  }
+
+  return { isPro: false, status: 'free' };
+}

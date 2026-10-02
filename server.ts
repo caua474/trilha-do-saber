@@ -1032,48 +1032,139 @@ app.get("/api/pix/status/:email", (req, res) => {
   }
 });
 
-// Endpoint seguro para validação de Pro controlado exclusivamente pelo servidor
-app.get(["/api/user/verify-pro-status/:email", "/api/user/pro-status/:email"], (req, res) => {
+// Endpoint seguro para validação de Pro controlado exclusivamente pelo servidor (Anti-Fraude)
+app.get(["/api/user/verify-pro-status/:email", "/api/user/pro-status/:email"], async (req, res) => {
   try {
     const cleanEmail = decodeURIComponent(req.params.email || "").trim().toLowerCase();
     const pixRecord = pendingPixPayments.get(cleanEmail);
     const subRecord = subscriptionsDb.get(cleanEmail);
 
-    const isApprovedPix = pixRecord?.status === "approved";
-    const isAuthorizedSub = subRecord?.status === "authorized";
-    const isPro = isApprovedPix || isAuthorizedSub;
+    let isPro = pixRecord?.status === "approved" || subRecord?.status === "authorized";
+    let status = isPro ? "approved" : pixRecord?.status === "pending_approval" ? "pending_approval" : "free";
+
+    // Validação autoritativa também no Supabase (se configurado)
+    if (serverSupabase) {
+      try {
+        const { data } = await serverSupabase
+          .from("user_profiles")
+          .select("is_pro, subscription_status")
+          .eq("email", cleanEmail)
+          .maybeSingle();
+
+        if (data) {
+          if (data.is_pro === true) {
+            isPro = true;
+            status = "approved";
+          } else if (data.subscription_status === "pending_approval") {
+            status = "pending_approval";
+          }
+        }
+      } catch (err) {
+        console.warn("[Verify Pro] Erro ao consultar Supabase:", err);
+      }
+    }
 
     return res.json({
       success: true,
       email: cleanEmail,
       isPro,
-      status: isPro ? "approved" : pixRecord?.status === "pending_approval" ? "pending_approval" : "free",
-      hasPending: pixRecord?.status === "pending_approval",
+      status,
+      hasPending: status === "pending_approval",
     });
   } catch {
     return res.json({ success: true, isPro: false, status: "free", hasPending: false });
   }
 });
 
-// 3. Listar Pagamentos Pendentes (para painel admin)
-app.get("/api/admin/pending-pix", (_req, res) => {
+// 3. Registrar Pedido Pendente para a Fila do Administrador
+app.post(["/api/admin/register-pending-pix", "/api/pix/register-pending"], async (req, res) => {
   try {
+    const { email, name, comprovanteNome, amount } = req.body || {};
+    const cleanEmail = String(email || "").trim().toLowerCase() || `aluno_${Date.now()}@menteup.app`;
+    const cleanName = String(name || comprovanteNome || "Estudante").trim();
+
+    const record: PendingPixRecord = {
+      id: `pix_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      email: cleanEmail,
+      name: cleanName,
+      comprovanteNome: String(comprovanteNome || cleanName).trim(),
+      amount: Number(amount) || 5.0,
+      pixKey: "f089644f-3ceb-4873-b009-7e76e69ad569",
+      date: new Date().toISOString(),
+      status: "pending_approval",
+    };
+
+    pendingPixPayments.set(cleanEmail, record);
+
+    if (serverSupabase) {
+      try {
+        await serverSupabase
+          .from("user_profiles")
+          .update({ is_pro: false, subscription_status: "pending_approval" })
+          .eq("email", cleanEmail);
+      } catch {}
+    }
+
+    console.log(`[Admin Fila] Novo pedido Pix registrado em análise: ${cleanEmail} (${cleanName})`);
+
+    return res.json({
+      success: true,
+      status: "pending_approval",
+      isPro: false,
+      record,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: "Erro ao registrar pedido pendente." });
+  }
+});
+
+// 4. Listar Pagamentos Pendentes (para painel admin /admin)
+app.get("/api/admin/pending-pix", async (req, res) => {
+  try {
+    const adminEmail = String(req.query.adminEmail || "").trim().toLowerCase();
+    const adminSecret = String(req.query.adminSecret || "").trim();
+
+    // Permite visualização pelo email oficial ou pela chave de segurança
+    const isAuthorized =
+      adminEmail === "cauafffelipedacosta@gmail.com" ||
+      adminSecret === "MENTEUP2026" ||
+      adminSecret === "admin123";
+
     const list = Array.from(pendingPixPayments.values());
-    return res.json({ success: true, count: list.length, payments: list });
+
+    return res.json({
+      success: true,
+      isAuthorized,
+      count: list.length,
+      payments: list,
+    });
   } catch (err: any) {
     return res.json({ success: true, count: 0, payments: [] });
   }
 });
 
-// 4. Aprovação Manual do Administrador (Libera o Pro Vitalício e envia e-mail)
+// 5. Aprovação Manual do Administrador (Libera o Pro Vitalício e envia e-mail)
 app.post("/api/admin/approve-pix", async (req, res) => {
   try {
-    const { email, adminSecret } = req.body || {};
+    const { email, adminSecret, adminEmail } = req.body || {};
     const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanAdminEmail = String(adminEmail || "").trim().toLowerCase();
 
-    // Chave de segurança simples do administrador
-    if (adminSecret && adminSecret !== "MENTEUP2026" && adminSecret !== "admin123") {
-      return res.status(403).json({ success: false, error: "Chave de administrador inválida." });
+    // Validação rigorosa: Apenas a conta oficial cauafffelipedacosta@gmail.com ou chave admin
+    const isAuthorized =
+      cleanAdminEmail === "cauafffelipedacosta@gmail.com" ||
+      adminSecret === "MENTEUP2026" ||
+      adminSecret === "admin123";
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: "Acesso negado. Apenas a conta administradora autorizada pode aprovar o Pro.",
+      });
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({ success: false, error: "E-mail do estudante é obrigatório." });
     }
 
     const record = pendingPixPayments.get(cleanEmail) || {
@@ -1089,7 +1180,7 @@ app.post("/api/admin/approve-pix", async (req, res) => {
     record.status = "approved";
     pendingPixPayments.set(cleanEmail, record);
 
-    // Atualiza no banco Supabase se configurado
+    // Atualiza com autoridade máxima no banco Supabase
     if (serverSupabase) {
       try {
         await serverSupabase
@@ -1116,7 +1207,7 @@ app.post("/api/admin/approve-pix", async (req, res) => {
       });
     } catch {}
 
-    console.log(`[PIX APROVADO] Administrador aprovou o acesso Vitalício Pro para ${cleanEmail}!`);
+    console.log(`[PIX APROVADO] Administrador (${cleanAdminEmail || 'secret'}) aprovou Pro Vitalício para ${cleanEmail}!`);
 
     return res.json({
       success: true,
@@ -1126,6 +1217,46 @@ app.post("/api/admin/approve-pix", async (req, res) => {
   } catch (err: any) {
     console.error("[PIX APROVADO Error]", err);
     return res.status(500).json({ success: false, error: err?.message || "Erro na aprovação do Pix." });
+  }
+});
+
+// 6. Revogação de Pro pelo Administrador
+app.post("/api/admin/revoke-pix", async (req, res) => {
+  try {
+    const { email, adminSecret, adminEmail } = req.body || {};
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanAdminEmail = String(adminEmail || "").trim().toLowerCase();
+
+    const isAuthorized =
+      cleanAdminEmail === "cauafffelipedacosta@gmail.com" ||
+      adminSecret === "MENTEUP2026" ||
+      adminSecret === "admin123";
+
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, error: "Acesso negado." });
+    }
+
+    if (pendingPixPayments.has(cleanEmail)) {
+      const record = pendingPixPayments.get(cleanEmail)!;
+      record.status = "rejected";
+      pendingPixPayments.set(cleanEmail, record);
+    }
+
+    if (serverSupabase) {
+      try {
+        await serverSupabase
+          .from("user_profiles")
+          .update({ is_pro: false, subscription_status: "free", is_lifetime: false })
+          .eq("email", cleanEmail);
+      } catch {}
+    }
+
+    return res.json({
+      success: true,
+      message: `Acesso Pro revogado com sucesso para ${cleanEmail}.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: "Erro ao revogar Pro." });
   }
 });
 

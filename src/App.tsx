@@ -63,6 +63,8 @@ import { EnemPrintableSheetModal } from './components/EnemPrintableSheetModal';
 import { MicrophonePermissionModal } from './components/MicrophonePermissionModal';
 import { OpcoesGeraisModal } from './components/OpcoesGeraisModal';
 import { TermsAndPrivacyModal, LegalTab } from './components/TermsAndPrivacyModal';
+import { AdminApprovalPanel } from './components/AdminApprovalPanel';
+import { fetchAuthoritativeProStatus } from './services/authService';
 
 // Utilities & Data
 import { StudyMaterial, TutorPlan, ELI5Explanation, UserProfile, AuthUser } from './types';
@@ -265,12 +267,23 @@ function MenteUpApp() {
     loadDatabaseItems();
   }, [loadDatabaseItems]);
 
+  // Rota administrativa /admin dedicada (protegida exclusivamente no servidor)
+  const [isAdminPage, setIsAdminPage] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    return path === '/admin' || path.startsWith('/admin') || hash === '#admin' || hash.startsWith('#admin');
+  });
+
   // Sincronização de rotas legais e páginas institucionais via URL/Hash
   useEffect(() => {
     const handleUrlRoute = () => {
       if (typeof window === 'undefined') return;
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
+
+      setIsAdminPage(path === '/admin' || path.startsWith('/admin') || hash === '#admin' || hash.startsWith('#admin'));
+
       if (path.includes('termos') || hash.includes('termos') || hash.includes('terms')) {
         setActiveModal('terms');
       } else if (path.includes('privacidade') || hash.includes('privacidade') || hash.includes('privacy')) {
@@ -286,6 +299,56 @@ function MenteUpApp() {
       window.removeEventListener('popstate', handleUrlRoute);
     };
   }, []);
+
+  // SEGURANÇA MENTEUP: Leitura do status Pro exclusivamente do servidor (Anti-Fraude e Anti-Burlar)
+  useEffect(() => {
+    if (!authUser?.email) return;
+
+    let isMounted = true;
+    const syncServerProStatus = async () => {
+      try {
+        const serverStatus = await fetchAuthoritativeProStatus(authUser.email);
+        if (!isMounted) return;
+
+        setAuthUser((prev) => {
+          if (!prev) return null;
+          // O status do servidor é a única verdade absoluta sobre o plano Pro
+          if (
+            prev.isPro !== serverStatus.isPro ||
+            prev.subscriptionStatus !== serverStatus.status
+          ) {
+            const updated = {
+              ...prev,
+              isPro: serverStatus.isPro,
+              subscriptionStatus: serverStatus.status,
+            };
+            try {
+              localStorage.setItem('gabaritai_auth_user', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          }
+          return prev;
+        });
+      } catch {
+        // Falha silenciosa defensiva
+      }
+    };
+
+    // Sincroniza imediatamente na inicialização
+    syncServerProStatus();
+
+    // Sincroniza sempre que o utilizador retornar à aba (ex: após pagar no Pix/WhatsApp)
+    window.addEventListener('focus', syncServerProStatus);
+
+    // Polling suave a cada 15 segundos para aplicar aprovações em tempo real feitas no /admin
+    const intervalId = setInterval(syncServerProStatus, 15000);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', syncServerProStatus);
+      clearInterval(intervalId);
+    };
+  }, [authUser?.email]);
 
   // Handle XP addition
   const handleAddXP = (amount: number) => {
@@ -325,6 +388,21 @@ function MenteUpApp() {
       setAbaAtiva('arena_x1');
     }
   };
+
+  // Página separada para o Painel Administrativo de Aprovações (/admin)
+  if (isAdminPage) {
+    return (
+      <AdminApprovalPanel
+        authUser={authUser}
+        onGoBack={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState(null, '', '/');
+          }
+          setIsAdminPage(false);
+        }}
+      />
+    );
+  }
 
   // Se o usuário não estiver autenticado, exibe a Tela de Login e Cadastro moderna
   if (!authUser) {
